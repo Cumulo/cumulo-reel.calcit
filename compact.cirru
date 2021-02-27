@@ -98,7 +98,6 @@
             let
                 cursor $ :cursor states
                 state $ either (:data states) initial-state
-              echo "\"state" state
               div
                 {} $ :style (merge ui/flex ui/center)
                 div ({})
@@ -131,7 +130,7 @@
         |initial-state $ quote
           def initial-state $ {} (:username |) (:password |)
         |on-submit $ quote
-          defn on-submit (username password signup?) (echo "\"submit" username password)
+          defn on-submit (username password signup?)
             fn (e dispatch!)
               dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
               .setItem js/localStorage (:storage-key config/site)
@@ -363,6 +362,7 @@
                               :border-radius "\"16px"
                               :margin "\"0 4px"
                           <> username
+                    set->list
               =< nil 48
               div ({})
                 button

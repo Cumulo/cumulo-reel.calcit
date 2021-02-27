@@ -3,11 +3,11 @@
     "@calcit/procs": "^0.2.62"
   },
   "scripts": {
-    "watch-server": "cr --emit-js",
+    "watch-server": "cr --emit-js --init-fn:cumulo-reel.server/main! --reload-fn:cumulo-reel.server/main!",
     "build-server": "target=node entry=./server.js yarn webpack && node js-out/bundle.js",
     "compile-server": "cr --emit-js --once --init-fn:cumulo-reel.server/main! --reload-fn:cumulo-reel.server/main!",
     "compile-page": "cr --emit-js --once",
-    "watch-page": "cr --emit-js --emit-path:out-page/ --init-fn:cumulo-util.client/main! --reload-fn:cumulo-util.client/reload!"
+    "watch-page": "cr --emit-js --emit-path:out-page/"
   },
   "devDependencies": {
     "md5": "^2.3.0",

@@ -25,7 +25,7 @@ jobs:
         && git clone https://github.com/Respo/respo.calcit.git
         && git clone https://github.com/Respo/respo-ui.calcit.git
         && git clone https://github.com/Respo/respo-message.calcit.git
-        && git clone https://github.com/Cumulo/cumulo-util.calcit.git
+        && git clone https://github.com/Cumulo/cumulo-util.calcit.git --branch=0.0.1
         && git clone https://github.com/mvc-works/ws-edn.calcit.git
 
     - name: "compiles to js"

@@ -2,7 +2,7 @@
 {} (:package |cumulo-reel)
   :configs $ {} (:init-fn |cumulo-reel.client/main!) (:reload-fn |cumulo-reel.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
-    :version nil
+    :version |0.0.1
   :files $ {}
     |cumulo-reel.updater $ {}
       :ns $ quote

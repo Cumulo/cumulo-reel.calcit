@@ -4454,7 +4454,12 @@
                       |j $ {} (:type :leaf) (:id |rkWR58eeCHZ) (:text "||8px 16px") (:by |root) (:at 1500541010211)
         :proc $ {} (:type :expr) (:id |S1om9LgxCBZ) (:by nil) (:at 1500541010211)
           :data $ {}
-  :configs $ {} (:storage-key |calcit.cirru) (:extension |.cljs) (:output |src) (:port 6001) (:compact-output? true)
+  :configs $ {} (:reload-fn |cumulo-reel.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
+    :output |src
+    :port 6001
+    :extension |.cljs
     :init-fn |cumulo-reel.client/main!
-    :reload-fn |cumulo-reel.client/reload!
+    :compact-output? true
+    :storage-key |calcit.cirru
+    :version |0.0.1

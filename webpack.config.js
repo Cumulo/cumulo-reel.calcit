@@ -14,6 +14,7 @@ module.exports = {
   externals: {
     ws: "commonjs ws",
     shortid: "commonjs shortid",
+    md5: "commonjs md5",
   },
   output: {
     path: path.resolve(__dirname, "js-out/"),

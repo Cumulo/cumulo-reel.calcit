@@ -1,8 +1,8 @@
 
 {} (:package |cumulo-reel)
   :configs $ {} (:init-fn |cumulo-reel.client/main!) (:reload-fn |cumulo-reel.client/reload!)
-    :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/
-    :version nil
+    :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
+    :version |0.0.1
   :files $ {}
     |cumulo-reel.updater $ {}
       :ns $ quote
@@ -12,15 +12,8 @@
         |updater $ quote
           defn updater (db op op-data sid op-id op-time)
             let
-                f $ case-default op
-                  do (println "|Unknown op:" op) identity
-                  :session/connect session/connect
-                  :session/disconnect session/disconnect
-                  :session/remove-message session/remove-message
-                  :user/log-in user/log-in
-                  :user/sign-up user/sign-up
-                  :user/log-out user/log-out
-                  :router/change router/change
+                f $ case op (:session/connect session/connect) (:session/disconnect session/disconnect) (:session/remove-message session/remove-message) (:user/log-in user/log-in) (:user/sign-up user/sign-up) (:user/log-out user/log-out) (:router/change router/change)
+                  op $ do (println "|Unknown op:" op) identity
               f db op-data sid op-id op-time
       :proc $ quote ()
     |cumulo-reel.core $ {}
@@ -30,7 +23,7 @@
       :defs $ {}
         |play-records $ quote
           defn play-records (db records updater)
-            if (empty? records) db $ let
+            if (empty? records) db $ let-sugar
                   [] op op-data sid op-id op-time
                   first records
                 next-db $ updater db op op-data sid op-id op-time
@@ -104,7 +97,7 @@
           defcomp comp-login (states)
             let
                 cursor $ :cursor states
-                state $ or (:data states) initial-state
+                state $ either (:data states) initial-state
               div
                 {} $ :style (merge ui/flex ui/center)
                 div ({})
@@ -140,7 +133,8 @@
           defn on-submit (username password signup?)
             fn (e dispatch!)
               dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
-              .setItem js/localStorage (:storage-key config/site) ([] username password)
+              .setItem js/localStorage (:storage-key config/site)
+                write-cirru-edn $ [] username password
       :proc $ quote ()
     |cumulo-reel.twig.container $ {}
       :ns $ quote
@@ -153,7 +147,7 @@
           defn twig-container (db session records)
             let
                 logged-in? $ some? (:user-id session)
-                router $ :router session
+                router $ either (:router session) ({})
                 base-data $ {} (:logged-in? logged-in?) (:session session)
                   :reel-length $ count records
               merge base-data $ if logged-in?
@@ -161,15 +155,16 @@
                   :user $ memof-call twig-user
                     get-in db $ [] :users (:user-id session)
                   :router $ assoc router :data
-                    case-default (:name router) ({})
+                    case (:name router)
                       :home $ :pages db
                       :profile $ memof-call twig-members (:sessions db) (:users db)
+                      (:name router) ({})
                   :count $ count (:sessions db)
                   :color $ color/randomColor
                 , nil
         |twig-members $ quote
           defn twig-members (sessions users)
-            ->> sessions
+            ->> sessions (to-pairs)
               map $ fn (pair)
                 let[] (k session) pair $ [] k
                   get-in users $ [] (:user-id session) :name
@@ -229,7 +224,7 @@
                   {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
                     :color $ hsl 0 0 60
                   , addional-styles
-              <> span (str |Length: count) nil
+              <> (str |Length: count) nil
               =< 8 nil
               span $ {} (:inner-text |Reset) (:style style-click)
                 :on $ {}
@@ -278,8 +273,10 @@
             case op
               :states $ reset! *states (update-states @*states op-data)
               :effect/connect $ connect!
-              ws-send! $ {} (:kind :op) (:op op) (:data op-data)
-        |*store $ quote (defatom *store nil)
+              op $ ws-send!
+                {} (:kind :op) (:op op) (:data op-data)
+        |*store $ quote
+          defatom *store $ {}
         |main! $ quote
           defn main! ()
             println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
@@ -288,7 +285,7 @@
             connect!
             add-watch *store :changes $ fn (store prev) (render-app! render!)
             add-watch *states :changes $ fn (states prev) (render-app! render!)
-            .addEventListener js/window "\"visibilitychange" $ fn ()
+            .addEventListener js/window "\"visibilitychange" $ fn (event)
               when
                 and (nil? @*store) (= "\"visible" js/document.visibilityState)
                 connect!
@@ -299,14 +296,15 @@
           defn connect! () $ ws-connect!
             str "\"ws://" js/location.hostname "\":" $ :port config/site
             {}
-              :on-open $ fn () (simulate-login!)
+              :on-open $ fn (event) (simulate-login!)
               :on-close $ fn (event) (reset! *store nil) (js/console.error "\"Lost connection!")
               :on-data $ fn (data)
-                case-default (:kind data) (println "\"unknown kind:" data)
+                case (:kind data)
                   :patch $ let
                       changes $ :data data
                     js/console.log "\"Changes" $ to-js-data changes
                     reset! *store $ patch-twig @*store changes
+                  (:kind data) (println "\"unknown kind:" data)
         |simulate-login! $ quote
           defn simulate-login! () $ let
               raw $ .getItem js/localStorage (:storage-key config/site)
@@ -316,9 +314,15 @@
               do $ println "|Found no storage."
         |render-app! $ quote
           defn render-app! (renderer)
-            renderer mount-target (comp-container @*states @*store) dispatch!
+            renderer mount-target
+              comp-container (:states @*states) @*store
+              , dispatch!
         |reload! $ quote
-          defn reload! () (clear-cache!) (render-app! render!) (println "|Code updated.")
+          defn reload! () (remove-watch *store :changes) (remove-watch *states :changes) (clear-cache!)
+            add-watch *store :changes $ fn (store prev) (render-app! render!)
+            add-watch *states :changes $ fn (states prev) (render-app! render!)
+            render-app! render!
+            println "|Code updated."
         |mount-target $ quote
           def mount-target $ .querySelector js/document |.app
       :proc $ quote ()
@@ -348,8 +352,8 @@
                 =< 8 nil
                 list->
                   {} $ :style ui/row
-                  ->> members $ map
-                    fn (pair)
+                  ->> members (to-pairs)
+                    map $ fn (pair)
                       let[] (k username) pair $ [] k
                         div
                           {} $ :style
@@ -358,12 +362,13 @@
                               :border-radius "\"16px"
                               :margin "\"0 4px"
                           <> username
+                    set->list
               =< nil 48
               div ({})
                 button
                   {}
                     :style $ merge ui/button
-                    :on-click $ fn (e d! m!)
+                    :on-click $ fn (e d!)
                       .replace js/location $ str js/location.origin "\"?time=" (.now js/Date)
                   <> "\"Refresh"
                 =< 8 nil
@@ -371,7 +376,7 @@
                   {}
                     :style $ merge ui/button
                       {} (:color :red) (:border-color :red)
-                    :on-click $ fn (e dispatch! mutate!) (dispatch! :user/log-out nil)
+                    :on-click $ fn (e dispatch!) (dispatch! :user/log-out nil)
                       .removeItem js/localStorage $ :storage-key config/site
                   <> "\"Log out"
       :proc $ quote ()
@@ -405,10 +410,11 @@
             let-sugar
                   [] username password
                   , op-data
-                maybe-user $ find
-                  fn (user)
-                    and $ = username (:name user)
+                maybe-user $ ->>
                   vals $ :users db
+                  set->list
+                  find $ fn (user)
+                    and $ = username (:name user)
               update-in db ([] :sessions sid)
                 fn (session)
                   if (some? maybe-user)
@@ -467,12 +473,10 @@
                 op-id $ id!
                 op-time $ unix-time!
               if config/dev? $ println |Dispatch! (str op) op-data sid
-              try
-                cond
-                    = op :effect/persist
-                    persist-db!
-                  :else $ reset! *reel (reel-reducer @*reel updater op op-data sid op-id op-time)
-                catch js/Error error $ js/console.error error
+              cond
+                  = op :effect/persist
+                  persist-db!
+                true $ reset! *reel (reel-reducer @*reel updater op op-data sid op-id op-time)
         |main! $ quote
           defn main! ()
             println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
@@ -486,8 +490,9 @@
             {}
               :on-open $ fn (sid socket) (dispatch! :session/connect nil sid) (js/console.info "|New client.")
               :on-data $ fn (sid action)
-                case-default (:kind action) (println "\"unknown data" action)
+                case (:kind action)
                   :op $ dispatch! (:op action) (:data action) sid
+                  (:kind action) (println "\"unknown data" action)
               :on-close $ fn (sid event) (js/console.warn "|Client closed!") (dispatch! :session/disconnect nil sid)
               :on-error $ fn (error) (.error js/console error)
         |sync-clients! $ quote
@@ -525,7 +530,7 @@
               if found? (println "\"Found local EDN data") (println "\"Found no data")
         |persist-db! $ quote
           defn persist-db! () $ let
-              file-content $ pr-str
+              file-content $ write-cirru-edn
                 assoc (:db @*reel) :sessions $ {}
               storage-path storage-file
               backup-path $ get-backup-path!
@@ -581,15 +586,17 @@
           [] cumulo-reel.config :refer $ [] dev?
           [] cumulo-reel.schema :as schema
           [] cumulo-reel.config :as config
+          [] respo-message.comp.messages :refer $ [] comp-messages
       :defs $ {}
         |comp-container $ quote
           defcomp comp-container (states store)
-            let
-                state $ :data states
-                session $ :session store
-                router $ :router store
-                router-data $ :data router
-              if (nil? store) (comp-offline)
+            if (nil? store) (comp-offline)
+              let
+                  state $ :data
+                    either states $ {}
+                  session $ either (:session store) ({})
+                  router $ either (:router store) ({})
+                  router-data $ either (:data router) ({})
                 div
                   {} $ :style (merge ui/global ui/fullscreen ui/column)
                   comp-navigation (:logged-in? store) (:count store)
@@ -598,16 +605,16 @@
                       :home $ <> "\"Home"
                       :profile $ comp-profile (:user store) (:data router)
                       <> router
-                    comp-login $ >> states :login
+                    comp-login $ >>
+                      either states $ {}
+                      , :login
                   comp-status-color $ :color store
                   when dev? $ comp-inspect |Store store
                     {} (:bottom 0) (:left 0) (:max-width |100%)
-                  ;
-                    [] respo-message.comp.messages :refer $ [] comp-messages
-                    ; comp-messages
-                      get-in store $ [] :session :messages
-                      {}
-                      fn (info d! m!) (d! :session/remove-message info)
+                  comp-messages
+                    get-in store $ [] :session :messages
+                    {}
+                    fn (info d!) (d! :session/remove-message info)
                   when dev? $ comp-reel (:reel-length store) ({})
         |comp-offline $ quote
           defcomp comp-offline () $ div

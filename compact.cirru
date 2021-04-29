@@ -2,7 +2,7 @@
 {} (:package |cumulo-reel)
   :configs $ {} (:init-fn |cumulo-reel.client/main!) (:reload-fn |cumulo-reel.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
-    :version |0.0.1
+    :version |0.0.2
   :files $ {}
     |cumulo-reel.updater $ {}
       :ns $ quote
@@ -164,7 +164,7 @@
                 , nil
         |twig-members $ quote
           defn twig-members (sessions users)
-            ->> sessions (to-pairs)
+            -> sessions (to-pairs)
               map $ fn (pair)
                 let[] (k session) pair $ [] k
                   get-in users $ [] (:user-id session) :name
@@ -217,14 +217,14 @@
           [] respo.comp.space :refer $ [] =<
       :defs $ {}
         |comp-reel $ quote
-          defcomp comp-reel (count addional-styles)
+          defcomp comp-reel (size addional-styles)
             div
               {} $ :style
                 merge
                   {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
                     :color $ hsl 0 0 60
                   , addional-styles
-              <> (str |Length: count) nil
+              <> (str |Length: size) nil
               =< 8 nil
               span $ {} (:inner-text |Reset) (:style style-click)
                 :on $ {}
@@ -352,7 +352,7 @@
                 =< 8 nil
                 list->
                   {} $ :style ui/row
-                  ->> members (to-pairs)
+                  -> members (to-pairs)
                     map $ fn (pair)
                       let[] (k username) pair $ [] k
                         div
@@ -410,7 +410,7 @@
             let-sugar
                   [] username password
                   , op-data
-                maybe-user $ ->>
+                maybe-user $ ->
                   vals $ :users db
                   set->list
                   find $ fn (user)
@@ -436,9 +436,9 @@
                   [] username password
                   , op-data
                 maybe-user $ find
+                  vals $ :users db
                   fn (user)
                     = username $ :name user
-                  vals $ :users db
               if (some? maybe-user)
                 update-in db ([] :sessions sid :messages)
                   fn (messages)

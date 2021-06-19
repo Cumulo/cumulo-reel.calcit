@@ -12,8 +12,16 @@
         |updater $ quote
           defn updater (db op op-data sid op-id op-time)
             let
-                f $ case op (:session/connect session/connect) (:session/disconnect session/disconnect) (:session/remove-message session/remove-message) (:user/log-in user/log-in) (:user/sign-up user/sign-up) (:user/log-out user/log-out) (:router/change router/change)
-                  op $ do (println "|Unknown op:" op) identity
+                f $ case-default op
+                  do (println "|Unknown op:" op)
+                    fn (db & args) db
+                  :session/connect session/connect
+                  :session/disconnect session/disconnect
+                  :session/remove-message session/remove-message
+                  :user/log-in user/log-in
+                  :user/sign-up user/sign-up
+                  :user/log-out user/log-out
+                  :router/change router/change
               f db op-data sid op-id op-time
       :proc $ quote ()
     |cumulo-reel.core $ {}
@@ -23,7 +31,7 @@
       :defs $ {}
         |play-records $ quote
           defn play-records (db records updater)
-            if (empty? records) db $ let-sugar
+            if (&list:empty? records) db $ let-sugar
                   [] op op-data sid op-id op-time
                   first records
                 next-db $ updater db op op-data sid op-id op-time
@@ -32,7 +40,8 @@
           defn reel-reducer (reel updater op op-data sid op-id op-time)
             if
               starts-with? (str op) |:reel/
-              merge reel $ case op
+              merge reel $ case-default op
+                do (println "|Unknown op:" op) reel
                 :reel/reset $ {}
                   :records $ []
                   :db $ :base reel
@@ -40,13 +49,12 @@
                   :records $ []
                   :base $ :db reel
                   :merged? true
-                op $ do (println "|Unknown op:" op) reel
               let
                   msg-pack $ [] op op-data sid op-id op-time
                 -> reel
                   update :records $ fn (records)
                     if dev? (conj records msg-pack) records
-                  assoc :db $ updater (:db reel) op op-data sid op-id op-time
+                  assoc :db $ updater (&map:get reel :db) op op-data sid op-id op-time
         |reel-schema $ quote
           def reel-schema $ {} (:base nil) (:db nil)
             :records $ []
@@ -54,7 +62,7 @@
         |refresh-reel $ quote
           defn refresh-reel (reel base updater)
             let
-                next-base $ if (:merged? reel) (:base reel) base
+                next-base $ if (&map:get reel :merged?) (:base reel) base
               -> reel (assoc :base next-base)
                 assoc :db $ play-records next-base (:records reel) updater
       :proc $ quote ()
@@ -133,8 +141,8 @@
           defn on-submit (username password signup?)
             fn (e dispatch!)
               dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
-              .setItem js/localStorage (:storage-key config/site)
-                write-cirru-edn $ [] username password
+              .!setItem js/localStorage (:storage-key config/site)
+                format-cirru-edn $ [] username password
       :proc $ quote ()
     |cumulo-reel.twig.container $ {}
       :ns $ quote
@@ -285,7 +293,7 @@
             connect!
             add-watch *store :changes $ fn (store prev) (render-app! render!)
             add-watch *states :changes $ fn (states prev) (render-app! render!)
-            .addEventListener js/window "\"visibilitychange" $ fn (event)
+            .!addEventListener js/window "\"visibilitychange" $ fn (event)
               when
                 and (nil? @*store) (= "\"visible" js/document.visibilityState)
                 connect!
@@ -352,7 +360,7 @@
                 =< 8 nil
                 list->
                   {} $ :style ui/row
-                  -> members (to-pairs)
+                  -> members (.to-list)
                     map $ fn (pair)
                       let[] (k username) pair $ [] k
                         div
@@ -362,7 +370,6 @@
                               :border-radius "\"16px"
                               :margin "\"0 4px"
                           <> username
-                    set->list
               =< nil 48
               div ({})
                 button
@@ -403,7 +410,7 @@
       :ns $ quote
         ns cumulo-reel.updater.user $ :require
           [] cumulo-util.core :refer $ [] find-first
-          [] "\"md5" :as md5
+          [] "\"md5" :default md5
       :defs $ {}
         |log-in $ quote
           defn log-in (db op-data sid op-id op-time)
@@ -412,14 +419,14 @@
                   , op-data
                 maybe-user $ ->
                   vals $ :users db
-                  set->list
+                  .to-list
                   find $ fn (user)
                     and $ = username (:name user)
               update-in db ([] :sessions sid)
                 fn (session)
                   if (some? maybe-user)
                     if
-                      = (md5/@ password) (:password maybe-user)
+                      = (md5 password) (:password maybe-user)
                       assoc session :user-id $ :id maybe-user
                       update session :messages $ fn (messages)
                         assoc messages op-id $ {} (:id op-id)
@@ -448,7 +455,7 @@
                   assoc-in ([] :sessions sid :user-id) op-id
                   assoc-in ([] :users op-id)
                     {} (:id op-id) (:name username) (:nickname username)
-                      :password $ md5/@ password
+                      :password $ md5 password
                       :avatar nil
       :proc $ quote ()
     |cumulo-reel.server $ {}
@@ -516,7 +523,7 @@
         |*client-caches $ quote
           defatom *client-caches $ {}
         |on-exit! $ quote
-          defn on-exit! (code) (persist-db!)
+          defn on-exit! (code ? arg) (persist-db!)
             ; println "\"exit code is:" $ pr-str code
             js/process.exit
         |storage-file $ quote
@@ -530,7 +537,7 @@
               if found? (println "\"Found local EDN data") (println "\"Found no data")
         |persist-db! $ quote
           defn persist-db! () $ let
-              file-content $ write-cirru-edn
+              file-content $ format-cirru-edn
                 assoc (:db @*reel) :sessions $ {}
               storage-path storage-file
               backup-path $ get-backup-path!

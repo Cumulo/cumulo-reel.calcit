@@ -1,10 +1,10 @@
 
-import { main_BANG_ } from "./out-page/cumulo-reel.client.js"
+import { main_$x_ } from "./out-page/cumulo-reel.client.js"
 
-main_BANG_()
+main_$x_()
 
 if (import.meta.hot) {
   import.meta.hot.accept('./out-page/cumulo-reel.client.js', (main) => {
-    main.reload_BANG_()
+    main.reload_$x_()
   })
 }

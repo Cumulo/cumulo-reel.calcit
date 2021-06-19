@@ -1,28 +1,60 @@
 
 {} (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.client/main!) (:reload-fn |cumulo-reel.client/reload!)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
     :version |0.0.2
   :files $ {}
-    |cumulo-reel.updater $ {}
+    |cumulo-reel.app.updater.user $ {}
       :ns $ quote
-        ns cumulo-reel.updater $ :require ([] cumulo-reel.updater.session :as session) ([] cumulo-reel.updater.user :as user) ([] cumulo-reel.updater.router :as router) ([] cumulo-reel.schema :as schema)
-          [] respo-message.updater :refer $ [] update-messages
+        ns cumulo-reel.app.updater.user $ :require
+          [] cumulo-util.core :refer $ [] find-first
+          [] "\"md5" :default md5
       :defs $ {}
-        |updater $ quote
-          defn updater (db op op-data sid op-id op-time)
-            let
-                f $ case-default op
-                  do (println "|Unknown op:" op)
-                    fn (db & args) db
-                  :session/connect session/connect
-                  :session/disconnect session/disconnect
-                  :session/remove-message session/remove-message
-                  :user/log-in user/log-in
-                  :user/sign-up user/sign-up
-                  :user/log-out user/log-out
-                  :router/change router/change
-              f db op-data sid op-id op-time
+        |log-in $ quote
+          defn log-in (db op-data sid op-id op-time)
+            let-sugar
+                  [] username password
+                  , op-data
+                maybe-user $ ->
+                  vals $ :users db
+                  .to-list
+                  find $ fn (user)
+                    and $ = username (:name user)
+              update-in db ([] :sessions sid)
+                fn (session)
+                  if (some? maybe-user)
+                    if
+                      = (md5 password) (:password maybe-user)
+                      assoc session :user-id $ :id maybe-user
+                      update session :messages $ fn (messages)
+                        assoc messages op-id $ {} (:id op-id)
+                          :text $ str "|Wrong password for " username
+                    update session :messages $ fn (messages)
+                      assoc messages op-id $ {} (:id op-id)
+                        :text $ str "|No user named: " username
+        |log-out $ quote
+          defn log-out (db op-data sid op-id op-time)
+            assoc-in db ([] :sessions sid :user-id) nil
+        |sign-up $ quote
+          defn sign-up (db op-data sid op-id op-time)
+            let-sugar
+                  [] username password
+                  , op-data
+                maybe-user $ find
+                  vals $ :users db
+                  fn (user)
+                    = username $ :name user
+              if (some? maybe-user)
+                update-in db ([] :sessions sid :messages)
+                  fn (messages)
+                    assoc messages op-id $ {} (:id op-id)
+                      :text $ str "|Name is token: " username
+                -> db
+                  assoc-in ([] :sessions sid :user-id) op-id
+                  assoc-in ([] :users op-id)
+                    {} (:id op-id) (:name username) (:nickname username)
+                      :password $ md5 password
+                      :avatar nil
       :proc $ quote ()
     |cumulo-reel.core $ {}
       :ns $ quote
@@ -66,208 +98,12 @@
               -> reel (assoc :base next-base)
                 assoc :db $ play-records next-base (:records reel) updater
       :proc $ quote ()
-    |cumulo-reel.updater.session $ {}
+    |cumulo-reel.app.client $ {}
       :ns $ quote
-        ns cumulo-reel.updater.session $ :require ([] cumulo-reel.schema :as schema)
-      :defs $ {}
-        |connect $ quote
-          defn connect (db op-data sid op-id op-time)
-            assoc-in db ([] :sessions sid)
-              merge schema/session $ {} (:id sid)
-        |disconnect $ quote
-          defn disconnect (db op-data sid op-id op-time)
-            update db :sessions $ fn (session) (dissoc session sid)
-        |remove-message $ quote
-          defn remove-message (db op-data sid op-id op-time)
-            update-in db ([] :sessions sid :messages)
-              fn (messages)
-                dissoc messages $ :id op-data
-      :proc $ quote ()
-    |cumulo-reel.twig.user $ {}
-      :ns $ quote
-        ns cumulo-reel.twig.user $ :require
-      :defs $ {}
-        |twig-user $ quote
-          defn twig-user (user) (dissoc user :password)
-      :proc $ quote ()
-    |cumulo-reel.comp.login $ {}
-      :ns $ quote
-        ns cumulo-reel.comp.login $ :require
-          [] respo.core :refer $ [] defcomp <> div input button span
-          [] respo.comp.space :refer $ [] =<
-          [] respo.comp.inspect :refer $ [] comp-inspect
-          [] respo-ui.core :as ui
-          [] cumulo-reel.schema :as schema
-          [] cumulo-reel.style :as style
-          [] cumulo-reel.config :as config
-      :defs $ {}
-        |comp-login $ quote
-          defcomp comp-login (states)
-            let
-                cursor $ :cursor states
-                state $ either (:data states) initial-state
-              div
-                {} $ :style (merge ui/flex ui/center)
-                div ({})
-                  div
-                    {} $ :style ({})
-                    div ({})
-                      input $ {} (:placeholder |Username)
-                        :value $ :username state
-                        :style ui/input
-                        :on-input $ fn (e d!)
-                          d! cursor $ assoc state :username (:value e)
-                    =< nil 8
-                    div ({})
-                      input $ {} (:placeholder |Password)
-                        :value $ :password state
-                        :style ui/input
-                        :on-input $ fn (e d!)
-                          d! cursor $ assoc state :password (:value e)
-                  =< nil 8
-                  div
-                    {} $ :style
-                      {} $ :text-align :right
-                    span $ {} (:inner-text "|Sign up")
-                      :style $ merge style/link
-                      :on-click $ on-submit (:username state) (:password state) true
-                    =< 8 nil
-                    span $ {} (:inner-text "|Log in")
-                      :style $ merge style/link
-                      :on-click $ on-submit (:username state) (:password state) false
-        |initial-state $ quote
-          def initial-state $ {} (:username |) (:password |)
-        |on-submit $ quote
-          defn on-submit (username password signup?)
-            fn (e dispatch!)
-              dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
-              .!setItem js/localStorage (:storage-key config/site)
-                format-cirru-edn $ [] username password
-      :proc $ quote ()
-    |cumulo-reel.twig.container $ {}
-      :ns $ quote
-        ns cumulo-reel.twig.container $ :require
-          [] cumulo-reel.twig.user :refer $ [] twig-user
-          [] "\"randomcolor" :as color
-          [] memof.alias :refer $ [] memof-call
-      :defs $ {}
-        |twig-container $ quote
-          defn twig-container (db session records)
-            let
-                logged-in? $ some? (:user-id session)
-                router $ either (:router session) ({})
-                base-data $ {} (:logged-in? logged-in?) (:session session)
-                  :reel-length $ count records
-              merge base-data $ if logged-in?
-                {}
-                  :user $ memof-call twig-user
-                    get-in db $ [] :users (:user-id session)
-                  :router $ assoc router :data
-                    case (:name router)
-                      :home $ :pages db
-                      :profile $ memof-call twig-members (:sessions db) (:users db)
-                      (:name router) ({})
-                  :count $ count (:sessions db)
-                  :color $ color/randomColor
-                , nil
-        |twig-members $ quote
-          defn twig-members (sessions users)
-            -> sessions (to-pairs)
-              map $ fn (pair)
-                let[] (k session) pair $ [] k
-                  get-in users $ [] (:user-id session) :name
-              pairs-map
-      :proc $ quote ()
-    |cumulo-reel.comp.navigation $ {}
-      :ns $ quote
-        ns cumulo-reel.comp.navigation $ :require
-          [] respo.util.format :refer $ [] hsl
-          [] respo-ui.core :as ui
-          [] respo.comp.space :refer $ [] =<
-          [] respo.core :refer $ [] defcomp <> span div
-          [] cumulo-reel.config :as config
-      :defs $ {}
-        |comp-navigation $ quote
-          defcomp comp-navigation (logged-in? count-members)
-            div
-              {} $ :style
-                merge ui/row-center $ {} (:height 48) (:justify-content :space-between) (:padding "|0 16px") (:font-size 16)
-                  :border-bottom $ str "|1px solid " (hsl 0 0 0 0.1)
-                  :font-family ui/font-fancy
-              div
-                {}
-                  :on-click $ fn (e d!)
-                    d! :router/change $ {} (:name :home)
-                  :style $ {} (:cursor :pointer)
-                <> (:title config/site) nil
-              div
-                {}
-                  :style $ {} (:cursor |pointer)
-                  :on-click $ fn (e d!)
-                    d! :router/change $ {} (:name :profile)
-                <> $ if logged-in? |Me |Guest
-                =< 8 nil
-                <> count-members
-      :proc $ quote ()
-    |cumulo-reel.updater.router $ {}
-      :ns $ quote (ns cumulo-reel.updater.router)
-      :defs $ {}
-        |change $ quote
-          defn change (db op-data sid op-id op-time)
-            assoc-in db ([] :sessions sid :router) op-data
-      :proc $ quote ()
-    |cumulo-reel.comp.reel $ {}
-      :ns $ quote
-        ns cumulo-reel.comp.reel $ :require
-          [] respo.util.format :refer $ [] hsl
-          [] respo-ui.core :as ui
-          [] respo.core :refer $ [] defcomp <> span button div
-          [] respo.comp.space :refer $ [] =<
-      :defs $ {}
-        |comp-reel $ quote
-          defcomp comp-reel (size addional-styles)
-            div
-              {} $ :style
-                merge
-                  {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
-                    :color $ hsl 0 0 60
-                  , addional-styles
-              <> (str |Length: size) nil
-              =< 8 nil
-              span $ {} (:inner-text |Reset) (:style style-click)
-                :on $ {}
-                  :click $ fn (e d!) (d! :reel/reset nil)
-              =< 8 nil
-              span $ {} (:inner-text |Merge) (:style style-click)
-                :on $ {}
-                  :click $ fn (e d!) (d! :reel/merge nil)
-              =< 8 nil
-              span $ {} (:inner-text |Persist) (:style style-click)
-                :on $ {}
-                  :click $ fn (e d!) (d! :effect/persist nil)
-        |style-click $ quote
-          def style-click $ {} (:cursor :pointer)
-            :color $ hsl 200 80 80
-            :font-size :12
-            :text-decoration :underline
-      :proc $ quote ()
-    |cumulo-reel.style $ {}
-      :ns $ quote
-        ns cumulo-reel.style $ :require
-          [] respo.util.format :refer $ [] hsl
-          [] respo-ui.core :as ui
-      :defs $ {}
-        |link $ quote
-          def link $ {} (:text-decoration :underline) (:cursor :pointer)
-            :color $ hsl 240 80 80
-            :font-family ui/font-fancy
-      :proc $ quote ()
-    |cumulo-reel.client $ {}
-      :ns $ quote
-        ns cumulo-reel.client $ :require
+        ns cumulo-reel.app.client $ :require
           [] respo.core :refer $ [] render! clear-cache! realize-ssr!
           [] respo.cursor :refer $ [] update-states
-          [] cumulo-reel.comp.container :refer $ [] comp-container
+          [] cumulo-reel.app.comp.container :refer $ [] comp-container
           [] cljs.reader :refer $ [] read-string
           [] cumulo-reel.schema :as schema
           [] cumulo-reel.config :as config
@@ -334,9 +170,270 @@
         |mount-target $ quote
           def mount-target $ .querySelector js/document |.app
       :proc $ quote ()
-    |cumulo-reel.comp.profile $ {}
+    |cumulo-reel.app.comp.navigation $ {}
       :ns $ quote
-        ns cumulo-reel.comp.profile $ :require
+        ns cumulo-reel.app.comp.navigation $ :require
+          [] respo.util.format :refer $ [] hsl
+          [] respo-ui.core :as ui
+          [] respo.comp.space :refer $ [] =<
+          [] respo.core :refer $ [] defcomp <> span div
+          [] cumulo-reel.config :as config
+      :defs $ {}
+        |comp-navigation $ quote
+          defcomp comp-navigation (logged-in? count-members)
+            div
+              {} $ :style
+                merge ui/row-center $ {} (:height 48) (:justify-content :space-between) (:padding "|0 16px") (:font-size 16)
+                  :border-bottom $ str "|1px solid " (hsl 0 0 0 0.1)
+                  :font-family ui/font-fancy
+              div
+                {}
+                  :on-click $ fn (e d!)
+                    d! :router/change $ {} (:name :home)
+                  :style $ {} (:cursor :pointer)
+                <> (:title config/site) nil
+              div
+                {}
+                  :style $ {} (:cursor |pointer)
+                  :on-click $ fn (e d!)
+                    d! :router/change $ {} (:name :profile)
+                <> $ if logged-in? |Me |Guest
+                =< 8 nil
+                <> count-members
+      :proc $ quote ()
+    |cumulo-reel.app.comp.container $ {}
+      :ns $ quote
+        ns cumulo-reel.app.comp.container $ :require
+          [] hsl.core :refer $ [] hsl
+          [] respo-ui.core :as ui
+          [] respo.core :refer $ [] defcomp <> div span >> button
+          [] respo.comp.inspect :refer $ [] comp-inspect
+          [] respo.comp.space :refer $ [] =<
+          [] cumulo-reel.app.comp.navigation :refer $ [] comp-navigation
+          [] cumulo-reel.app.comp.profile :refer $ [] comp-profile
+          [] cumulo-reel.app.comp.login :refer $ [] comp-login
+          [] cumulo-reel.comp.reel :refer $ [] comp-reel
+          [] cumulo-reel.config :refer $ [] dev?
+          [] cumulo-reel.schema :as schema
+          [] cumulo-reel.config :as config
+          [] respo-message.comp.messages :refer $ [] comp-messages
+      :defs $ {}
+        |comp-container $ quote
+          defcomp comp-container (states store)
+            if (nil? store) (comp-offline)
+              let
+                  state $ :data
+                    either states $ {}
+                  session $ either (:session store) ({})
+                  router $ either (:router store) ({})
+                  router-data $ either (:data router) ({})
+                div
+                  {} $ :style (merge ui/global ui/fullscreen ui/column)
+                  comp-navigation (:logged-in? store) (:count store)
+                  if (:logged-in? store)
+                    case (:name router)
+                      :home $ <> "\"Home"
+                      :profile $ comp-profile (:user store) (:data router)
+                      <> router
+                    comp-login $ >>
+                      either states $ {}
+                      , :login
+                  comp-status-color $ :color store
+                  when dev? $ comp-inspect |Store store
+                    {} (:bottom 0) (:left 0) (:max-width |100%)
+                  comp-messages
+                    get-in store $ [] :session :messages
+                    {}
+                    fn (info d!) (d! :session/remove-message info)
+                  when dev? $ comp-reel (:reel-length store) ({})
+        |comp-offline $ quote
+          defcomp comp-offline () $ div
+            {} $ :style
+              merge ui/global ui/fullscreen ui/column-dispersive $ {}
+                :background-color $ :theme config/site
+            div $ {}
+              :style $ {} (:height 0)
+            div $ {}
+              :style $ {}
+                :background-image $ str "\"url(" (:icon config/site) "\")"
+                :width 128
+                :height 128
+                :background-size :contain
+            div
+              {}
+                :style $ {} (:cursor :pointer) (:line-height "\"32px")
+                :on-click $ fn (e d!) (d! :effect/connect nil)
+              <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
+        |comp-status-color $ quote
+          defcomp comp-status-color (color)
+            div $ {}
+              :style $ let
+                  size 24
+                {} (:width size) (:height size) (:position :absolute) (:bottom 60) (:left 8) (:background-color color) (:border-radius "\"50%") (:opacity 0.6) (:pointer-events :none)
+        |style-body $ quote
+          def style-body $ {} (:padding "|8px 16px")
+      :proc $ quote ()
+    |cumulo-reel.app.comp.login $ {}
+      :ns $ quote
+        ns cumulo-reel.app.comp.login $ :require
+          [] respo.core :refer $ [] defcomp <> div input button span
+          [] respo.comp.space :refer $ [] =<
+          [] respo.comp.inspect :refer $ [] comp-inspect
+          [] respo-ui.core :as ui
+          [] cumulo-reel.schema :as schema
+          [] cumulo-reel.style :as style
+          [] cumulo-reel.config :as config
+      :defs $ {}
+        |comp-login $ quote
+          defcomp comp-login (states)
+            let
+                cursor $ :cursor states
+                state $ either (:data states) initial-state
+              div
+                {} $ :style (merge ui/flex ui/center)
+                div ({})
+                  div
+                    {} $ :style ({})
+                    div ({})
+                      input $ {} (:placeholder |Username)
+                        :value $ :username state
+                        :style ui/input
+                        :on-input $ fn (e d!)
+                          d! cursor $ assoc state :username (:value e)
+                    =< nil 8
+                    div ({})
+                      input $ {} (:placeholder |Password)
+                        :value $ :password state
+                        :style ui/input
+                        :on-input $ fn (e d!)
+                          d! cursor $ assoc state :password (:value e)
+                  =< nil 8
+                  div
+                    {} $ :style
+                      {} $ :text-align :right
+                    span $ {} (:inner-text "|Sign up")
+                      :style $ merge style/link
+                      :on-click $ on-submit (:username state) (:password state) true
+                    =< 8 nil
+                    span $ {} (:inner-text "|Log in")
+                      :style $ merge style/link
+                      :on-click $ on-submit (:username state) (:password state) false
+        |initial-state $ quote
+          def initial-state $ {} (:username |) (:password |)
+        |on-submit $ quote
+          defn on-submit (username password signup?)
+            fn (e dispatch!)
+              dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
+              .!setItem js/localStorage (:storage-key config/site)
+                format-cirru-edn $ [] username password
+      :proc $ quote ()
+    |cumulo-reel.app.updater.session $ {}
+      :ns $ quote
+        ns cumulo-reel.app.updater.session $ :require ([] cumulo-reel.schema :as schema)
+      :defs $ {}
+        |connect $ quote
+          defn connect (db op-data sid op-id op-time)
+            assoc-in db ([] :sessions sid)
+              merge schema/session $ {} (:id sid)
+        |disconnect $ quote
+          defn disconnect (db op-data sid op-id op-time)
+            update db :sessions $ fn (session) (dissoc session sid)
+        |remove-message $ quote
+          defn remove-message (db op-data sid op-id op-time)
+            update-in db ([] :sessions sid :messages)
+              fn (messages)
+                dissoc messages $ :id op-data
+      :proc $ quote ()
+    |cumulo-reel.app.twig.user $ {}
+      :ns $ quote
+        ns cumulo-reel.app.twig.user $ :require
+      :defs $ {}
+        |twig-user $ quote
+          defn twig-user (user) (dissoc user :password)
+      :proc $ quote ()
+    |cumulo-reel.app.twig.container $ {}
+      :ns $ quote
+        ns cumulo-reel.app.twig.container $ :require
+          [] cumulo-reel.app.twig.user :refer $ [] twig-user
+          [] "\"randomcolor" :as color
+          [] memof.alias :refer $ [] memof-call
+      :defs $ {}
+        |twig-container $ quote
+          defn twig-container (db session records)
+            let
+                logged-in? $ some? (:user-id session)
+                router $ either (:router session) ({})
+                base-data $ {} (:logged-in? logged-in?) (:session session)
+                  :reel-length $ count records
+              merge base-data $ if logged-in?
+                {}
+                  :user $ memof-call twig-user
+                    get-in db $ [] :users (:user-id session)
+                  :router $ assoc router :data
+                    case (:name router)
+                      :home $ :pages db
+                      :profile $ memof-call twig-members (:sessions db) (:users db)
+                      (:name router) ({})
+                  :count $ count (:sessions db)
+                  :color $ color/randomColor
+                , nil
+        |twig-members $ quote
+          defn twig-members (sessions users)
+            -> sessions (to-pairs)
+              map $ fn (pair)
+                let[] (k session) pair $ [] k
+                  get-in users $ [] (:user-id session) :name
+              pairs-map
+      :proc $ quote ()
+    |cumulo-reel.comp.reel $ {}
+      :ns $ quote
+        ns cumulo-reel.comp.reel $ :require
+          [] respo.util.format :refer $ [] hsl
+          [] respo-ui.core :as ui
+          [] respo.core :refer $ [] defcomp <> span button div
+          [] respo.comp.space :refer $ [] =<
+      :defs $ {}
+        |comp-reel $ quote
+          defcomp comp-reel (size addional-styles)
+            div
+              {} $ :style
+                merge
+                  {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
+                    :color $ hsl 0 0 60
+                  , addional-styles
+              <> (str |Length: size) nil
+              =< 8 nil
+              span $ {} (:inner-text |Reset) (:style style-click)
+                :on $ {}
+                  :click $ fn (e d!) (d! :reel/reset nil)
+              =< 8 nil
+              span $ {} (:inner-text |Merge) (:style style-click)
+                :on $ {}
+                  :click $ fn (e d!) (d! :reel/merge nil)
+              =< 8 nil
+              span $ {} (:inner-text |Persist) (:style style-click)
+                :on $ {}
+                  :click $ fn (e d!) (d! :effect/persist nil)
+        |style-click $ quote
+          def style-click $ {} (:cursor :pointer)
+            :color $ hsl 200 80 80
+            :font-size :12
+            :text-decoration :underline
+      :proc $ quote ()
+    |cumulo-reel.style $ {}
+      :ns $ quote
+        ns cumulo-reel.style $ :require
+          [] respo.util.format :refer $ [] hsl
+          [] respo-ui.core :as ui
+      :defs $ {}
+        |link $ quote
+          def link $ {} (:text-decoration :underline) (:cursor :pointer)
+            :color $ hsl 240 80 80
+            :font-family ui/font-fancy
+      :proc $ quote ()
+    |cumulo-reel.app.comp.profile $ {}
+      :ns $ quote
+        ns cumulo-reel.app.comp.profile $ :require
           [] respo.util.format :refer $ [] hsl
           [] cumulo-reel.schema :as schema
           [] respo-ui.core :as ui
@@ -406,62 +503,37 @@
         |user $ quote
           def user $ {} (:name nil) (:id nil) (:nickname nil) (:avatar nil) (:password nil)
       :proc $ quote ()
-    |cumulo-reel.updater.user $ {}
-      :ns $ quote
-        ns cumulo-reel.updater.user $ :require
-          [] cumulo-util.core :refer $ [] find-first
-          [] "\"md5" :default md5
+    |cumulo-reel.app.updater.router $ {}
+      :ns $ quote (ns cumulo-reel.app.updater.router)
       :defs $ {}
-        |log-in $ quote
-          defn log-in (db op-data sid op-id op-time)
-            let-sugar
-                  [] username password
-                  , op-data
-                maybe-user $ ->
-                  vals $ :users db
-                  .to-list
-                  find $ fn (user)
-                    and $ = username (:name user)
-              update-in db ([] :sessions sid)
-                fn (session)
-                  if (some? maybe-user)
-                    if
-                      = (md5 password) (:password maybe-user)
-                      assoc session :user-id $ :id maybe-user
-                      update session :messages $ fn (messages)
-                        assoc messages op-id $ {} (:id op-id)
-                          :text $ str "|Wrong password for " username
-                    update session :messages $ fn (messages)
-                      assoc messages op-id $ {} (:id op-id)
-                        :text $ str "|No user named: " username
-        |log-out $ quote
-          defn log-out (db op-data sid op-id op-time)
-            assoc-in db ([] :sessions sid :user-id) nil
-        |sign-up $ quote
-          defn sign-up (db op-data sid op-id op-time)
-            let-sugar
-                  [] username password
-                  , op-data
-                maybe-user $ find
-                  vals $ :users db
-                  fn (user)
-                    = username $ :name user
-              if (some? maybe-user)
-                update-in db ([] :sessions sid :messages)
-                  fn (messages)
-                    assoc messages op-id $ {} (:id op-id)
-                      :text $ str "|Name is token: " username
-                -> db
-                  assoc-in ([] :sessions sid :user-id) op-id
-                  assoc-in ([] :users op-id)
-                    {} (:id op-id) (:name username) (:nickname username)
-                      :password $ md5 password
-                      :avatar nil
+        |change $ quote
+          defn change (db op-data sid op-id op-time)
+            assoc-in db ([] :sessions sid :router) op-data
       :proc $ quote ()
-    |cumulo-reel.server $ {}
+    |cumulo-reel.app.updater $ {}
       :ns $ quote
-        ns cumulo-reel.server $ :require ([] cumulo-reel.schema :as schema)
-          [] cumulo-reel.updater :refer $ [] updater
+        ns cumulo-reel.app.updater $ :require ([] cumulo-reel.app.updater.session :as session) ([] cumulo-reel.app.updater.user :as user) ([] cumulo-reel.app.updater.router :as router) ([] cumulo-reel.schema :as schema)
+          [] respo-message.updater :refer $ [] update-messages
+      :defs $ {}
+        |updater $ quote
+          defn updater (db op op-data sid op-id op-time)
+            let
+                f $ case-default op
+                  do (println "|Unknown op:" op)
+                    fn (db & args) db
+                  :session/connect session/connect
+                  :session/disconnect session/disconnect
+                  :session/remove-message session/remove-message
+                  :user/log-in user/log-in
+                  :user/sign-up user/sign-up
+                  :user/log-out user/log-out
+                  :router/change router/change
+              f db op-data sid op-id op-time
+      :proc $ quote ()
+    |cumulo-reel.app.server $ {}
+      :ns $ quote
+        ns cumulo-reel.app.server $ :require ([] cumulo-reel.schema :as schema)
+          [] cumulo-reel.app.updater :refer $ [] updater
           [] cljs.reader :refer $ [] read-string
           [] cumulo-reel.core :refer $ [] reel-reducer refresh-reel reel-schema
           [] "\"fs" :as fs
@@ -469,7 +541,7 @@
           [] cumulo-reel.config :as config
           [] cumulo-util.file :refer $ [] write-mildly! get-backup-path! merge-local-edn!
           [] cumulo-util.core :refer $ [] id! repeat! unix-time! delay!
-          [] cumulo-reel.twig.container :refer $ [] twig-container
+          [] cumulo-reel.app.twig.container :refer $ [] twig-container
           [] recollect.diff :refer $ [] diff-twig
           [] ws-edn.server :refer $ [] wss-serve! wss-send! wss-each!
           [] recollect.twig :refer $ [] new-twig-loop! clear-twig-caches!
@@ -561,12 +633,6 @@
         ns cumulo-reel.config $ :require
           [] cumulo-util.core :refer $ [] get-env!
       :defs $ {}
-        |cdn? $ quote
-          def cdn? $ cond
-              exists? js/window
-              , false
-            (exists? js/process) (= "\"true" js/process.env.cdn)
-            :else false
         |dev? $ quote
           def dev? $ let
               debug? true
@@ -577,76 +643,4 @@
               true true
         |site $ quote
           def site $ {} (:port 5021) (:title "\"Cumulo") (:icon "\"http://cdn.tiye.me/logo/cumulo.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/cumulo-reel/") (:theme "\"#eeeeff") (:storage-key "\"reel-storage") (:storage-file "\"storage.cirru")
-      :proc $ quote ()
-    |cumulo-reel.comp.container $ {}
-      :ns $ quote
-        ns cumulo-reel.comp.container $ :require
-          [] hsl.core :refer $ [] hsl
-          [] respo-ui.core :as ui
-          [] respo.core :refer $ [] defcomp <> div span >> button
-          [] respo.comp.inspect :refer $ [] comp-inspect
-          [] respo.comp.space :refer $ [] =<
-          [] cumulo-reel.comp.navigation :refer $ [] comp-navigation
-          [] cumulo-reel.comp.profile :refer $ [] comp-profile
-          [] cumulo-reel.comp.login :refer $ [] comp-login
-          [] cumulo-reel.comp.reel :refer $ [] comp-reel
-          [] cumulo-reel.config :refer $ [] dev?
-          [] cumulo-reel.schema :as schema
-          [] cumulo-reel.config :as config
-          [] respo-message.comp.messages :refer $ [] comp-messages
-      :defs $ {}
-        |comp-container $ quote
-          defcomp comp-container (states store)
-            if (nil? store) (comp-offline)
-              let
-                  state $ :data
-                    either states $ {}
-                  session $ either (:session store) ({})
-                  router $ either (:router store) ({})
-                  router-data $ either (:data router) ({})
-                div
-                  {} $ :style (merge ui/global ui/fullscreen ui/column)
-                  comp-navigation (:logged-in? store) (:count store)
-                  if (:logged-in? store)
-                    case (:name router)
-                      :home $ <> "\"Home"
-                      :profile $ comp-profile (:user store) (:data router)
-                      <> router
-                    comp-login $ >>
-                      either states $ {}
-                      , :login
-                  comp-status-color $ :color store
-                  when dev? $ comp-inspect |Store store
-                    {} (:bottom 0) (:left 0) (:max-width |100%)
-                  comp-messages
-                    get-in store $ [] :session :messages
-                    {}
-                    fn (info d!) (d! :session/remove-message info)
-                  when dev? $ comp-reel (:reel-length store) ({})
-        |comp-offline $ quote
-          defcomp comp-offline () $ div
-            {} $ :style
-              merge ui/global ui/fullscreen ui/column-dispersive $ {}
-                :background-color $ :theme config/site
-            div $ {}
-              :style $ {} (:height 0)
-            div $ {}
-              :style $ {}
-                :background-image $ str "\"url(" (:icon config/site) "\")"
-                :width 128
-                :height 128
-                :background-size :contain
-            div
-              {}
-                :style $ {} (:cursor :pointer) (:line-height "\"32px")
-                :on-click $ fn (e d!) (d! :effect/connect nil)
-              <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
-        |comp-status-color $ quote
-          defcomp comp-status-color (color)
-            div $ {}
-              :style $ let
-                  size 24
-                {} (:width size) (:height size) (:position :absolute) (:bottom 60) (:left 8) (:background-color color) (:border-radius "\"50%") (:opacity 0.6) (:pointer-events :none)
-        |style-body $ quote
-          def style-body $ {} (:padding "|8px 16px")
       :proc $ quote ()

@@ -5,10 +5,10 @@
   },
   "scripts": {
     "watch-server": "cr --emit-js --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/main!",
-    "dev-server": "target=node entry=./server.js yarn webpack",
+    "build-server": "target=node entry=./server.js yarn webpack",
     "server": "node js-out/bundle.js",
     "compile-server": "cr --emit-js --once --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/main!",
-    "compile-page": "cr --emit-js --once",
+    "compile-page": "cr --emit-js --once --emit-path out-page/",
     "watch-page": "cr --emit-js --emit-path out-page/"
   },
   "devDependencies": {

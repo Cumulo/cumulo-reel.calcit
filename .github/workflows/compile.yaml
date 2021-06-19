@@ -36,6 +36,4 @@ jobs:
         && git clone https://github.com/mvc-works/ws-edn.calcit.git
 
     - name: "compiles to js"
-      run: >
-        cr --emit-js --once --emit-path out-page/
-        && cr --emit-js --once --init-fn cumulo-reel.server/main! --reload-fn cumulo-reel.server/reload!
+      run: yarn && yarn compile-page && yarn compile-server && yarn build-server && yarn vite build

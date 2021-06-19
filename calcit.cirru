@@ -4436,4 +4436,4 @@
     :init-fn |cumulo-reel.app.client/main!
     :compact-output? true
     :storage-key |calcit.cirru
-    :version |0.0.2
+    :version |0.0.3

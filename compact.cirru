@@ -2,7 +2,7 @@
 {} (:package |cumulo-reel)
   :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
-    :version |0.0.3
+    :version |0.0.4
   :files $ {}
     |cumulo-reel.app.updater.user $ {}
       :ns $ quote
@@ -57,9 +57,7 @@
                       :avatar nil
       :proc $ quote ()
     |cumulo-reel.core $ {}
-      :ns $ quote
-        ns cumulo-reel.core $ :require
-          [] cumulo-reel.config :refer $ [] dev?
+      :ns $ quote (ns cumulo-reel.core)
       :defs $ {}
         |play-records $ quote
           defn play-records (db records updater)
@@ -69,7 +67,7 @@
                 next-db $ updater db op op-data sid op-id op-time
               recur next-db (rest records) updater
         |reel-reducer $ quote
-          defn reel-reducer (reel updater op op-data sid op-id op-time)
+          defn reel-reducer (reel updater op op-data sid op-id op-time ? dev?)
             if
               starts-with? (str op) |:reel/
               merge reel $ case-default op
@@ -106,7 +104,7 @@
           [] cumulo-reel.app.comp.container :refer $ [] comp-container
           [] cljs.reader :refer $ [] read-string
           [] cumulo-reel.schema :as schema
-          [] cumulo-reel.config :as config
+          [] cumulo-reel.app.config :as config
           [] ws-edn.client :refer $ [] ws-connect! ws-send!
           [] recollect.patch :refer $ [] patch-twig
       :defs $ {}
@@ -177,7 +175,7 @@
           [] respo-ui.core :as ui
           [] respo.comp.space :refer $ [] =<
           [] respo.core :refer $ [] defcomp <> span div
-          [] cumulo-reel.config :as config
+          [] cumulo-reel.app.config :as config
       :defs $ {}
         |comp-navigation $ quote
           defcomp comp-navigation (logged-in? count-members)
@@ -213,9 +211,8 @@
           [] cumulo-reel.app.comp.profile :refer $ [] comp-profile
           [] cumulo-reel.app.comp.login :refer $ [] comp-login
           [] cumulo-reel.comp.reel :refer $ [] comp-reel
-          [] cumulo-reel.config :refer $ [] dev?
           [] cumulo-reel.schema :as schema
-          [] cumulo-reel.config :as config
+          [] cumulo-reel.app.config :as config
           [] respo-message.comp.messages :refer $ [] comp-messages
       :defs $ {}
         |comp-container $ quote
@@ -239,13 +236,13 @@
                       either states $ {}
                       , :login
                   comp-status-color $ :color store
-                  when dev? $ comp-inspect |Store store
-                    {} (:bottom 0) (:left 0) (:max-width |100%)
                   comp-messages
                     get-in store $ [] :session :messages
                     {}
                     fn (info d!) (d! :session/remove-message info)
-                  when dev? $ comp-reel (:reel-length store) ({})
+                  when config/dev? $ comp-inspect |Store store
+                    {} (:bottom 0) (:left 0) (:max-width |100%)
+                  when config/dev? $ comp-reel (:reel-length store) ({})
         |comp-offline $ quote
           defcomp comp-offline () $ div
             {} $ :style
@@ -282,7 +279,7 @@
           [] respo-ui.core :as ui
           [] cumulo-reel.schema :as schema
           [] cumulo-reel.style :as style
-          [] cumulo-reel.config :as config
+          [] cumulo-reel.app.config :as config
       :defs $ {}
         |comp-login $ quote
           defcomp comp-login (states)
@@ -431,6 +428,16 @@
             :color $ hsl 240 80 80
             :font-family ui/font-fancy
       :proc $ quote ()
+    |cumulo-reel.app.config $ {}
+      :ns $ quote
+        ns cumulo-reel.app.config $ :require
+          [] cumulo-util.core :refer $ [] get-env!
+      :defs $ {}
+        |dev? $ quote
+          def dev? $ = "\"dev" (get-env "\"env")
+        |site $ quote
+          def site $ {} (:port 5021) (:title "\"Cumulo") (:icon "\"http://cdn.tiye.me/logo/cumulo.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/cumulo-reel/") (:theme "\"#eeeeff") (:storage-key "\"reel-storage") (:storage-file "\"storage.cirru")
+      :proc $ quote ()
     |cumulo-reel.app.comp.profile $ {}
       :ns $ quote
         ns cumulo-reel.app.comp.profile $ :require
@@ -439,7 +446,7 @@
           [] respo-ui.core :as ui
           [] respo.core :refer $ [] defcomp list-> <> span div button
           [] respo.comp.space :refer $ [] =<
-          [] cumulo-reel.config :as config
+          [] cumulo-reel.app.config :as config
       :defs $ {}
         |comp-profile $ quote
           defcomp comp-profile (user members)
@@ -538,7 +545,7 @@
           [] cumulo-reel.core :refer $ [] reel-reducer refresh-reel reel-schema
           [] "\"fs" :as fs
           [] "\"path" :as path
-          [] cumulo-reel.config :as config
+          [] cumulo-reel.app.config :as config
           [] cumulo-util.file :refer $ [] write-mildly! get-backup-path! merge-local-edn!
           [] cumulo-util.core :refer $ [] id! repeat! unix-time! delay!
           [] cumulo-reel.app.twig.container :refer $ [] twig-container
@@ -555,7 +562,7 @@
               cond
                   = op :effect/persist
                   persist-db!
-                true $ reset! *reel (reel-reducer @*reel updater op op-data sid op-id op-time)
+                true $ reset! *reel (reel-reducer @*reel updater op op-data sid op-id op-time config/dev?)
         |main! $ quote
           defn main! ()
             println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
@@ -627,20 +634,4 @@
               reset! *reader-reel @*reel
               sync-clients! @*reader-reel
             delay! 0.2 render-loop!
-      :proc $ quote ()
-    |cumulo-reel.config $ {}
-      :ns $ quote
-        ns cumulo-reel.config $ :require
-          [] cumulo-util.core :refer $ [] get-env!
-      :defs $ {}
-        |dev? $ quote
-          def dev? $ let
-              debug? true
-            cond
-                exists? js/window
-                , debug?
-              (exists? js/process) (not= "\"true" js/process.env.release)
-              true true
-        |site $ quote
-          def site $ {} (:port 5021) (:title "\"Cumulo") (:icon "\"http://cdn.tiye.me/logo/cumulo.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/cumulo-reel/") (:theme "\"#eeeeff") (:storage-key "\"reel-storage") (:storage-file "\"storage.cirru")
       :proc $ quote ()

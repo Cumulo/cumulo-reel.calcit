@@ -28,10 +28,10 @@ Client side:
 cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 ```
 
-use `env=dev` to enable dev mode:
+use `mode=dev` to enable dev mode:
 
 ```bash
-env=dev node js-out/bundle.js
+mode=dev node js-out/bundle.js
 ```
 
 ### Workflow

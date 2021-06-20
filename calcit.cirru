@@ -560,7 +560,7 @@
                                   |T $ {} (:type :leaf) (:text |updater) (:id |r1WSmR3hZ) (:by |root) (:at 1507808057996)
                                   |j $ {} (:type :expr) (:id |S1xVBXRnhZ) (:by |root) (:at 1507808059894)
                                     :data $ {}
-                                      |T $ {} (:type :leaf) (:text |&map:get) (:id |ry7HmR3hZ) (:by |B1y7Rc-Zz) (:at 1624105889823)
+                                      |T $ {} (:type :leaf) (:text |&record:get) (:id |ry7HmR3hZ) (:by |B1y7Rc-Zz) (:at 1624195972864)
                                       |j $ {} (:type :leaf) (:text |reel) (:id |B1SB7Rh2b) (:by |root) (:at 1507808061864)
                                       |r $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624104794110) (:text |:db)
                                   |r $ {} (:type :leaf) (:text |op) (:id |SkePSQAh2Z) (:by |root) (:at 1507808063495)
@@ -574,7 +574,7 @@
               |j $ {} (:type :leaf) (:text |reel-schema) (:id |ByG3DbC3n-) (:by |root) (:at 1507807587733)
               |r $ {} (:type :expr) (:id |SkX2vb03n-) (:by |root) (:at 1507807587733)
                 :data $ {}
-                  |T $ {} (:type :leaf) (:text |{}) (:id |HJy_WAnh-) (:by |B1y7Rc-Zz) (:at 1624105898126)
+                  |T $ {} (:type :leaf) (:text |%{}) (:id |HJy_WAnh-) (:by |B1y7Rc-Zz) (:at 1624195884697)
                   |X $ {} (:type :expr) (:id |SkZdOWChnb) (:by |root) (:at 1507807600445)
                     :data $ {}
                       |T $ {} (:type :leaf) (:text |:base) (:id |SkZdOWChnbleaf) (:by |root) (:at 1507807601764)
@@ -593,6 +593,7 @@
                     :data $ {}
                       |T $ {} (:type :leaf) (:text |:merged?) (:id |S1-pdbR22Wleaf) (:by |root) (:at 1507807606629)
                       |j $ {} (:type :leaf) (:text |false) (:id |Hyx1F-AnhW) (:by |root) (:at 1507807608050)
+                  |V $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195887635) (:text |ReelState)
           |refresh-reel $ {} (:type :expr) (:id |S1eKPWAn2Z) (:by |root) (:at 1507807585218)
             :data $ {}
               |T $ {} (:type :leaf) (:text |defn) (:id |ryWFw-Ch2W) (:by |root) (:at 1507807585218)
@@ -645,6 +646,14 @@
                                   |T $ {} (:type :leaf) (:text |:records) (:id |SkYfMCn3Z) (:by |root) (:at 1507807765879)
                                   |j $ {} (:type :leaf) (:text |reel) (:id |Syf0fM03nZ) (:by |root) (:at 1507807767222)
                               |v $ {} (:type :leaf) (:text |updater) (:id |r1ggmfRnh-) (:by |root) (:at 1507807769477)
+          |ReelState $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1624195889172)
+            :data $ {}
+              |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195891799) (:text |defrecord)
+              |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195889172) (:text |ReelState)
+              |r $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195893458) (:text |:base)
+              |v $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195895208) (:text |:db)
+              |x $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195898729) (:text |:records)
+              |y $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624195901174) (:text |:merged?)
         :proc $ {} (:type :expr) (:id |S1QY8b0n3Z) (:by |root) (:at 1507807568560)
           :data $ {}
       |cumulo-reel.app.client $ {}
@@ -3033,7 +3042,7 @@
                   |r $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1624108095805)
                     :data $ {}
                       |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624108095805) (:text |get-env)
-                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624108095805) (:text "|\"env")
+                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624196018232) (:text "|\"mode")
           |site $ {} (:type :expr) (:id |ryy9lUWg0BW) (:by nil) (:at 1500541255553)
             :data $ {}
               |T $ {} (:type :leaf) (:id |Syx9g8-l0B-) (:text |def) (:by |root) (:at 1500541255553)
@@ -4392,4 +4401,4 @@
     :init-fn |cumulo-reel.app.client/main!
     :compact-output? true
     :storage-key |calcit.cirru
-    :version |0.0.4
+    :version |0.0.5

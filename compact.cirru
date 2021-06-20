@@ -2,7 +2,7 @@
 {} (:package |cumulo-reel)
   :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
-    :version |0.0.4
+    :version |0.0.5
   :files $ {}
     |cumulo-reel.app.updater.user $ {}
       :ns $ quote
@@ -84,9 +84,9 @@
                 -> reel
                   update :records $ fn (records)
                     if dev? (conj records msg-pack) records
-                  assoc :db $ updater (&map:get reel :db) op op-data sid op-id op-time
+                  assoc :db $ updater (&record:get reel :db) op op-data sid op-id op-time
         |reel-schema $ quote
-          def reel-schema $ {} (:base nil) (:db nil)
+          def reel-schema $ %{} ReelState (:base nil) (:db nil)
             :records $ []
             :merged? false
         |refresh-reel $ quote
@@ -95,6 +95,7 @@
                 next-base $ if (&map:get reel :merged?) (:base reel) base
               -> reel (assoc :base next-base)
                 assoc :db $ play-records next-base (:records reel) updater
+        |ReelState $ quote (defrecord ReelState :base :db :records :merged?)
       :proc $ quote ()
     |cumulo-reel.app.client $ {}
       :ns $ quote
@@ -434,7 +435,7 @@
           [] cumulo-util.core :refer $ [] get-env!
       :defs $ {}
         |dev? $ quote
-          def dev? $ = "\"dev" (get-env "\"env")
+          def dev? $ = "\"dev" (get-env "\"mode")
         |site $ quote
           def site $ {} (:port 5021) (:title "\"Cumulo") (:icon "\"http://cdn.tiye.me/logo/cumulo.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/cumulo-reel/") (:theme "\"#eeeeff") (:storage-key "\"reel-storage") (:storage-file "\"storage.cirru")
       :proc $ quote ()

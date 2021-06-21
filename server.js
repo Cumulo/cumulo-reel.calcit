@@ -1,10 +1,10 @@
 
-import { main_BANG_ } from "./js-out/cumulo-reel.server.js"
+import { main_$x_ } from "./js-out/cumulo-reel.app.server.js"
 
-main_BANG_()
+main_$x_()
 
 if (import.meta.hot) {
-  import.meta.hot.accept('./js-out/cumulo-reel.server.js', (main) => {
-    main.reload_BANG_()
+  import.meta.hot.accept('./js-out/cumulo-reel.app.server.js', (main) => {
+    main.reload_$x_()
   })
 }

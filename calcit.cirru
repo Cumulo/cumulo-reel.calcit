@@ -616,7 +616,7 @@
                               |T $ {} (:type :leaf) (:text |if) (:id |S1fgfRn3Z) (:by |root) (:at 1507807722454)
                               |j $ {} (:type :expr) (:id |HkQeMRn2Z) (:by |root) (:at 1507807722676)
                                 :data $ {}
-                                  |T $ {} (:type :leaf) (:text |&map:get) (:id |HymGxMC2n-) (:by |B1y7Rc-Zz) (:at 1624104823965)
+                                  |T $ {} (:type :leaf) (:text |&record:get) (:id |HymGxMC2n-) (:by |B1y7Rc-Zz) (:at 1624470595986)
                                   |j $ {} (:type :leaf) (:text |reel) (:id |ByeNeMA22b) (:by |root) (:at 1507807724899)
                                   |r $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624104824681) (:text |:merged?)
                               |r $ {} (:type :expr) (:id |SJvgMAnn-) (:by |root) (:at 1507807726560)
@@ -4337,7 +4337,7 @@
               |v $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1545066692604) (:id |e6-0BvzKyanU)
                 :data $ {}
                   |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1545066692604) (:text |println) (:id |1zbOK2iVfWqb)
-                  |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1545066692604) (:text "||Code updated.") (:id |woGMd_9Q7_do)
+                  |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1624471131986) (:text "||Code updated.") (:id |woGMd_9Q7_do)
               |x $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1545066692604) (:id |m_Mato2valwJ)
                 :data $ {}
                   |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1545066692604) (:text |reset!) (:id |jlkEu98SDbBx)
@@ -4401,4 +4401,4 @@
     :init-fn |cumulo-reel.app.client/main!
     :compact-output? true
     :storage-key |calcit.cirru
-    :version |0.0.5
+    :version |0.0.6

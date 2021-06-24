@@ -2,7 +2,7 @@
 {} (:package |cumulo-reel)
   :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
-    :version |0.0.5
+    :version |0.0.6
   :files $ {}
     |cumulo-reel.app.updater.user $ {}
       :ns $ quote
@@ -92,7 +92,7 @@
         |refresh-reel $ quote
           defn refresh-reel (reel base updater)
             let
-                next-base $ if (&map:get reel :merged?) (:base reel) base
+                next-base $ if (&record:get reel :merged?) (:base reel) base
               -> reel (assoc :base next-base)
                 assoc :db $ play-records next-base (:records reel) updater
         |ReelState $ quote (defrecord ReelState :base :db :records :merged?)

@@ -1,6 +1,6 @@
 
 {} (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.7)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.8)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
   :entries $ {}
     :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!)
@@ -89,13 +89,12 @@
                   router $ either (:router store) ({})
                   router-data $ either (:data router) ({})
                 div
-                  {} $ :style (merge ui/global ui/fullscreen ui/column)
+                  {} $ :class-name (str-spaced css/global css/fullscreen css/column)
                   comp-navigation (:logged-in? store) (:count store)
                   if (:logged-in? store)
-                    case (:name router)
+                    case-default (:name router) (<> router)
                       :home $ <> "\"Home"
                       :profile $ comp-profile (:user store) (:data router)
-                      <> router
                     comp-login $ >>
                       either states $ {}
                       , :login
@@ -127,26 +126,31 @@
               <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
         |comp-status-color $ quote
           defcomp comp-status-color (color)
-            div $ {}
+            div $ {} (:class-name css-status-color)
               :style $ let
                   size 24
-                {} (:width size) (:height size) (:position :absolute) (:bottom 60) (:left 8) (:background-color color) (:border-radius "\"50%") (:opacity 0.6) (:pointer-events :none)
+                {} (:width size) (:height size) (:background-color color)
+        |css-status-color $ quote
+          defstyle css-status-color $ {}
+            "\"$0" $ {} (:position :absolute) (:bottom 60) (:left 8) (:border-radius "\"50%") (:opacity 0.6) (:pointer-events :none)
         |style-body $ quote
           def style-body $ {} (:padding "|8px 16px")
       :ns $ quote
         ns cumulo-reel.app.comp.container $ :require
-          [] hsl.core :refer $ [] hsl
-          [] respo-ui.core :as ui
-          [] respo.core :refer $ [] defcomp <> div span >> button
-          [] respo.comp.inspect :refer $ [] comp-inspect
-          [] respo.comp.space :refer $ [] =<
-          [] cumulo-reel.app.comp.navigation :refer $ [] comp-navigation
-          [] cumulo-reel.app.comp.profile :refer $ [] comp-profile
-          [] cumulo-reel.app.comp.login :refer $ [] comp-login
-          [] cumulo-reel.comp.reel :refer $ [] comp-reel
-          [] cumulo-reel.schema :as schema
-          [] cumulo-reel.app.config :as config
-          [] respo-message.comp.messages :refer $ [] comp-messages
+          hsl.core :refer $ hsl
+          respo-ui.core :as ui
+          respo-ui.css :as css
+          respo.core :refer $ defcomp <> div span >> button
+          respo.css :refer $ defstyle
+          respo.comp.inspect :refer $ comp-inspect
+          respo.comp.space :refer $ =<
+          cumulo-reel.app.comp.navigation :refer $ comp-navigation
+          cumulo-reel.app.comp.profile :refer $ comp-profile
+          cumulo-reel.app.comp.login :refer $ comp-login
+          cumulo-reel.comp.reel :refer $ comp-reel
+          cumulo-reel.schema :as schema
+          cumulo-reel.app.config :as config
+          respo-message.comp.messages :refer $ comp-messages
     |cumulo-reel.app.comp.login $ {}
       :defs $ {}
         |comp-login $ quote
@@ -205,10 +209,7 @@
         |comp-navigation $ quote
           defcomp comp-navigation (logged-in? count-members)
             div
-              {} $ :style
-                merge ui/row-center $ {} (:height 48) (:justify-content :space-between) (:padding "|0 16px") (:font-size 16)
-                  :border-bottom $ str "|1px solid " (hsl 0 0 0 0.1)
-                  :font-family ui/font-fancy
+              {} $ :class-name (str-spaced css/row-center css-nav)
               div
                 {}
                   :on-click $ fn (e d!)
@@ -223,65 +224,74 @@
                 <> $ if logged-in? |Me |Guest
                 =< 8 nil
                 <> count-members
+        |css-nav $ quote
+          defstyle css-nav $ {}
+            "\"$0" $ {} (:height 48) (:justify-content :space-between) (:padding "|0 16px") (:font-size 16)
+              :border-bottom $ str "|1px solid " (hsl 0 0 0 0.1)
+              :font-family ui/font-fancy
       :ns $ quote
         ns cumulo-reel.app.comp.navigation $ :require
-          [] respo.util.format :refer $ [] hsl
-          [] respo-ui.core :as ui
-          [] respo.comp.space :refer $ [] =<
-          [] respo.core :refer $ [] defcomp <> span div
-          [] cumulo-reel.app.config :as config
+          respo.util.format :refer $ hsl
+          respo-ui.core :as ui
+          respo-ui.css :as css
+          respo.comp.space :refer $ =<
+          respo.core :refer $ defcomp <> span div
+          respo.css :refer $ defstyle
+          cumulo-reel.app.config :as config
     |cumulo-reel.app.comp.profile $ {}
       :defs $ {}
         |comp-profile $ quote
           defcomp comp-profile (user members)
             div
-              {} $ :style
-                merge ui/flex $ {} (:padding 16)
+              {} (:class-name css/flex)
+                :style $ {} (:padding 16)
               div
-                {} $ :style
-                  {} (:font-family ui/font-fancy) (:font-size 32) (:font-weight 100)
+                {} (:class-name css/font-fancy)
+                  :style $ {} (:font-size 32) (:font-weight 100)
                 <> $ str "|Hello! " (:name user)
               =< nil 16
               div
-                {} $ :style ui/row
+                {} $ :class-name css/row
                 <> "\"Members:"
                 =< 8 nil
                 list->
-                  {} $ :style ui/row
+                  {} $ :class-name css/row
                   -> members (.to-list)
                     map $ fn (pair)
                       let[] (k username) pair $ [] k
                         div
-                          {} $ :style
-                            {} (:padding "\"0 8px")
-                              :border $ str "\"1px solid " (hsl 0 0 80)
-                              :border-radius "\"16px"
-                              :margin "\"0 4px"
+                          {} $ :class-name css-member-label
                           <> username
               =< nil 48
               div ({})
                 button
-                  {}
-                    :style $ merge ui/button
+                  {} (:class-name css/button)
                     :on-click $ fn (e d!)
-                      .replace js/location $ str js/location.origin "\"?time=" (.now js/Date)
+                      js/location.replace $ str js/location.origin "\"?time=" (.now js/Date)
                   <> "\"Refresh"
                 =< 8 nil
                 button
-                  {}
-                    :style $ merge ui/button
-                      {} (:color :red) (:border-color :red)
+                  {} (:class-name css/button)
+                    :style $ {} (:color :red) (:border-color :red)
                     :on-click $ fn (e dispatch!) (dispatch! :user/log-out nil)
-                      .removeItem js/localStorage $ :storage-key config/site
+                      js/localStorage.removeItem $ :storage-key config/site
                   <> "\"Log out"
+        |css-member-label $ quote
+          defstyle css-member-label $ {}
+            "\"$0" $ {} (:padding "\"0 8px")
+              :border $ str "\"1px solid " (hsl 0 0 80)
+              :border-radius "\"16px"
+              :margin "\"0 4px"
       :ns $ quote
         ns cumulo-reel.app.comp.profile $ :require
-          [] respo.util.format :refer $ [] hsl
-          [] cumulo-reel.schema :as schema
-          [] respo-ui.core :as ui
-          [] respo.core :refer $ [] defcomp list-> <> span div button
-          [] respo.comp.space :refer $ [] =<
-          [] cumulo-reel.app.config :as config
+          respo.util.format :refer $ hsl
+          respo.css :refer $ defstyle
+          cumulo-reel.schema :as schema
+          respo-ui.core :as ui
+          respo-ui.css :as css
+          respo.core :refer $ defcomp list-> <> span div button
+          respo.comp.space :refer $ =<
+          cumulo-reel.app.config :as config
     |cumulo-reel.app.config $ {}
       :defs $ {}
         |dev? $ quote
@@ -535,35 +545,35 @@
         |comp-reel $ quote
           defcomp comp-reel (size addional-styles)
             div
-              {} $ :style
-                merge
-                  {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
-                    :color $ hsl 0 0 60
-                  , addional-styles
+              {} (:class-name css-reel) (:style addional-styles)
               <> (str |Length: size) nil
               =< 8 nil
-              span $ {} (:inner-text |Reset) (:style style-click)
-                :on $ {}
-                  :click $ fn (e d!) (d! :reel/reset nil)
+              span $ {} (:inner-text |Reset) (:class-name css-click)
+                :on-click $ fn (e d!) (d! :reel/reset nil)
               =< 8 nil
-              span $ {} (:inner-text |Merge) (:style style-click)
-                :on $ {}
-                  :click $ fn (e d!) (d! :reel/merge nil)
+              span $ {} (:inner-text |Merge) (:class-name css-click)
+                :on-click $ fn (e d!) (d! :reel/merge nil)
               =< 8 nil
-              span $ {} (:inner-text |Persist) (:style style-click)
-                :on $ {}
-                  :click $ fn (e d!) (d! :effect/persist nil)
-        |style-click $ quote
-          def style-click $ {} (:cursor :pointer)
-            :color $ hsl 200 80 80
-            :font-size :12
-            :text-decoration :underline
+              span $ {} (:inner-text |Persist) (:class-name css-click)
+                :on-click $ fn (e d!) (d! :effect/persist nil)
+        |css-click $ quote
+          defstyle css-click $ {}
+            "\"$0" $ {} (:cursor :pointer)
+              :color $ hsl 200 80 80
+              :font-size :12
+              :text-decoration :underline
+        |css-reel $ quote
+          defstyle css-reel $ {}
+            "\"$0" $ {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
+              :color $ hsl 0 0 60
       :ns $ quote
         ns cumulo-reel.comp.reel $ :require
-          [] respo.util.format :refer $ [] hsl
-          [] respo-ui.core :as ui
-          [] respo.core :refer $ [] defcomp <> span button div
-          [] respo.comp.space :refer $ [] =<
+          respo.util.format :refer $ hsl
+          respo-ui.css :as css
+          respo-ui.core :as ui
+          respo.core :refer $ defcomp <> span button div
+          respo.css :refer $ defstyle
+          respo.comp.space :refer $ =<
     |cumulo-reel.core $ {}
       :defs $ {}
         |ReelState $ quote (defrecord ReelState :base :db :records :merged?)

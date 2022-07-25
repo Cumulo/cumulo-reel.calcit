@@ -295,7 +295,7 @@
     |cumulo-reel.app.config $ {}
       :defs $ {}
         |dev? $ quote
-          def dev? $ = "\"dev" (get-env "\"mode")
+          def dev? $ = "\"dev" (get-env "\"mode" "\"release")
         |site $ quote
           def site $ {} (:port 5021) (:title "\"Cumulo") (:icon "\"http://cdn.tiye.me/logo/cumulo.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/cumulo-reel/") (:theme "\"#eeeeff") (:storage-key "\"reel-storage") (:storage-file "\"storage.cirru")
       :ns $ quote

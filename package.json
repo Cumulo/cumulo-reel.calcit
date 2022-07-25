@@ -1,13 +1,10 @@
 {
   "version": "0.0.8",
   "dependencies": {
-    "@calcit/procs": "^0.5.47"
+    "@calcit/procs": "^0.6.1"
   },
   "scripts": {
     "watch-server": "cr --emit-js --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/reload!",
-    "build-server": "target=node entry=./server.js yarn webpack",
-    "dev-server": "hot=true webpack --watch",
-    "server": "env=dev node js-out/bundle.js",
     "compile-server": "cr --emit-js --once --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/reload!",
     "compile-page": "cr --emit-js --once --emit-path out-page/",
     "watch-page": "cr --emit-js --emit-path out-page/"
@@ -16,7 +13,7 @@
     "md5": "^2.3.0",
     "randomcolor": "^0.6.2",
     "shortid": "^2.2.16",
-    "vite": "^3.0.0",
-    "ws": "^8.8.0"
+    "vite": "^3.0.2",
+    "ws": "^8.8.1"
   }
 }

@@ -1,6 +1,6 @@
 
 {} (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.8)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.9)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
   :entries $ {}
     :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!)
@@ -22,25 +22,30 @@
                 case (:kind data)
                   :patch $ let
                       changes $ :data data
-                    js/console.log "\"Changes" $ to-js-data changes
+                    js/console.log "\"Changes" changes
                     reset! *store $ patch-twig @*store changes
                   (:kind data) (println "\"unknown kind:" data)
         |dispatch! $ quote
-          defn dispatch! (op op-data) (println |Dispatch op op-data)
-            case op
-              :states $ reset! *states (update-states @*states op-data)
-              :effect/connect $ connect!
-              op $ ws-send!
-                {} (:kind :op) (:op op) (:data op-data)
+          defn dispatch! (op ? op-data) (println |Dispatch op op-data)
+            if (list? op)
+              recur $ :: :states op op-data
+              if (tag? op)
+                recur $ :: op op-data
+                tag-match op
+                    :states cursor s
+                    reset! *states $ update-states @*states cursor s
+                  (:effect/connect) (connect!)
+                  _ $ ws-send! op
         |main! $ quote
           defn main! ()
             println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
+            if config/dev? $ load-console-formatter!
             if ssr? $ render-app! realize-ssr!
             render-app! render!
             connect!
             add-watch *store :changes $ fn (store prev) (render-app! render!)
             add-watch *states :changes $ fn (states prev) (render-app! render!)
-            .!addEventListener js/window "\"visibilitychange" $ fn (event)
+            js/window.addEventListener "\"visibilitychange" $ fn (event)
               when
                 and (nil? @*store) (= "\"visible" js/document.visibilityState)
                 connect!
@@ -60,10 +65,12 @@
               , dispatch!
         |simulate-login! $ quote
           defn simulate-login! () $ let
-              raw $ .getItem js/localStorage (:storage-key config/site)
+              raw $ js/localStorage.getItem (:storage-key config/site)
             if (some? raw)
-              do (println "|Found storage.")
-                dispatch! :user/log-in $ parse-cirru-edn raw
+              let
+                  pair $ parse-cirru-edn raw
+                do (println "|Found storage.")
+                  dispatch! $ :: :user/log-in (nth pair 0) (nth pair 1)
               do $ println "|Found no storage."
         |ssr? $ quote
           def ssr? $ some? (.querySelector js/document |meta.respo-ssr)
@@ -102,7 +109,8 @@
                   comp-messages
                     get-in store $ [] :session :messages
                     {}
-                    fn (info d!) (d! :session/remove-message info)
+                    fn (info d!)
+                      d! $ :: :session/remove-message info
                   when config/dev? $ comp-inspect |Store store
                     {} (:bottom 0) (:left 0) (:max-width |100%)
                   when config/dev? $ comp-reel (:reel-length store) ({})
@@ -192,8 +200,8 @@
         |on-submit $ quote
           defn on-submit (username password signup?)
             fn (e dispatch!)
-              dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
-              .!setItem js/localStorage (:storage-key config/site)
+              dispatch! $ if signup? (:: :user/sign-up username password) (:: :user/log-in username password)
+              js/localStorage.setItem (:storage-key config/site)
                 format-cirru-edn $ [] username password
       :ns $ quote
         ns cumulo-reel.app.comp.login $ :require
@@ -316,13 +324,15 @@
           defatom *reel $ merge reel-schema
             {} (:base @*initial-db) (:db @*initial-db)
         |dispatch! $ quote
-          defn dispatch! (op op-data sid)
+          defn dispatch! (op sid)
             let
                 op-id $ generate-id!
                 op-time $ -> (get-time!) (.timestamp)
-              if config/dev? $ println "\"Dispatch!" (str op) op-data sid
-              if (= op :effect/persist) (persist-db!)
-                reset! *reel $ reel-reducer @*reel updater op op-data sid op-id op-time config/dev?
+              if config/dev? $ println "\"Dispatch!" (str op) sid
+              tag-match op
+                  :effect/persist
+                  persist-db!
+                _ $ reset! *reel (reel-reducer @*reel updater op sid op-id op-time config/dev?)
         |get-backup-path! $ quote
           defn get-backup-path! () $ let
               now $ .extract (get-time!)
@@ -363,18 +373,20 @@
         |run-server! $ quote
           defn run-server! (port)
             wss-serve! (&{} :port port)
-              fn (data)
-                key-match data
+              fn (data) (println "\"Data" data)
+                tag-match data
                     :connect sid
-                    do (dispatch! :session/connect nil sid) (println "\"New client.")
+                    do
+                      dispatch! (:: :session/connect) sid
+                      println "\"New client."
                   (:message sid msg)
                     let
                         action $ parse-cirru-edn msg
-                      case-default (:kind action) (println "\"unknown action:" action)
-                        :op $ dispatch! (:op action) (:data action) sid
+                      dispatch! action sid
                   (:disconnect sid)
-                    do (println "\"Client closed!") (dispatch! :session/disconnect nil sid)
-                  _ $ println "\"unknown data:" data
+                    do (println "\"Client closed!")
+                      dispatch! (:: :session/disconnect) sid
+                  _ $ eprintln "\"unknown data:" data
         |storage-file $ quote
           def storage-file $ if (empty? calcit-dirname)
             str calcit-dirname $ :storage-file config/site
@@ -454,19 +466,17 @@
     |cumulo-reel.app.updater $ {}
       :defs $ {}
         |updater $ quote
-          defn updater (db op op-data sid op-id op-time)
-            let
-                f $ case-default op
-                  do (println "|Unknown op:" op)
-                    fn (db & args) db
-                  :session/connect session/connect
-                  :session/disconnect session/disconnect
-                  :session/remove-message session/remove-message
-                  :user/log-in user/log-in
-                  :user/sign-up user/sign-up
-                  :user/log-out user/log-out
-                  :router/change router/change
-              f db op-data sid op-id op-time
+          defn updater (db op sid op-id op-time)
+            tag-match op
+                :session/connect
+                session/connect db sid op-id op-time
+              (:session/disconnect) (session/disconnect db sid op-id op-time)
+              (:session/remove-message op-data) (session/remove-message db op-data sid op-id op-time)
+              (:user/log-in username password) (user/log-in db username password sid op-id op-time)
+              (:user/sign-up username password) (user/sign-up db username password sid op-id op-time)
+              (:user/log-out) (user/log-out db sid op-id op-time)
+              (:router/change data) (router/change db data sid op-id op-time)
+              _ $ do (eprintln "\"Unknown op" op) db
       :ns $ quote
         ns cumulo-reel.app.updater $ :require ([] cumulo-reel.app.updater.session :as session) ([] cumulo-reel.app.updater.user :as user) ([] cumulo-reel.app.updater.router :as router) ([] cumulo-reel.schema :as schema)
           [] respo-message.updater :refer $ [] update-messages
@@ -479,11 +489,11 @@
     |cumulo-reel.app.updater.session $ {}
       :defs $ {}
         |connect $ quote
-          defn connect (db op-data sid op-id op-time)
+          defn connect (db sid op-id op-time)
             assoc-in db ([] :sessions sid)
               merge schema/session $ {} (:id sid)
         |disconnect $ quote
-          defn disconnect (db op-data sid op-id op-time)
+          defn disconnect (db sid op-id op-time)
             update db :sessions $ fn (session) (dissoc session sid)
         |remove-message $ quote
           defn remove-message (db op-data sid op-id op-time)
@@ -495,10 +505,8 @@
     |cumulo-reel.app.updater.user $ {}
       :defs $ {}
         |log-in $ quote
-          defn log-in (db op-data sid op-id op-time)
-            let-sugar
-                  [] username password
-                  , op-data
+          defn log-in (db username password sid op-id op-time)
+            let
                 maybe-user $ -> (:users db) (vals) (.to-list)
                   find $ fn (user)
                     and $ = username (:name user)
@@ -515,13 +523,11 @@
                       assoc messages op-id $ {} (:id op-id)
                         :text $ str "\"No user named: " username
         |log-out $ quote
-          defn log-out (db op-data sid op-id op-time)
+          defn log-out (db sid op-id op-time)
             assoc-in db ([] :sessions sid :user-id) nil
         |sign-up $ quote
-          defn sign-up (db op-data sid op-id op-time)
-            let-sugar
-                  [] username password
-                  , op-data
+          defn sign-up (db username password sid op-id op-time)
+            let
                 maybe-user $ find
                   vals $ :users db
                   fn (user)
@@ -580,28 +586,32 @@
         |play-records $ quote
           defn play-records (db records updater)
             if (&list:empty? records) db $ let-sugar
-                  [] op op-data sid op-id op-time
+                  [] op sid op-id op-time
                   first records
-                next-db $ updater db op op-data sid op-id op-time
+                next-db $ updater db op sid op-id op-time
               recur next-db (rest records) updater
         |reel-reducer $ quote
-          defn reel-reducer (reel updater op op-data sid op-id op-time ? dev?)
-            if (starts-with? op :reel/)
-              merge reel $ case-default op
-                do (println "|Unknown op:" op) reel
-                :reel/reset $ {}
-                  :records $ []
-                  :db $ :base reel
-                :reel/merge $ {}
-                  :records $ []
-                  :base $ :db reel
-                  :merged? true
-              let
-                  msg-pack $ [] op op-data sid op-id op-time
-                -> reel
-                  update :records $ fn (records)
-                    if dev? (conj records msg-pack) records
-                  assoc :db $ updater (&record:get reel :db) op op-data sid op-id op-time
+          defn reel-reducer (reel updater op sid op-id op-time ? dev?)
+            let
+                tag-name $ nth op 0
+              if (starts-with? tag-name :reel/)
+                merge reel $ tag-match op
+                    :reel/reset
+                    {}
+                      :records $ []
+                      :db $ :base reel
+                  (:reel/merge)
+                    {}
+                      :records $ []
+                      :base $ :db reel
+                      :merged? true
+                  _ $ do (println "|Unknown op:" op) reel
+                let
+                    msg-pack $ [] op sid op-id op-time
+                  -> reel
+                    update :records $ fn (records)
+                      if dev? (conj records msg-pack) records
+                    assoc :db $ updater (&record:get reel :db) op sid op-id op-time
         |reel-schema $ quote
           def reel-schema $ %{} ReelState (:base nil) (:db nil)
             :records $ []

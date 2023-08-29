@@ -1,12 +1,12 @@
 
 {} (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.10)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.11)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
   :entries $ {}
     :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!)
       :modules $ [] |recollect/ |memof/ |ws-edn.calcit/ |cumulo-util.calcit/ |lilac/ |calcit.std/ |calcit-wss/
   :files $ {}
-    |cumulo-reel.app.client $ {}
+    |cumulo-reel.app.client $ %{} :FileEntry
       :defs $ {}
         |*states $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -95,7 +95,7 @@
             [] cumulo-reel.app.config :as config
             [] ws-edn.client :refer $ [] ws-connect! ws-send!
             [] recollect.patch :refer $ [] patch-twig
-    |cumulo-reel.app.comp.container $ {}
+    |cumulo-reel.app.comp.container $ %{} :FileEntry
       :defs $ {}
         |comp-container $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -176,7 +176,7 @@
             cumulo-reel.schema :as schema
             cumulo-reel.app.config :as config
             respo-message.comp.messages :refer $ comp-messages
-    |cumulo-reel.app.comp.login $ {}
+    |cumulo-reel.app.comp.login $ %{} :FileEntry
       :defs $ {}
         |comp-login $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -233,7 +233,7 @@
             [] cumulo-reel.schema :as schema
             [] cumulo-reel.style :as style
             [] cumulo-reel.app.config :as config
-    |cumulo-reel.app.comp.navigation $ {}
+    |cumulo-reel.app.comp.navigation $ %{} :FileEntry
       :defs $ {}
         |comp-navigation $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -270,7 +270,7 @@
             respo.core :refer $ defcomp <> span div
             respo.css :refer $ defstyle
             cumulo-reel.app.config :as config
-    |cumulo-reel.app.comp.profile $ {}
+    |cumulo-reel.app.comp.profile $ %{} :FileEntry
       :defs $ {}
         |comp-profile $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -327,7 +327,7 @@
             respo.core :refer $ defcomp list-> <> span div button
             respo.comp.space :refer $ =<
             cumulo-reel.app.config :as config
-    |cumulo-reel.app.config $ {}
+    |cumulo-reel.app.config $ %{} :FileEntry
       :defs $ {}
         |dev? $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -339,7 +339,7 @@
         :code $ quote
           ns cumulo-reel.app.config $ :require
             [] cumulo-util.core :refer $ [] get-env!
-    |cumulo-reel.app.server $ {}
+    |cumulo-reel.app.server $ %{} :FileEntry
       :defs $ {}
         |*client-caches $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -469,7 +469,7 @@
             calcit.std.time :refer $ set-interval
             calcit.std.date :refer $ Date get-time!
             calcit.std.path :refer $ join-path
-    |cumulo-reel.app.twig.container $ {}
+    |cumulo-reel.app.twig.container $ %{} :FileEntry
       :defs $ {}
         |twig-container $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -505,7 +505,7 @@
             cumulo-reel.app.twig.user :refer $ twig-user
             memof.alias :refer $ memof-call
             calcit.std.rand :refer $ rand-hex-color!
-    |cumulo-reel.app.twig.user $ {}
+    |cumulo-reel.app.twig.user $ %{} :FileEntry
       :defs $ {}
         |twig-user $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -513,7 +513,7 @@
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.twig.user $ :require
-    |cumulo-reel.app.updater $ {}
+    |cumulo-reel.app.updater $ %{} :FileEntry
       :defs $ {}
         |updater $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -532,7 +532,7 @@
         :code $ quote
           ns cumulo-reel.app.updater $ :require ([] cumulo-reel.app.updater.session :as session) ([] cumulo-reel.app.updater.user :as user) ([] cumulo-reel.app.updater.router :as router) ([] cumulo-reel.schema :as schema)
             [] respo-message.updater :refer $ [] update-messages
-    |cumulo-reel.app.updater.router $ {}
+    |cumulo-reel.app.updater.router $ %{} :FileEntry
       :defs $ {}
         |change $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -540,7 +540,7 @@
               assoc-in db ([] :sessions sid :router) op-data
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote (ns cumulo-reel.app.updater.router)
-    |cumulo-reel.app.updater.session $ {}
+    |cumulo-reel.app.updater.session $ %{} :FileEntry
       :defs $ {}
         |connect $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -560,7 +560,7 @@
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.updater.session $ :require ([] cumulo-reel.schema :as schema)
-    |cumulo-reel.app.updater.user $ {}
+    |cumulo-reel.app.updater.user $ %{} :FileEntry
       :defs $ {}
         |log-in $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -608,7 +608,7 @@
         :code $ quote
           ns cumulo-reel.app.updater.user $ :require
             calcit.std.hash :refer $ md5
-    |cumulo-reel.comp.reel $ {}
+    |cumulo-reel.comp.reel $ %{} :FileEntry
       :defs $ {}
         |comp-reel $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -646,7 +646,7 @@
             respo.core :refer $ defcomp <> span button div
             respo.css :refer $ defstyle
             respo.comp.space :refer $ =<
-    |cumulo-reel.core $ {}
+    |cumulo-reel.core $ %{} :FileEntry
       :defs $ {}
         |ReelState $ %{} :CodeEntry (:doc |)
           :code $ quote (defrecord ReelState :base :db :records :merged?)
@@ -695,7 +695,7 @@
                   assoc :db $ play-records next-base (:records reel) updater
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote (ns cumulo-reel.core)
-    |cumulo-reel.schema $ {}
+    |cumulo-reel.schema $ %{} :FileEntry
       :defs $ {}
         |database $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -718,7 +718,7 @@
             def user $ {} (:name nil) (:id nil) (:nickname nil) (:avatar nil) (:password nil)
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote (ns cumulo-reel.schema)
-    |cumulo-reel.style $ {}
+    |cumulo-reel.style $ %{} :FileEntry
       :defs $ {}
         |link $ %{} :CodeEntry (:doc |)
           :code $ quote

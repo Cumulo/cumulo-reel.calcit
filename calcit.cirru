@@ -1,12 +1,12 @@
 
 {} (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:port 6001) (:reload-fn |cumulo-reel.app.client/reload!) (:storage-key |calcit.cirru) (:version |0.0.10)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:port 6001) (:reload-fn |cumulo-reel.app.client/reload!) (:storage-key |calcit.cirru) (:version |0.0.11)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
   :entries $ {}
     :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!)
       :modules $ [] |recollect/ |memof/ |ws-edn.calcit/ |cumulo-util.calcit/ |lilac/ |calcit.std/ |calcit-wss/
   :files $ {}
-    |cumulo-reel.app.client $ {}
+    |cumulo-reel.app.client $ %{} :FileEntry
       :defs $ {}
         |*states $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1545066543854) (:by |B1y7Rc-Zz)
@@ -572,7 +572,7 @@
                       :data $ {}
                         |T $ %{} :Leaf (:at 1545066543854) (:by |B1y7Rc-Zz) (:text |[])
                         |j $ %{} :Leaf (:at 1545066543854) (:by |B1y7Rc-Zz) (:text |patch-twig)
-    |cumulo-reel.app.comp.container $ {}
+    |cumulo-reel.app.comp.container $ %{} :FileEntry
       :defs $ {}
         |comp-container $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541010211) (:by nil)
@@ -1136,7 +1136,7 @@
                     |v $ %{} :Expr (:at 1614332430274) (:by |B1y7Rc-Zz)
                       :data $ {}
                         |j $ %{} :Leaf (:at 1614332430274) (:by |B1y7Rc-Zz) (:text |comp-messages)
-    |cumulo-reel.app.comp.login $ {}
+    |cumulo-reel.app.comp.login $ %{} :FileEntry
       :defs $ {}
         |comp-login $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541010211) (:by nil)
@@ -1527,7 +1527,7 @@
                     |j $ %{} :Leaf (:at 1624107822879) (:by |B1y7Rc-Zz) (:text |cumulo-reel.app.config)
                     |r $ %{} :Leaf (:at 1527788914516) (:by |root) (:text |:as)
                     |v $ %{} :Leaf (:at 1527788915188) (:by |root) (:text |config)
-    |cumulo-reel.app.comp.navigation $ {}
+    |cumulo-reel.app.comp.navigation $ %{} :FileEntry
       :defs $ {}
         |comp-navigation $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541010211) (:by nil)
@@ -1754,7 +1754,7 @@
                     |j $ %{} :Leaf (:at 1624107805291) (:by |B1y7Rc-Zz) (:text |cumulo-reel.app.config)
                     |r $ %{} :Leaf (:at 1536561758845) (:by |B1y7Rc-Zz) (:text |:as)
                     |v $ %{} :Leaf (:at 1536561761903) (:by |B1y7Rc-Zz) (:text |config)
-    |cumulo-reel.app.comp.profile $ {}
+    |cumulo-reel.app.comp.profile $ %{} :FileEntry
       :defs $ {}
         |comp-profile $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541010211) (:by nil)
@@ -2098,7 +2098,7 @@
                     |j $ %{} :Leaf (:at 1624107832244) (:by |B1y7Rc-Zz) (:text |cumulo-reel.app.config)
                     |r $ %{} :Leaf (:at 1527788938747) (:by |root) (:text |:as)
                     |v $ %{} :Leaf (:at 1527788939786) (:by |root) (:text |config)
-    |cumulo-reel.app.config $ {}
+    |cumulo-reel.app.config $ %{} :FileEntry
       :defs $ {}
         |dev? $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1545066604311) (:by |B1y7Rc-Zz)
@@ -2175,7 +2175,7 @@
                       :data $ {}
                         |T $ %{} :Leaf (:at 1545066784671) (:by |B1y7Rc-Zz) (:text |[])
                         |j $ %{} :Leaf (:at 1545066784671) (:by |B1y7Rc-Zz) (:text |get-env!)
-    |cumulo-reel.app.server $ {}
+    |cumulo-reel.app.server $ %{} :FileEntry
       :defs $ {}
         |*client-caches $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1545066692604) (:by |B1y7Rc-Zz)
@@ -2965,7 +2965,7 @@
                     |h $ %{} :Expr (:at 1657818357489) (:by |B1y7Rc-Zz)
                       :data $ {}
                         |T $ %{} :Leaf (:at 1657818357489) (:by |B1y7Rc-Zz) (:text |join-path)
-    |cumulo-reel.app.twig.container $ {}
+    |cumulo-reel.app.twig.container $ %{} :FileEntry
       :defs $ {}
         |twig-container $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541255553) (:by nil)
@@ -3200,7 +3200,7 @@
                     |h $ %{} :Expr (:at 1657819093512) (:by |B1y7Rc-Zz)
                       :data $ {}
                         |T $ %{} :Leaf (:at 1657819093512) (:by |B1y7Rc-Zz) (:text |rand-hex-color!)
-    |cumulo-reel.app.twig.user $ {}
+    |cumulo-reel.app.twig.user $ %{} :FileEntry
       :defs $ {}
         |twig-user $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541255553) (:by nil)
@@ -3223,7 +3223,7 @@
             |r $ %{} :Expr (:at 1500541255553) (:by nil)
               :data $ {}
                 |T $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |:require)
-    |cumulo-reel.app.updater $ {}
+    |cumulo-reel.app.updater $ %{} :FileEntry
       :defs $ {}
         |updater $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541255553) (:by nil)
@@ -3390,7 +3390,7 @@
                       :data $ {}
                         |T $ %{} :Leaf (:at 1529231116379) (:by |root) (:text |[])
                         |j $ %{} :Leaf (:at 1529231118760) (:by |root) (:text |update-messages)
-    |cumulo-reel.app.updater.router $ {}
+    |cumulo-reel.app.updater.router $ %{} :FileEntry
       :defs $ {}
         |change $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541255553) (:by nil)
@@ -3420,7 +3420,7 @@
           :data $ {}
             |T $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |ns)
             |j $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |cumulo-reel.app.updater.router)
-    |cumulo-reel.app.updater.session $ {}
+    |cumulo-reel.app.updater.session $ %{} :FileEntry
       :defs $ {}
         |connect $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541255553) (:by nil)
@@ -3530,7 +3530,7 @@
                     |j $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |cumulo-reel.schema)
                     |r $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |:as)
                     |v $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |schema)
-    |cumulo-reel.app.updater.user $ {}
+    |cumulo-reel.app.updater.user $ %{} :FileEntry
       :defs $ {}
         |log-in $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1657819046746) (:by |B1y7Rc-Zz)
@@ -3866,7 +3866,7 @@
                     |h $ %{} :Expr (:at 1657819056477) (:by |B1y7Rc-Zz)
                       :data $ {}
                         |T $ %{} :Leaf (:at 1657819056477) (:by |B1y7Rc-Zz) (:text |md5)
-    |cumulo-reel.comp.reel $ {}
+    |cumulo-reel.comp.reel $ %{} :FileEntry
       :defs $ {}
         |comp-reel $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1507828615828) (:by |root)
@@ -4130,7 +4130,7 @@
                     |v $ %{} :Expr (:at 1507828760096) (:by |root)
                       :data $ {}
                         |j $ %{} :Leaf (:at 1507828761860) (:by |root) (:text |=<)
-    |cumulo-reel.core $ {}
+    |cumulo-reel.core $ %{} :FileEntry
       :defs $ {}
         |ReelState $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1624195889172) (:by |B1y7Rc-Zz)
@@ -4439,7 +4439,7 @@
           :data $ {}
             |T $ %{} :Leaf (:at 1507807568560) (:by |root) (:text |ns)
             |j $ %{} :Leaf (:at 1507807568560) (:by |root) (:text |cumulo-reel.core)
-    |cumulo-reel.schema $ {}
+    |cumulo-reel.schema $ %{} :FileEntry
       :defs $ {}
         |database $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1500541255553) (:by nil)
@@ -4576,7 +4576,7 @@
           :data $ {}
             |T $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |ns)
             |j $ %{} :Leaf (:at 1500541255553) (:by |root) (:text |cumulo-reel.schema)
-    |cumulo-reel.style $ {}
+    |cumulo-reel.style $ %{} :FileEntry
       :defs $ {}
         |link $ %{} :CodeEntry (:doc |)
           :code $ %{} :Expr (:at 1519367966237) (:by |root)

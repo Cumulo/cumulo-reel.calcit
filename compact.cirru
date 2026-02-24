@@ -1,9 +1,9 @@
 
-{} (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.11)
+{} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |cumulo-reel)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.12)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
   :entries $ {}
-    :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!)
+    :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!) (:version |0.0.0)
       :modules $ [] |recollect/ |memof/ |ws-edn.calcit/ |cumulo-util.calcit/ |lilac/ |calcit.std/ |calcit-wss/
   :files $ {}
     |cumulo-reel.app.client $ %{} :FileEntry
@@ -11,9 +11,11 @@
         |*states $ %{} :CodeEntry (:doc |)
           :code $ quote
             defatom *states $ {}
+          :examples $ []
         |*store $ %{} :CodeEntry (:doc |)
           :code $ quote
             defatom *store $ {}
+          :examples $ []
         |connect! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn connect! () $ ws-connect!
@@ -28,6 +30,7 @@
                       js/console.log "\"Changes" changes
                       reset! *store $ patch-twig @*store changes
                     (:kind data) (println "\"unknown kind:" data)
+          :examples $ []
         |dispatch! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn dispatch! (op ? op-data) (println |Dispatch op op-data)
@@ -40,6 +43,7 @@
                       reset! *states $ update-states @*states cursor s
                     (:effect/connect) (connect!)
                     _ $ ws-send! op
+          :examples $ []
         |main! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn main! ()
@@ -55,9 +59,11 @@
                   and (nil? @*store) (= "\"visible" js/document.visibilityState)
                   connect!
               println "|App started!"
+          :examples $ []
         |mount-target $ %{} :CodeEntry (:doc |)
           :code $ quote
-            def mount-target $ .querySelector js/document |.app
+            def mount-target $ .!querySelector js/document |.app
+          :examples $ []
         |reload! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn reload! () (remove-watch *store :changes) (remove-watch *states :changes) (clear-cache!)
@@ -65,12 +71,14 @@
               add-watch *states :changes $ fn (states prev) (render-app! render!)
               render-app! render!
               println "|Code updated."
+          :examples $ []
         |render-app! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn render-app! (renderer)
               renderer mount-target
                 comp-container (:states @*states) @*store
                 , dispatch!
+          :examples $ []
         |simulate-login! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn simulate-login! () $ let
@@ -81,9 +89,11 @@
                   do (println "|Found storage.")
                     dispatch! $ :: :user/log-in (nth pair 0) (nth pair 1)
                 do $ println "|Found no storage."
+          :examples $ []
         |ssr? $ %{} :CodeEntry (:doc |)
           :code $ quote
-            def ssr? $ some? (.querySelector js/document |meta.respo-ssr)
+            def ssr? $ some? (.!querySelector js/document |meta.respo-ssr)
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.client $ :require
@@ -95,6 +105,7 @@
             [] cumulo-reel.app.config :as config
             [] ws-edn.client :refer $ [] ws-connect! ws-send!
             [] recollect.patch :refer $ [] patch-twig
+        :examples $ []
     |cumulo-reel.app.comp.container $ %{} :FileEntry
       :defs $ {}
         |comp-container $ %{} :CodeEntry (:doc |)
@@ -126,6 +137,7 @@
                     when config/dev? $ comp-inspect |Store store
                       {} (:bottom 0) (:left 0) (:max-width |100%)
                     when config/dev? $ comp-reel (:reel-length store) ({})
+          :examples $ []
         |comp-offline $ %{} :CodeEntry (:doc |)
           :code $ quote
             defcomp comp-offline () $ div
@@ -145,6 +157,7 @@
                   :style $ {} (:cursor :pointer) (:line-height "\"32px")
                   :on-click $ fn (e d!) (d! :effect/connect nil)
                 <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
+          :examples $ []
         |comp-status-color $ %{} :CodeEntry (:doc |)
           :code $ quote
             defcomp comp-status-color (color)
@@ -152,13 +165,16 @@
                 :style $ let
                     size 24
                   {} (:width size) (:height size) (:background-color color)
+          :examples $ []
         |css-status-color $ %{} :CodeEntry (:doc |)
           :code $ quote
             defstyle css-status-color $ {}
               "\"$0" $ {} (:position :absolute) (:bottom 60) (:left 8) (:border-radius "\"50%") (:opacity 0.6) (:pointer-events :none)
+          :examples $ []
         |style-body $ %{} :CodeEntry (:doc |)
           :code $ quote
             def style-body $ {} (:padding "|8px 16px")
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.comp.container $ :require
@@ -176,6 +192,7 @@
             cumulo-reel.schema :as schema
             cumulo-reel.app.config :as config
             respo-message.comp.messages :refer $ comp-messages
+        :examples $ []
     |cumulo-reel.app.comp.login $ %{} :FileEntry
       :defs $ {}
         |comp-login $ %{} :CodeEntry (:doc |)
@@ -213,9 +230,11 @@
                       span $ {} (:inner-text "|Log in")
                         :style $ merge style/link
                         :on-click $ on-submit (:username state) (:password state) false
+          :examples $ []
         |initial-state $ %{} :CodeEntry (:doc |)
           :code $ quote
             def initial-state $ {} (:username |) (:password |)
+          :examples $ []
         |on-submit $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn on-submit (username password signup?)
@@ -223,6 +242,7 @@
                 dispatch! $ if signup? (:: :user/sign-up username password) (:: :user/log-in username password)
                 js/localStorage.setItem (:storage-key config/site)
                   format-cirru-edn $ [] username password
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.comp.login $ :require
@@ -233,6 +253,7 @@
             [] cumulo-reel.schema :as schema
             [] cumulo-reel.style :as style
             [] cumulo-reel.app.config :as config
+        :examples $ []
     |cumulo-reel.app.comp.navigation $ %{} :FileEntry
       :defs $ {}
         |comp-navigation $ %{} :CodeEntry (:doc |)
@@ -254,12 +275,14 @@
                   <> $ if logged-in? |Me |Guest
                   =< 8 nil
                   <> count-members
+          :examples $ []
         |css-nav $ %{} :CodeEntry (:doc |)
           :code $ quote
             defstyle css-nav $ {}
               "\"$0" $ {} (:height 48) (:justify-content :space-between) (:padding "|0 16px") (:font-size 16)
                 :border-bottom $ str "|1px solid " (hsl 0 0 0 0.1)
                 :font-family ui/font-fancy
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.comp.navigation $ :require
@@ -270,6 +293,7 @@
             respo.core :refer $ defcomp <> span div
             respo.css :refer $ defstyle
             cumulo-reel.app.config :as config
+        :examples $ []
     |cumulo-reel.app.comp.profile $ %{} :FileEntry
       :defs $ {}
         |comp-profile $ %{} :CodeEntry (:doc |)
@@ -309,6 +333,7 @@
                       :on-click $ fn (e dispatch!) (dispatch! :user/log-out nil)
                         js/localStorage.removeItem $ :storage-key config/site
                     <> "\"Log out"
+          :examples $ []
         |css-member-label $ %{} :CodeEntry (:doc |)
           :code $ quote
             defstyle css-member-label $ {}
@@ -316,6 +341,7 @@
                 :border $ str "\"1px solid " (hsl 0 0 80)
                 :border-radius "\"16px"
                 :margin "\"0 4px"
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.comp.profile $ :require
@@ -327,23 +353,28 @@
             respo.core :refer $ defcomp list-> <> span div button
             respo.comp.space :refer $ =<
             cumulo-reel.app.config :as config
+        :examples $ []
     |cumulo-reel.app.config $ %{} :FileEntry
       :defs $ {}
         |dev? $ %{} :CodeEntry (:doc |)
           :code $ quote
             def dev? $ = "\"dev" (get-env "\"mode" "\"release")
+          :examples $ []
         |site $ %{} :CodeEntry (:doc |)
           :code $ quote
             def site $ {} (:port 5021) (:title "\"Cumulo") (:icon "\"http://cdn.tiye.me/logo/cumulo.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/cumulo-reel/") (:theme "\"#eeeeff") (:storage-key "\"reel-storage") (:storage-file "\"storage.cirru")
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.config $ :require
             [] cumulo-util.core :refer $ [] get-env!
+        :examples $ []
     |cumulo-reel.app.server $ %{} :FileEntry
       :defs $ {}
         |*client-caches $ %{} :CodeEntry (:doc |)
           :code $ quote
             defatom *client-caches $ {}
+          :examples $ []
         |*initial-db $ %{} :CodeEntry (:doc |)
           :code $ quote
             defatom *initial-db $ if
@@ -351,12 +382,15 @@
               do (println "\"Found local EDN data")
                 merge schema/database $ parse-cirru-edn (read-file storage-file)
               do (println "\"Found no data") schema/database
+          :examples $ []
         |*reader-reel $ %{} :CodeEntry (:doc |)
           :code $ quote (defatom *reader-reel @*reel)
+          :examples $ []
         |*reel $ %{} :CodeEntry (:doc |)
           :code $ quote
             defatom *reel $ merge reel-schema
               {} (:base @*initial-db) (:db @*initial-db)
+          :examples $ []
         |dispatch! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn dispatch! (op sid)
@@ -368,6 +402,7 @@
                     :effect/persist
                     persist-db!
                   _ $ reset! *reel (reel-reducer @*reel updater op sid op-id op-time config/dev?)
+          :examples $ []
         |get-backup-path! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn get-backup-path! () $ let
@@ -375,6 +410,7 @@
               join-path calcit-dirname "\"backups"
                 str $ :month now
                 str (:day now) "\"-snapshot.cirru"
+          :examples $ []
         |main! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn main! ()
@@ -388,9 +424,11 @@
               set-interval 200 $ fn () (render-loop!)
               set-interval 600000 $ fn () (persist-db!)
               on-control-c on-exit!
+          :examples $ []
         |on-exit! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn on-exit! () (persist-db!) (; println "\"exit code is...") (quit! 0)
+          :examples $ []
         |persist-db! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn persist-db! () $ let
@@ -400,17 +438,20 @@
                 backup-path $ get-backup-path!
               check-write-file! storage-path file-content
               check-write-file! backup-path file-content
+          :examples $ []
         |reload! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn reload! () (println "|Code updated.") (clear-twig-caches!)
               reset! *reel $ refresh-reel @*reel @*initial-db updater
               sync-clients! @*reader-reel
+          :examples $ []
         |render-loop! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn render-loop! () $ when
               not $ identical? @*reader-reel @*reel
               reset! *reader-reel @*reel
               sync-clients! @*reader-reel
+          :examples $ []
         |run-server! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn run-server! (port)
@@ -429,11 +470,13 @@
                       do (println "\"Client closed!")
                         dispatch! (:: :session/disconnect) sid
                     _ $ eprintln "\"unknown data:" data
+          :examples $ []
         |storage-file $ %{} :CodeEntry (:doc |)
           :code $ quote
             def storage-file $ if (empty? calcit-dirname)
               str calcit-dirname $ :storage-file config/site
               str calcit-dirname "\"/" $ :storage-file config/site
+          :examples $ []
         |sync-clients! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn sync-clients! (reel)
@@ -453,7 +496,7 @@
                       wss-send! sid $ format-cirru-edn
                         {} (:kind :patch) (:data changes)
                       swap! *client-caches assoc sid new-store
-              new-twig-loop!
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.server $ :require (cumulo-reel.schema :as schema)
@@ -463,12 +506,13 @@
             cumulo-reel.app.twig.container :refer $ twig-container
             recollect.diff :refer $ diff-twig
             wss.core :refer $ wss-serve! wss-send! wss-each!
-            recollect.twig :refer $ new-twig-loop! clear-twig-caches!
+            recollect.twig :refer $ clear-twig-caches!
             cumulo-reel.$meta :refer $ calcit-dirname
             calcit.std.fs :refer $ path-exists? check-write-file!
             calcit.std.time :refer $ set-interval
-            calcit.std.date :refer $ Date get-time!
+            calcit.std.date :refer $ get-time!
             calcit.std.path :refer $ join-path
+        :examples $ []
     |cumulo-reel.app.twig.container $ %{} :FileEntry
       :defs $ {}
         |twig-container $ %{} :CodeEntry (:doc |)
@@ -481,16 +525,17 @@
                     :reel-length $ count records
                 merge base-data $ if logged-in?
                   {}
-                    :user $ memof-call twig-user
+                    :user $ memof1-call twig-user
                       get-in db $ [] :users (:user-id session)
                     :router $ assoc router :data
                       case (:name router)
                         :home $ :pages db
-                        :profile $ memof-call twig-members (:sessions db) (:users db)
+                        :profile $ memof1-call twig-members (:sessions db) (:users db)
                         (:name router) ({})
                     :count $ count (:sessions db)
                     :color $ rand-hex-color!
                   , nil
+          :examples $ []
         |twig-members $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn twig-members (sessions users)
@@ -499,20 +544,24 @@
                   let[] (k session) pair $ [] k
                     get-in users $ [] (:user-id session) :name
                 pairs-map
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.twig.container $ :require
             cumulo-reel.app.twig.user :refer $ twig-user
-            memof.alias :refer $ memof-call
             calcit.std.rand :refer $ rand-hex-color!
+            memof.once :refer $ memof1-call
+        :examples $ []
     |cumulo-reel.app.twig.user $ %{} :FileEntry
       :defs $ {}
         |twig-user $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn twig-user (user) (dissoc user :password)
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.twig.user $ :require
+        :examples $ []
     |cumulo-reel.app.updater $ %{} :FileEntry
       :defs $ {}
         |updater $ %{} :CodeEntry (:doc |)
@@ -528,18 +577,22 @@
                 (:user/log-out) (user/log-out db sid op-id op-time)
                 (:router/change data) (router/change db data sid op-id op-time)
                 _ $ do (eprintln "\"Unknown op" op) db
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.updater $ :require ([] cumulo-reel.app.updater.session :as session) ([] cumulo-reel.app.updater.user :as user) ([] cumulo-reel.app.updater.router :as router) ([] cumulo-reel.schema :as schema)
             [] respo-message.updater :refer $ [] update-messages
+        :examples $ []
     |cumulo-reel.app.updater.router $ %{} :FileEntry
       :defs $ {}
         |change $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn change (db op-data sid op-id op-time)
               assoc-in db ([] :sessions sid :router) op-data
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote (ns cumulo-reel.app.updater.router)
+        :examples $ []
     |cumulo-reel.app.updater.session $ %{} :FileEntry
       :defs $ {}
         |connect $ %{} :CodeEntry (:doc |)
@@ -547,19 +600,23 @@
             defn connect (db sid op-id op-time)
               assoc-in db ([] :sessions sid)
                 merge schema/session $ {} (:id sid)
+          :examples $ []
         |disconnect $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn disconnect (db sid op-id op-time)
               update db :sessions $ fn (session) (dissoc session sid)
+          :examples $ []
         |remove-message $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn remove-message (db op-data sid op-id op-time)
               update-in db ([] :sessions sid :messages)
                 fn (messages)
                   dissoc messages $ :id op-data
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.updater.session $ :require ([] cumulo-reel.schema :as schema)
+        :examples $ []
     |cumulo-reel.app.updater.user $ %{} :FileEntry
       :defs $ {}
         |log-in $ %{} :CodeEntry (:doc |)
@@ -581,10 +638,12 @@
                       update session :messages $ fn (messages)
                         assoc messages op-id $ {} (:id op-id)
                           :text $ str "\"No user named: " username
+          :examples $ []
         |log-out $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn log-out (db sid op-id op-time)
               assoc-in db ([] :sessions sid :user-id) nil
+          :examples $ []
         |sign-up $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn sign-up (db username password sid op-id op-time)
@@ -604,10 +663,12 @@
                       {} (:id op-id) (:name username) (:nickname username)
                         :password $ md5 password
                         :avatar nil
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.app.updater.user $ :require
             calcit.std.hash :refer $ md5
+        :examples $ []
     |cumulo-reel.comp.reel $ %{} :FileEntry
       :defs $ {}
         |comp-reel $ %{} :CodeEntry (:doc |)
@@ -625,6 +686,7 @@
                 =< 8 nil
                 span $ {} (:inner-text |Persist) (:class-name css-click)
                   :on-click $ fn (e d!) (d! :effect/persist nil)
+          :examples $ []
         |css-click $ %{} :CodeEntry (:doc |)
           :code $ quote
             defstyle css-click $ {}
@@ -632,11 +694,13 @@
                 :color $ hsl 200 80 80
                 :font-size :12
                 :text-decoration :underline
+          :examples $ []
         |css-reel $ %{} :CodeEntry (:doc |)
           :code $ quote
             defstyle css-reel $ {}
               "\"$0" $ {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
                 :color $ hsl 0 0 60
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.comp.reel $ :require
@@ -646,10 +710,13 @@
             respo.core :refer $ defcomp <> span button div
             respo.css :refer $ defstyle
             respo.comp.space :refer $ =<
+        :examples $ []
     |cumulo-reel.core $ %{} :FileEntry
       :defs $ {}
         |ReelState $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord ReelState :base :db :records :merged?)
+          :code $ quote
+            defstruct ReelState (:base :dynamic) (:db :dynamic) (:records :dynamic) (:merged? :dynamic)
+          :examples $ []
         |play-records $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn play-records (db records updater)
@@ -658,6 +725,7 @@
                     first records
                   next-db $ updater db op sid op-id op-time
                 recur next-db (rest records) updater
+          :examples $ []
         |reel-reducer $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn reel-reducer (reel updater op sid op-id op-time ? dev?)
@@ -680,21 +748,25 @@
                     -> reel
                       update :records $ fn (records)
                         if dev? (conj records msg-pack) records
-                      assoc :db $ updater (&record:get reel :db) op sid op-id op-time
+                      assoc :db $ updater (:db reel) op sid op-id op-time
+          :examples $ []
         |reel-schema $ %{} :CodeEntry (:doc |)
           :code $ quote
             def reel-schema $ %{} ReelState (:base nil) (:db nil)
               :records $ []
               :merged? false
+          :examples $ []
         |refresh-reel $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn refresh-reel (reel base updater)
               let
-                  next-base $ if (&record:get reel :merged?) (:base reel) base
+                  next-base $ if (:merged? reel) (:base reel) base
                 -> reel (assoc :base next-base)
                   assoc :db $ play-records next-base (:records reel) updater
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote (ns cumulo-reel.core)
+        :examples $ []
     |cumulo-reel.schema $ %{} :FileEntry
       :defs $ {}
         |database $ %{} :CodeEntry (:doc |)
@@ -702,22 +774,27 @@
             def database $ {}
               :sessions $ do session ({})
               :users $ do user ({})
+          :examples $ []
         |router $ %{} :CodeEntry (:doc |)
           :code $ quote
             def router $ {} (:name nil) (:title nil)
               :data $ {}
               :router nil
+          :examples $ []
         |session $ %{} :CodeEntry (:doc |)
           :code $ quote
             def session $ {} (:user-id nil) (:id nil) (:nickname nil)
               :router $ do router
                 {} (:name :home) (:data nil) (:router nil)
               :messages $ {}
+          :examples $ []
         |user $ %{} :CodeEntry (:doc |)
           :code $ quote
             def user $ {} (:name nil) (:id nil) (:nickname nil) (:avatar nil) (:password nil)
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote (ns cumulo-reel.schema)
+        :examples $ []
     |cumulo-reel.style $ %{} :FileEntry
       :defs $ {}
         |link $ %{} :CodeEntry (:doc |)
@@ -725,8 +802,10 @@
             def link $ {} (:text-decoration :underline) (:cursor :pointer)
               :color $ hsl 240 80 80
               :font-family ui/font-fancy
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns cumulo-reel.style $ :require
             [] respo.util.format :refer $ [] hsl
             [] respo-ui.core :as ui
+        :examples $ []

@@ -1,7 +1,7 @@
 {
   "version": "0.0.11",
   "dependencies": {
-    "@calcit/procs": "^0.8.0-a3"
+    "@calcit/procs": "^0.11.6"
   },
   "scripts": {
     "watch-server": "cr --emit-js --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/reload!",
@@ -13,7 +13,8 @@
     "md5": "^2.3.0",
     "randomcolor": "^0.6.2",
     "shortid": "^2.2.16",
-    "vite": "^4.4.9",
+    "vite": "^7.3.1",
     "ws": "^8.13.0"
-  }
+  },
+  "packageManager": "yarn@4.12.0"
 }

@@ -10,3 +10,7 @@ out-page/
 backups/
 
 storage.cirru
+
+.yarn/*.gz
+
+.DS_Store

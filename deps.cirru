@@ -1,5 +1,5 @@
 
-{} (:calcit-version |0.12.17)
+{} (:calcit-version |0.12.18)
   :dependencies $ {} (|Cumulo/cumulo-util.calcit |0.0.7)
     |Respo/respo-message.calcit |0.0.9
     |Respo/respo-ui.calcit |0.6.4

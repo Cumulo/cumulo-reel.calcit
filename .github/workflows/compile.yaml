@@ -25,4 +25,4 @@ jobs:
     - uses: calcit-lang/setup-cr@0.0.8
 
     - name: "compiles to js"
-      run: caps --ci && yarn && cr js -1 && yarn vite build && cr --entry server --once ir
+      run: caps --ci && yarn && cr compact.cirru js && yarn vite build && cr compact.cirru --entry server ir

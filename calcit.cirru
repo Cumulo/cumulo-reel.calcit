@@ -1,6 +1,6 @@
 
-{} (:about "|Machine-generated snapshot. AI AGENTS: never edit this file directly — changes will be overwritten on recompile. Inspect via `cr query`; modify via `cr edit` / `cr tree`. MANDATORY first step: run `cr docs agents --full`.") (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.14)
+{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.15)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
   :entries $ {}
     :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!) (:version |0.0.0)
@@ -39,7 +39,7 @@
                 if (tag? op)
                   recur $ :: op op-data
                   match op
-                      :states cursor s
+                    (:states cursor s)
                       reset! *states $ update-states @*states cursor s
                     (:effect/connect) (connect!)
                     _ $ ws-send! op
@@ -209,14 +209,20 @@
                           :value $ :username state
                           :style ui/input
                           :on-input $ fn (e d!)
-                            d! cursor $ assoc state :username (:value e)
+                            let
+                                value $ :value e
+                              d! cursor $ assoc state :username
+                                if (string? value) value |
                       =< nil 8
                       div ({})
                         input $ {} (:placeholder |Password)
                           :value $ :password state
                           :style ui/input
                           :on-input $ fn (e d!)
-                            d! cursor $ assoc state :password (:value e)
+                            let
+                                value $ :value e
+                              d! cursor $ assoc state :password
+                                if (string? value) value |
                     =< nil 8
                     div
                       {} $ :style
@@ -393,8 +399,7 @@
                   op-time $ -> (get-time!) (.timestamp)
                 if config/dev? $ println |Dispatch! (str op) sid
                 match op
-                    :effect/persist
-                    persist-db!
+                  (:effect/persist) (persist-db!)
                   _ $ reset! *reel (reel-reducer @*reel updater op sid op-id op-time config/dev?)
           :examples $ []
         |get-backup-path! $ %{} :CodeEntry (:doc |) (:schema :dynamic)
@@ -452,7 +457,7 @@
               wss-serve! (&{} :port port)
                 fn (data) (println |Data data)
                   match data
-                      :connect sid
+                    (:connect sid)
                       do
                         dispatch! (:: :session/connect) sid
                         println "|New client."
@@ -559,8 +564,7 @@
           :code $ quote
             defn updater (db op sid op-id op-time)
               match op
-                  :session/connect
-                  session/connect db sid op-id op-time
+                (:session/connect) (session/connect db sid op-id op-time)
                 (:session/disconnect) (session/disconnect db sid op-id op-time)
                 (:session/remove-message op-data) (session/remove-message db op-data sid op-id op-time)
                 (:user/log-in username password) (user/log-in db username password sid op-id op-time)
@@ -722,7 +726,7 @@
                   tag-name $ nth op 0
                 if (starts-with? tag-name :reel/)
                   merge reel $ match op
-                      :reel/reset
+                    (:reel/reset)
                       {}
                         :records $ []
                         :db $ :base reel

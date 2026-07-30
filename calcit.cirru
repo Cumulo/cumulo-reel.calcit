@@ -1,10 +1,12 @@
 
 {} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.17)
+  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.18)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
+    :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
   :entries $ {}
     :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!) (:version |0.0.0)
       :modules $ [] |recollect/ |memof/ |ws-edn.calcit/ |cumulo-util.calcit/ |lilac/ |calcit.std/ |calcit-wss/
+      :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
   :files $ {}
     |cumulo-reel.app.client $ %{} :FileEntry
       :defs $ {}
@@ -769,6 +771,10 @@
         :code $ quote (ns cumulo-reel.core)
     |cumulo-reel.schema $ %{} :FileEntry
       :defs $ {}
+        |Op $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defenum Op (:session/connect) (:session/disconnect) (:session/remove-message :dynamic) (:user/log-in :string :string) (:user/sign-up :string :string) (:user/log-out) (:router/change :dynamic) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
+          :examples $ []
         |database $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             def database $ {}

@@ -1,5 +1,5 @@
 
-{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel) (:version |0.0.20)
+{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel) (:version |0.0.21)
   :entries $ {}
     :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.client/reload!)
       :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
@@ -539,12 +539,12 @@
                     :reel-length $ count records
                 merge base-data $ if logged-in?
                   {}
-                    :user $ memo-twig-by (:user-id session) twig-user
+                    :user $ memo-twig-by1 (:user-id session) twig-user
                       get-in db $ [] :users (:user-id session)
                     :router $ assoc router :data
                       case (:name router)
                         :home $ :pages db
-                        :profile $ memo-twig-by :members twig-members (:sessions db) (:users db)
+                        :profile $ memo-twig-by2 :members twig-members (:sessions db) (:users db)
                         (:name router) ({})
                     :count $ count (:sessions db)
                     :color $ rand-hex-color!
@@ -564,7 +564,7 @@
           ns cumulo-reel.app.twig.container $ :require
             cumulo-reel.app.twig.user :refer $ twig-user
             calcit.std.rand :refer $ rand-hex-color!
-            recollect.memo :refer $ memo-twig-by
+            recollect.memo :refer $ memo-twig-by1 memo-twig-by2
     |cumulo-reel.app.twig.user $ %{} :FileEntry
       :defs $ {}
         |twig-user $ %{} :CodeEntry (:doc |) (:schema :dynamic)

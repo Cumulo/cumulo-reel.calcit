@@ -1,11 +1,11 @@
 
-{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel)
-  :configs $ {} (:init-fn |cumulo-reel.app.client/main!) (:reload-fn |cumulo-reel.app.client/reload!) (:version |0.0.18)
-    :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
-    :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
+{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel) (:version |0.0.19)
   :entries $ {}
-    :server $ {} (:init-fn |cumulo-reel.app.server/main!) (:reload-fn |cumulo-reel.app.server/reload!) (:version |0.0.0)
-      :modules $ [] |recollect/ |memof/ |ws-edn.calcit/ |cumulo-util.calcit/ |lilac/ |calcit.std/ |calcit-wss/
+    :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.client/reload!)
+      :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
+      :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
+    :server $ {} (:description |) (:init-fn 'cumulo-reel.app.server/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.server/reload!)
+      :modules $ [] |recollect/ |ws-edn.calcit/ |cumulo-util.calcit/ |calcit.std/ |calcit-wss/
       :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
   :files $ {}
     |cumulo-reel.app.client $ %{} :FileEntry
@@ -160,7 +160,8 @@
               div
                 {}
                   :style $ {} (:cursor :pointer) (:line-height |32px)
-                  :on-click $ fn (e d!) (d! :effect/connect nil)
+                  :on-click $ fn (e d!)
+                    d! $ :: :effect/connect
                 <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
           :examples $ []
         |comp-status-color $ %{} :CodeEntry (:doc |) (:schema :dynamic)
@@ -273,14 +274,16 @@
                 div
                   {}
                     :on-click $ fn (e d!)
-                      d! :router/change $ {} (:name :home)
+                      d! $ :: :router/change
+                        {} $ :name :home
                     :style $ {} (:cursor :pointer)
                   <> (:title config/site) nil
                 div
                   {}
                     :style $ {} (:cursor |pointer)
                     :on-click $ fn (e d!)
-                      d! :router/change $ {} (:name :profile)
+                      d! $ :: :router/change
+                        {} $ :name :profile
                   <> $ if logged-in? |Me |Guest
                   =< 8 nil
                   <> count-members
@@ -338,7 +341,8 @@
                   button
                     {} (:class-name css/button)
                       :style $ {} (:color :red) (:border-color :red)
-                      :on-click $ fn (e dispatch!) (dispatch! :user/log-out nil)
+                      :on-click $ fn (e dispatch!)
+                        dispatch! $ :: :user/log-out
                         js/localStorage.removeItem $ :storage-key config/site
                     <> "|Log out"
           :examples $ []
@@ -488,7 +492,7 @@
           :examples $ []
         |sync-clients! $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
-            defn sync-clients! (reel)
+            defn sync-clients! (reel) (begin-twig-frame!)
               wss-each! $ fn (sid)
                 let
                     db $ :db reel
@@ -505,6 +509,7 @@
                       wss-send! sid $ format-cirru-edn
                         {} (:kind :patch) (:data changes)
                       swap! *client-caches assoc sid new-store
+              finish-twig-frame!
           :examples $ []
       :ns $ %{} :NsEntry (:doc |)
         :code $ quote
@@ -521,6 +526,7 @@
             calcit.std.time :refer $ set-interval
             calcit.std.date :refer $ get-time!
             calcit.std.path :refer $ join-path
+            recollect.memo :refer $ begin-twig-frame! finish-twig-frame!
     |cumulo-reel.app.twig.container $ %{} :FileEntry
       :defs $ {}
         |twig-container $ %{} :CodeEntry (:doc |) (:schema :dynamic)
@@ -533,12 +539,12 @@
                     :reel-length $ count records
                 merge base-data $ if logged-in?
                   {}
-                    :user $ memof1-call twig-user
+                    :user $ memo-twig-by (:user-id session) twig-user
                       get-in db $ [] :users (:user-id session)
                     :router $ assoc router :data
                       case (:name router)
                         :home $ :pages db
-                        :profile $ memof1-call twig-members (:sessions db) (:users db)
+                        :profile $ memo-twig-by :members twig-members (:sessions db) (:users db)
                         (:name router) ({})
                     :count $ count (:sessions db)
                     :color $ rand-hex-color!
@@ -558,7 +564,7 @@
           ns cumulo-reel.app.twig.container $ :require
             cumulo-reel.app.twig.user :refer $ twig-user
             calcit.std.rand :refer $ rand-hex-color!
-            memof.once :refer $ memof1-call
+            recollect.memo :refer $ memo-twig-by
     |cumulo-reel.app.twig.user $ %{} :FileEntry
       :defs $ {}
         |twig-user $ %{} :CodeEntry (:doc |) (:schema :dynamic)

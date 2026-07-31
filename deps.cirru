@@ -6,5 +6,5 @@
     |Respo/respo.calcit |0.16.59
     |calcit-lang/calcit-wss |0.2.10
     |calcit-lang/calcit.std |0.2.14
-    |calcit-lang/recollect |0.0.25
+    |calcit-lang/recollect |0.0.26
     |mvc-works/ws-edn.calcit |0.0.13

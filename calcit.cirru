@@ -806,11 +806,11 @@
                     (:reel/reset)
                       {}
                         :records $ []
-                        :db $ option:unwrap (get reel :base)
+                        :db $ :base reel
                     (:reel/merge)
                       {}
                         :records $ []
-                        :base $ option:unwrap (get reel :db)
+                        :base $ :db reel
                         :merged? true
                     _ $ do (println "|Unknown op:" op) reel
                   let
@@ -818,20 +818,25 @@
                     -> reel
                       update :records $ fn (records)
                         if dev? (conj records msg-pack) records
-                      assoc :db $ updater
-                        option:unwrap $ get reel :db
-                        , op sid op-id op-time
+                      assoc :db $ updater (:db reel) op sid op-id op-time
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn
+            {} (:return 'cumulo-reel.core/ReelState)
+              :args $ [] 'cumulo-reel.core/ReelState 'Dynamic 'Dynamic 'Dynamic 'Dynamic 'Dynamic 'Dynamic
           :tests $ []
             %{} 'TestEntry (:name |resets-from-base)
               :code $ quote
                 let
-                    reel $ {} (:base 1) (:db 2)
+                    reel $ %{} ReelState (:base 1) (:db 2)
                       :records $ []
+                      :merged? false
                     updater $ fn (db op sid op-id op-time) db
                     result $ reel-reducer reel updater (:: :reel/reset) |s |o 0
-                  assert= 1 $ option:unwrap (get result :db)
+                  assert=
+                    merge reel $ {}
+                      :records $ []
+                      :db 1
+                    , result
         |reel-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote
             def reel-schema $ %{} ReelState (:base nil) (:db nil)
@@ -847,7 +852,9 @@
                 -> reel (assoc :base next-base)
                   assoc :db $ play-records next-base (:records reel) updater
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn
+            {} (:return 'cumulo-reel.core/ReelState)
+              :args $ [] 'cumulo-reel.core/ReelState 'Dynamic 'Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote (ns cumulo-reel.core)
     |cumulo-reel.schema $ %{} 'FileEntry

@@ -799,17 +799,18 @@
           :code $ quote
             defn reel-reducer (reel updater op sid op-id op-time ? dev?)
               let
-                  tag-name $ nth op 0
-                if (starts-with? tag-name :reel/)
+                  tag-name $ option:unwrap (nth op 0)
+                if
+                  starts-with? (str tag-name) |:reel/
                   merge reel $ match op
                     (:reel/reset)
                       {}
                         :records $ []
-                        :db $ :base reel
+                        :db $ option:unwrap (get reel :base)
                     (:reel/merge)
                       {}
                         :records $ []
-                        :base $ :db reel
+                        :base $ option:unwrap (get reel :db)
                         :merged? true
                     _ $ do (println "|Unknown op:" op) reel
                   let
@@ -817,9 +818,20 @@
                     -> reel
                       update :records $ fn (records)
                         if dev? (conj records msg-pack) records
-                      assoc :db $ updater (:db reel) op sid op-id op-time
+                      assoc :db $ updater
+                        option:unwrap $ get reel :db
+                        , op sid op-id op-time
           :examples $ []
           :schema $ :: 'Dynamic
+          :tests $ []
+            %{} 'TestEntry (:name |resets-from-base)
+              :code $ quote
+                let
+                    reel $ {} (:base 1) (:db 2)
+                      :records $ []
+                    updater $ fn (db op sid op-id op-time) db
+                    result $ reel-reducer reel updater (:: :reel/reset) |s |o 0
+                  assert= 1 $ option:unwrap (get result :db)
         |reel-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote
             def reel-schema $ %{} ReelState (:base nil) (:db nil)

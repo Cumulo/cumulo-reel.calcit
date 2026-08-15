@@ -1,7 +1,7 @@
 {
   "version": "0.0.23",
   "dependencies": {
-    "@calcit/procs": "^0.13.7"
+    "@calcit/procs": "^0.13.16"
   },
   "scripts": {
     "watch-server": "cr --entry server js -w",

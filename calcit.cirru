@@ -590,19 +590,19 @@
                   router $ &struct:get session :router
                   base-data $ {} (:logged-in? logged-in?) (:session session)
                     :reel-length $ count records
-                merge base-data $ if logged-in?
-                  {}
-                    :user $ memo-twig-by1 (&struct:get session :user-id) twig-user
-                      &map:get
-                        get-in db $ [] :users
-                        &struct:get session :user-id
-                    :router $ assoc router :data
-                      case (&struct:get router :name)
+                    :router $ if logged-in?
+                      assoc router :data $ case (&struct:get router :name)
                         :home $ &struct:get db :pages
                         :profile $ memo-twig-by2 :members twig-members (&struct:get db :sessions) (&struct:get db :users)
                         (&struct:get router :name) ({})
+                      , router
                     :count $ count (&struct:get db :sessions)
                     :color $ rand-hex-color!
+                merge base-data $ if logged-in?
+                  {} $ :user
+                    memo-twig-by1 (&struct:get session :user-id) twig-user $ &map:get
+                      get-in db $ [] :users
+                      &struct:get session :user-id
                   , nil
           :examples $ []
           :schema $ :: 'Dynamic
@@ -920,6 +920,7 @@
             def database $ %{} Database
               :sessions $ {}
               :users $ {}
+              :pages $ {}
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/Database
         |router $ %{} 'CodeEntry (:doc |)

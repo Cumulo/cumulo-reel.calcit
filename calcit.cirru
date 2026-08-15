@@ -23,7 +23,7 @@
         |connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn connect! () $ ws-connect!
-              str |ws:// js/location.hostname |: $ &struct:get config/site :port
+              str |ws:// js/location.hostname |: $ :port config/site
               {}
                 :on-open $ fn (event) (simulate-login!)
                 :on-close $ fn (event) (reset! *store nil) (js/console.error "|Lost connection!")
@@ -93,7 +93,7 @@
         |simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn simulate-login! () $ let
-                raw $ js/localStorage.getItem (&struct:get config/site :storage-key)
+                raw $ js/localStorage.getItem (:storage-key config/site)
               if (js-present? raw)
                 let
                     pair $ parse-cirru-edn (unsafe-coerce raw String)
@@ -135,22 +135,22 @@
                     router-data $ &struct:get router :data
                   div
                     {} $ :class-name (str-spaced css/global css/fullscreen css/column)
-                    comp-navigation (&struct:get store-typed :logged-in?) (&struct:get store-typed :count)
-                    if (&struct:get store-typed :logged-in?)
+                    comp-navigation (:logged-in? store-typed) (:count store-typed)
+                    if (:logged-in? store-typed)
                       case-default (&struct:get router :name)
                         <> $ turn-string (&struct:get router :name)
                         :home $ <> |Home
-                        :profile $ comp-profile (&struct:get store-typed :user) (&struct:get router :data)
+                        :profile $ comp-profile (:user store-typed) (&struct:get router :data)
                       comp-login $ >>
                         either states $ {}
                         , :login
-                    comp-status-color $ &struct:get store-typed :color
+                    comp-status-color $ :color store-typed
                     comp-messages (&struct:get session :messages) ({})
                       fn (info d!)
                         d! $ :: :session/remove-message info
                     when config/dev? $ comp-inspect |Store store
                       {} (:bottom 0) (:left 0) (:max-width |100%)
-                    when config/dev? $ comp-reel (&struct:get store-typed :reel-length) ({})
+                    when config/dev? $ comp-reel (:reel-length store-typed) ({})
           :examples $ []
           :schema $ :: 'Fn
             {} (:return 'respo.schema/Component)
@@ -236,7 +236,7 @@
                       {} $ :style ({})
                       div ({})
                         input $ {} (:placeholder |Username)
-                          :value $ &struct:get state :username
+                          :value $ :username state
                           :style ui/input
                           :on-input $ fn (e d!)
                             let
@@ -246,7 +246,7 @@
                       =< nil 8
                       div ({})
                         input $ {} (:placeholder |Password)
-                          :value $ &struct:get state :password
+                          :value $ :password state
                           :style ui/input
                           :on-input $ fn (e d!)
                             let
@@ -259,11 +259,11 @@
                         {} $ :text-align :right
                       span $ {} (:inner-text "|Sign up")
                         :style $ merge style/link
-                        :on-click $ on-submit (&struct:get state :username) (&struct:get state :password) true
+                        :on-click $ on-submit (:username state) (:password state) true
                       =< 8 nil
                       span $ {} (:inner-text "|Log in")
                         :style $ merge style/link
-                        :on-click $ on-submit (&struct:get state :username) (&struct:get state :password) false
+                        :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
           :schema $ :: 'Fn
             {} (:return 'respo.schema/Component)
@@ -278,7 +278,7 @@
             defn on-submit (username password signup?)
               fn (e dispatch!)
                 dispatch! $ if signup? (:: :user/sign-up username password) (:: :user/log-in username password)
-                js/localStorage.setItem (&struct:get config/site :storage-key)
+                js/localStorage.setItem (:storage-key config/site)
                   format-cirru-edn $ [] username password
           :examples $ []
           :schema $ :: 'Dynamic
@@ -305,7 +305,7 @@
                       d! $ :: :router/change
                         {} $ :name :home
                     :style $ {} (:cursor :pointer)
-                  <> (&struct:get config/site :title) nil
+                  <> (:title config/site) nil
                 div
                   {}
                     :style $ {} (:cursor |pointer)
@@ -346,7 +346,7 @@
                 div
                   {} (:class-name css/font-fancy)
                     :style $ {} (:font-size 32) (:font-weight 100)
-                  <> $ str "|Hello! " (&struct:get user :name)
+                  <> $ str "|Hello! " (:name user)
                 =< nil 16
                 div
                   {} $ :class-name css/row
@@ -373,10 +373,12 @@
                       :style $ {} (:color :red) (:border-color :red)
                       :on-click $ fn (e dispatch!)
                         dispatch! $ :: :user/log-out
-                        js/localStorage.removeItem $ &struct:get config/site :storage-key
+                        js/localStorage.removeItem $ :storage-key config/site
                     <> "|Log out"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn
+            {} (:return 'respo.schema/Component)
+              :args $ [] 'cumulo-reel.schema/User 'Map
         |css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstyle css-member-label $ {}

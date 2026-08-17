@@ -1,13 +1,13 @@
 {
-  "version": "0.0.23",
+  "version": "0.0.21",
   "dependencies": {
-    "@calcit/procs": "^0.13.16"
+    "@calcit/procs": "^0.13.19"
   },
   "scripts": {
-    "watch-server": "cr --entry server js -w",
-    "compile-server": "cr --entry server js",
-    "compile-page": "cr --emit-path out-page/ js",
-    "watch-page": "cr --emit-path out-page/ js -w"
+    "watch-server": "cr --emit-js --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/reload!",
+    "compile-server": "cr --emit-js --once --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/reload!",
+    "compile-page": "cr --emit-js --once --emit-path out-page/",
+    "watch-page": "cr --emit-js --emit-path out-page/"
   },
   "devDependencies": {
     "md5": "^2.3.0",

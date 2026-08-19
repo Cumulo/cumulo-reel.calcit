@@ -1,10 +1,12 @@
 
-{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel) (:version |0.0.22)
+{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |cumulo-reel)
   :entries $ {}
     :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.client/reload!)
-      :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/
+      :feature-policy $ {}
+      :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |js-ffi/
       :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
     :server $ {} (:description |) (:init-fn 'cumulo-reel.app.server/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.server/reload!)
+      :feature-policy $ {}
       :modules $ [] |recollect/ |ws-edn.calcit/ |cumulo-util.calcit/ |calcit.std/ |calcit-wss/
       :type-slots $ {} (:dispatch-op |cumulo-reel.schema/Op)
   :files $ {}
@@ -130,27 +132,27 @@
                     state $ &map:get
                       either states $ {}
                       , :data
-                    session $ &struct:get store-typed :session
-                    router $ &struct:get store-typed :router
-                    router-data $ &struct:get router :data
+                    session store-typed.:session
+                    router store-typed.:router
+                    router-data router.:data
                   div
                     {} $ :class-name (str-spaced css/global css/fullscreen css/column)
-                    comp-navigation (:logged-in? store-typed) (:count store-typed)
-                    if (:logged-in? store-typed)
-                      case-default (&struct:get router :name)
-                        <> $ turn-string (&struct:get router :name)
+                    comp-navigation store-typed.:logged-in? store-typed.:count
+                    if store-typed.:logged-in?
+                      case-default router.:name
+                        <> $ turn-string router.:name
                         :home $ <> |Home
-                        :profile $ comp-profile (:user store-typed) (&struct:get router :data)
+                        :profile $ comp-profile store-typed.:user router.:data
                       comp-login $ >>
                         either states $ {}
                         , :login
-                    comp-status-color $ :color store-typed
-                    comp-messages (&struct:get session :messages) ({})
+                    comp-status-color store-typed.:color
+                    comp-messages (-> session.:messages vals .to-list) ({})
                       fn (info d!)
                         d! $ :: :session/remove-message info
                     when config/dev? $ comp-inspect |Store store
                       {} (:bottom 0) (:left 0) (:max-width |100%)
-                    when config/dev? $ comp-reel (:reel-length store-typed) ({})
+                    when config/dev? $ comp-reel store-typed.:reel-length ({})
           :examples $ []
           :schema $ :: 'Fn
             {} (:return 'respo.schema/Component)
@@ -220,7 +222,7 @@
           :code $ quote
             defstruct LoginState (:username 'String) (:password 'String)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defcomp comp-login (states)
@@ -492,8 +494,9 @@
         |persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn persist-db! () $ let
+                reel $ unsafe-coerce @*reel 'cumulo-reel.core/ReelState
                 file-content $ format-cirru-edn
-                  assoc (&struct:get @*reel :db) :sessions $ {}
+                  assoc reel.:db :sessions $ {}
                 storage-path storage-file
                 backup-path $ get-backup-path!
               check-write-file! storage-path file-content
@@ -547,8 +550,8 @@
             defn sync-clients! (reel) (begin-twig-frame!)
               wss-each! $ fn (sid)
                 let
-                    db $ &struct:get reel :db
-                    records $ &struct:get reel :records
+                    db reel.:db
+                    records reel.:records
                     session $ get-in db ([] :sessions sid)
                     old-store $ or (get @*client-caches sid) nil
                     new-store $ twig-container db session records
@@ -586,23 +589,24 @@
           :code $ quote
             defn twig-container (db session records)
               let
-                  logged-in? $ some? (&struct:get session :user-id)
-                  router $ &struct:get session :router
+                  logged-in? $ some? session.:user-id
+                  router session.:router
+                  router-name router.:name
+                  pages db.:pages
+                  sessions db.:sessions
+                  users db.:users
                   base-data $ {} (:logged-in? logged-in?) (:session session)
                     :reel-length $ count records
                     :router $ if logged-in?
-                      assoc router :data $ case (&struct:get router :name)
-                        :home $ &struct:get db :pages
-                        :profile $ memo-twig-by2 :members twig-members (&struct:get db :sessions) (&struct:get db :users)
-                        (&struct:get router :name) ({})
+                      assoc router :data $ case router-name (:home pages)
+                        :profile $ memo-twig-by2 :members twig-members sessions users
+                        router-name $ {}
                       , router
-                    :count $ count (&struct:get db :sessions)
+                    :count $ count sessions
                     :color $ rand-hex-color!
                 merge base-data $ if logged-in?
                   {} $ :user
-                    memo-twig-by1 (&struct:get session :user-id) twig-user $ &map:get
-                      get-in db $ [] :users
-                      &struct:get session :user-id
+                    memo-twig-by1 session.:user-id twig-user $ &map:get (users) (session.:user-id)
                   , nil
           :examples $ []
           :schema $ :: 'Dynamic
@@ -612,7 +616,7 @@
               -> sessions (to-pairs)
                 map $ fn (pair)
                   let[] (k session) pair $ [] k
-                    get-in users $ [] (&struct:get session :user-id) :name
+                    get-in users $ [] session.:user-id :name
                 pairs-map
           :examples $ []
           :schema $ :: 'Dynamic
@@ -696,9 +700,9 @@
           :code $ quote
             defn log-in (db username password sid op-id op-time)
               let
-                  maybe-user $ -> (&struct:get db :users) (vals) (.to-list)
+                  maybe-user $ -> db.:users (vals) (.to-list)
                     find $ fn (user)
-                      and $ = username (&struct:get user :name)
+                      and $ = username user.:name
                   user $ option:unwrap-or maybe-user nil
                 update-in db ([] :sessions sid)
                   fn (session-opt)
@@ -708,8 +712,8 @@
                           , 'cumulo-reel.schema/Session
                       if (some? user)
                         if
-                          = (md5 password) (&struct:get user :password)
-                          assoc session :user-id $ &struct:get user :id
+                          = (md5 password) user.:password
+                          assoc session :user-id user.:id
                           update session :messages $ fn (messages)
                             assoc messages op-id $ {} (:id op-id)
                               :text $ str "|Wrong password for " username
@@ -728,10 +732,9 @@
           :code $ quote
             defn sign-up (db username password sid op-id op-time)
               let
-                  maybe-user $ find
-                    vals $ &struct:get db :users
+                  maybe-user $ find (vals db.:users)
                     fn (user)
-                      = username $ &struct:get user :name
+                      = username $ user.:name
                 if (option:some? maybe-user)
                   update-in db ([] :sessions sid :messages)
                     fn (messages)
@@ -805,7 +808,7 @@
           :code $ quote
             defstruct ReelState (:base 'Dynamic) (:db 'Dynamic) (:records 'Dynamic) (:merged? 'Dynamic)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |play-records $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn play-records (db records updater)
@@ -884,37 +887,37 @@
           :code $ quote
             defstruct ClientStore (:session 'Session) (:router 'Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number) (:name 'String) (:user 'User)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |Database $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct Database (:sessions 'Map) (:users 'Map) (:pages 'Dynamic)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |Op $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'Dynamic) (:user/log-in 'String 'String) (:user/sign-up 'String 'String) (:user/log-out) (:router/change 'Dynamic) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |Router $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct Router (:name 'Dynamic) (:title 'Dynamic) (:data 'Dynamic) (:router 'Dynamic)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |Session $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct Session (:user-id 'Dynamic) (:id 'Dynamic) (:nickname 'Dynamic) (:router 'Router) (:messages 'Map)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |SiteConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct SiteConfig (:port 'Number) (:title 'String) (:icon 'String) (:dev-ui 'String) (:release-ui 'String) (:cdn-url 'String) (:theme 'String) (:storage-key 'String) (:storage-file 'String)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |User $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct User (:name 'Dynamic) (:id 'Dynamic) (:nickname 'Dynamic) (:avatar 'Dynamic) (:password 'Dynamic)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Enum
         |database $ %{} 'CodeEntry (:doc |)
           :code $ quote
             def database $ %{} Database

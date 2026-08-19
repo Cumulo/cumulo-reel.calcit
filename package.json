@@ -1,7 +1,7 @@
 {
-  "version": "0.0.21",
+  "version": "0.0.22",
   "dependencies": {
-    "@calcit/procs": "^0.13.19"
+    "@calcit/procs": "^0.13.27"
   },
   "scripts": {
     "watch-server": "cr --emit-js --init-fn cumulo-reel.app.server/main! --reload-fn cumulo-reel.app.server/reload!",

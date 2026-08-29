@@ -38,6 +38,9 @@ mode=dev node js-out/bundle.js
 
 https://github.com/Cumulo/cumulo-workflow
 
+For reducer, reload, and replay guidance usable from the CLI, see
+[Realtime Reel state and replay](docs/realtime-reel.md).
+
 ### License
 
 MIT

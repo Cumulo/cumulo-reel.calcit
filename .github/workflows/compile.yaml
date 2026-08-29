@@ -27,7 +27,7 @@ jobs:
         tools: calcit,caps
 
     - name: "load deps"
-      run: caps --ci && yarn install --immutable
+      run: caps --strict --ci && yarn install --immutable
 
     - name: Validate Calcit snapshot and types
       run: |

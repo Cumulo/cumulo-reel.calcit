@@ -1,7 +1,7 @@
 {
   "version": "0.0.32",
   "dependencies": {
-    "@calcit/procs": "0.13.67"
+    "@calcit/procs": "0.13.68"
   },
   "scripts": {
     "watch-server": "calcit calcit.cirru --entry server js -w",

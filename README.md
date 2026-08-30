@@ -74,6 +74,8 @@ work.
 `caps --strict --ci` 用于发现传递依赖中的旧版本固定。如果两个已发布模块请求
 不同版本，应在对应上游模块升级并发版；迁移期间普通 `caps --ci` 会报告同一
 分歧，并选择兼容的最高 SemVer 继续验证。
+For reducer, reload, and replay guidance usable from the CLI, see
+[Realtime Reel state and replay](docs/realtime-reel.md).
 
 ### License
 

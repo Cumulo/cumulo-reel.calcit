@@ -1,9 +1,10 @@
 {
   "version": "0.0.33",
   "dependencies": {
-    "@calcit/procs": "0.13.68"
+    "@calcit/procs": "0.13.75"
   },
   "scripts": {
+    "check-quality": "calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru",
     "watch-server": "calcit calcit.cirru --entry server js -w",
     "compile-server": "calcit calcit.cirru --entry server js",
     "compile-page": "calcit calcit.cirru js",

@@ -148,7 +148,7 @@
                         either states $ {}
                         , :login
                     comp-status-color store-typed.:color
-                    comp-messages (-> session.:messages vals .to-list) ({})
+                    comp-messages (session.:messages) ({})
                       fn (info d!)
                         d! $ :: :session/remove-message info
                     when config/dev? $ comp-inspect |Store store

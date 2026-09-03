@@ -1,7 +1,7 @@
 {
   "version": "0.0.33",
   "dependencies": {
-    "@calcit/procs": "0.13.75"
+    "@calcit/procs": "0.13.76"
   },
   "scripts": {
     "check-quality": "calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru",

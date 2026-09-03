@@ -41,10 +41,10 @@ jobs:
         calcit calcit.cirru analyze check-types --summary-only --format json
         calcit calcit.cirru analyze weak-types --only schema-dynamic,code-dynamic --intent unresolved --summary-only --format json
         calcit calcit.cirru analyze deprecated --summary-only --format json
-        yarn check-quality
+        calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
 
     - name: "compiles to js"
       run: >
-        yarn compile-page
+        calcit calcit.cirru js
         && yarn vite build
-        && yarn compile-server
+        && calcit calcit.cirru --entry server js

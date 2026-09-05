@@ -628,7 +628,8 @@
                 map $ fn (pair)
                   let[] (k session) pair $ [] k
                     get-in users $ [] session.:user-id :name
-                , .to-list $ pairs-map
+                .to-list
+                pairs-map
           :examples $ []
           :schema $ :: 'Dynamic
       :ns $ %{} 'NsEntry (:doc |)

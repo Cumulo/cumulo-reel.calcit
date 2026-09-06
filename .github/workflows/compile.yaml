@@ -13,11 +13,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      with:
+        persist-credentials: false
 
-    - uses: actions/setup-node@v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 24
+        package-manager-cache: false
 
     - name: Enable Corepack
       run: |
@@ -25,12 +28,12 @@ jobs:
         corepack prepare yarn@4.12.0 --activate
         yarn --version
 
-    - uses: calcit-lang/setup-calcit@v1
+    - uses: calcit-lang/setup-calcit@704b3f5cd6f9ce3bd1e0c926dbdd1d181adb8180 # v1.4.0
       with:
         tools: calcit,caps
 
     - name: "load deps"
-      run: caps --strict --ci && yarn install --immutable
+      run: caps --strict --ci && yarn install --immutable && caps verify --toolchain
 
     - name: Validate Calcit snapshot and types
       run: |
@@ -41,6 +44,8 @@ jobs:
         calcit calcit.cirru analyze check-types --summary-only --format json
         calcit calcit.cirru analyze weak-types --only schema-dynamic,code-dynamic --intent unresolved --summary-only --format json
         calcit calcit.cirru analyze deprecated --summary-only --format json
+        calcit calcit.cirru analyze dynamic-methods --max 0
+        calcit calcit.cirru --entry server analyze dynamic-methods --max 0
         calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
 
     - name: "compiles to js"

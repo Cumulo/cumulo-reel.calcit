@@ -779,15 +779,15 @@
                 =< 8 nil
                 span $ {} (:inner-text |Reset) (:class-name css-click)
                   :on-click $ fn (e d!)
-                    d! $ :: :reel/reset nil
+                    d! $ :: :reel/reset
                 =< 8 nil
                 span $ {} (:inner-text |Merge) (:class-name css-click)
                   :on-click $ fn (e d!)
-                    d! $ :: :reel/merge nil
+                    d! $ :: :reel/merge
                 =< 8 nil
                 span $ {} (:inner-text |Persist) (:class-name css-click)
                   :on-click $ fn (e d!)
-                    d! $ :: :effect/persist nil
+                    d! $ :: :effect/persist
           :examples $ []
           :schema $ :: 'Dynamic
         'css-click $ %{} 'CodeEntry (:doc |)

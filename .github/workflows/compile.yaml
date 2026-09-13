@@ -48,6 +48,9 @@ jobs:
         calcit calcit.cirru --entry server analyze dynamic-methods --max 0
         calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
 
+    - name: Run Calcit tests
+      run: calcit calcit.cirru test --require-match --summary-only --format json
+
     - name: "compiles to js"
       run: >
         calcit calcit.cirru js

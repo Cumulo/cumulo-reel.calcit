@@ -173,7 +173,7 @@
                       case-default router.:name
                         <> $ turn-string router.:name
                         :home $ <> |Home
-                        :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/User) router.:data
+                        :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/ClientUser) router.:data
                       comp-login $ >>
                         either states $ {}
                         , :login
@@ -418,7 +418,7 @@
           :examples $ []
           :schema $ :: 'Fn
             {} (:return 'respo.schema/Component)
-              :args $ [] 'cumulo-reel.schema/User
+              :args $ [] 'cumulo-reel.schema/ClientUser
                 :: 'Map 'Number $ :: 'JsNullish 'String
         'css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote
@@ -715,14 +715,29 @@
       :defs $ {}
         'twig-user $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defn twig-user (user) user
+            defn twig-user (user)
+              %{} schema/ClientUser
+                :name $ :name user
+                :id $ :id user
+                :nickname $ :nickname user
+                :avatar $ :avatar user
           :examples $ []
           :schema $ :: 'Fn
-            {} (:return 'cumulo-reel.schema/User)
+            {} (:return 'cumulo-reel.schema/ClientUser)
               :args $ [] 'cumulo-reel.schema/User
+          :tests $ []
+            %{} 'TestEntry (:name |omits-password)
+              :code $ quote
+                let
+                    user $ struct-with schema/user (:name |Ada) (:id |u1) (:nickname |Ada) (:password |secret)
+                    client-user $ twig-user user
+                  assert=
+                    %{} schema/ClientUser (:name |Ada) (:id |u1) (:nickname |Ada) (:avatar nil)
+                    , client-user
+              :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote
-          ns cumulo-reel.app.twig.user $ :require
+          ns cumulo-reel.app.twig.user $ :require (cumulo-reel.schema :as schema)
     'cumulo-reel.app.updater $ %{} 'FileEntry
       :defs $ {}
         'updater $ %{} 'CodeEntry (:doc |)
@@ -1047,7 +1062,13 @@
           :code $ quote
             defstruct ClientStore (:session 'Session) (:router 'Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number)
               :name $ :: 'JsNullish 'String
-              :user $ :: 'JsNullish 'User
+              :user $ :: 'JsNullish 'ClientUser
+          :examples $ []
+          :schema $ :: 'StructDef
+        'ClientUser $ %{} 'CodeEntry (:doc |)
+          :code $ quote
+            defstruct ClientUser (:name 'String) (:id 'String) (:nickname 'String)
+              :avatar $ :: 'JsNullish 'String
           :examples $ []
           :schema $ :: 'StructDef
         'Database $ %{} 'CodeEntry (:doc |)
@@ -1120,7 +1141,7 @@
           :schema $ :: 'cumulo-reel.schema/Session
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            def user $ %{} User (:name nil) (:id nil) (:nickname nil) (:avatar nil) (:password nil)
+            def user $ %{} User (:name |) (:id |) (:nickname |) (:avatar nil) (:password |)
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/User
       :ns $ %{} 'NsEntry (:doc |)

@@ -3,19 +3,11 @@
   :about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `calcit query` to inspect and `calcit edit`/`calcit tree` to modify. Run `calcit docs agents --contract` before mutations; use `--full` for first orientation or changed contract digest. Manual edits must follow format and schema conventions, then run `calcit edit format`."
   :package |cumulo-reel
   :entries $ {}
-    :default $ {} (:description |)
-      :init-fn 'cumulo-reel.app.client/main!
-      :mode :native
-      :reload-fn 'cumulo-reel.app.client/reload!
-      :target :browser
+    :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.client/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |js-ffi/
       :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
-    :server $ {} (:description |)
-      :init-fn 'cumulo-reel.app.server/main!
-      :mode :native
-      :reload-fn 'cumulo-reel.app.server/reload!
-      :target :node
+    :server $ {} (:description |) (:init-fn 'cumulo-reel.app.server/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.server/reload!) (:target :node)
       :feature-policy $ {}
       :modules $ [] |recollect/ |ws-edn.calcit/ |cumulo-util.calcit/ |calcit.std/ |calcit-wss/
       :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
@@ -36,20 +28,16 @@
               str |ws:// js/location.hostname |: $ :port config/site
               {}
                 :on-open $ fn (event) (simulate-login!)
-                :on-close $ fn (event) (reset! *store nil)
-                  js/console.error "|Lost connection!"
+                :on-close $ fn (event) (reset! *store nil) (js/console.error "|Lost connection!")
                 :on-data $ fn (data)
                   case (&map:get data :kind)
                     :patch $ let
-                        changes $ assert-type (&map:get data :data)
-                          :: 'List 'recollect.schema/change-op
+                        changes $ assert-type (&map:get data :data) (:: 'List 'recollect.schema/change-op)
                       js/console.log |Changes changes
-                      reset! *store $ assert-type (patch-twig @*store changes)
-                        :: 'JsNullish 'cumulo-reel.schema/ClientStore
+                      reset! *store $ assert-type (patch-twig @*store changes) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                     (&map:get data :kind) (println "|unknown kind:" data)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'ws-edn.client/WsClient
+          :schema $ :: 'Fn $ {} (:return 'ws-edn.client/WsClient)
             :args $ []
             :features $ #{} :js-ffi
         'dispatch! $ %{} 'CodeEntry (:doc |)
@@ -131,10 +119,8 @@
                           :: :user/log-in (&list:nth pair 0) (&list:nth pair 1)
                           %none
                       eprintln "|Invalid stored login pair"
-                  (:err error)
-                    eprintln "|Invalid stored login:" error
-              (:none)
-                println "|Found no storage."
+                  (:err error) (eprintln "|Invalid stored login:" error)
+              (:none) (println "|Found no storage.")
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -177,25 +163,19 @@
                     case-default router.:name
                       <> $ turn-string router.:name
                       :home $ <> |Home
-                      :profile $ comp-profile
-                        assert-type store-typed.:user 'cumulo-reel.schema/ClientUser
-                        , router.:data
+                      :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/ClientUser) router.:data
                     comp-login $ >>
                       either states $ {}
                       , :login
                   comp-status-color store-typed.:color
-                  comp-messages
-                    session.:messages
-                    {}
+                  comp-messages (session.:messages) ({})
                     fn (info d!)
                       d! $ :: :session/remove-message $ assert-type (&map:get info :id) 'String
                   when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
                   when config/dev? $ comp-reel store-typed.:reel-length $ {}
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
-            :args $ [] (:: 'Map 'Tag 'Dynamic)
-              :: 'JsNullish 'cumulo-reel.schema/ClientStore
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
+            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline ()
             div
@@ -216,19 +196,16 @@
                     d! $ :: :effect/connect
                 <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ []
         'comp-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-status-color (color)
             div $ {} (:class-name css-status-color)
               :style $ let
                   size 24
-                {} (:width size) (:height size)
-                  :background-color color
+                {} (:width size) (:height size) (:background-color color)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'String
         'css-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-status-color
@@ -300,8 +277,7 @@
                       :style $ style/merge-styles style/link
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] $ :: 'Map 'Tag 'Dynamic
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state
@@ -315,8 +291,7 @@
               js/localStorage.setItem (:storage-key config/site)
                 format-cirru-edn $ [] username password
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/EventHandler
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/EventHandler)
             :args $ [] 'String 'String 'Bool
             :features $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
@@ -350,8 +325,7 @@
                 =< 8 nil
                 <> $ str count-members
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'Bool 'Number
         'css-nav $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-nav
@@ -411,8 +385,7 @@
                       , &unit
                   <> "|Log out"
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'cumulo-reel.schema/ClientUser $ :: 'Map 'Number (:: 'JsNullish 'String)
         'css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-member-label
@@ -442,14 +415,7 @@
           :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
-            %{} cumulo-reel.schema/SiteConfig (:port 5021) (:title |Cumulo)
-              :icon |http://cdn.tiye.me/logo/cumulo.png
-              :dev-ui |http://localhost:8100/main.css
-              :release-ui |http://cdn.tiye.me/favored-fonts/main.css
-              :cdn-url |http://cdn.tiye.me/cumulo-reel/
-              :theme |#eeeeff
-              :storage-key |reel-storage
-              :storage-file |storage.cirru
+            %{} cumulo-reel.schema/SiteConfig (:port 5021) (:title |Cumulo) (:icon |http://cdn.tiye.me/logo/cumulo.png) (:dev-ui |http://localhost:8100/main.css) (:release-ui |http://cdn.tiye.me/favored-fonts/main.css) (:cdn-url |http://cdn.tiye.me/cumulo-reel/) (:theme |#eeeeff) (:storage-key |reel-storage) (:storage-file |storage.cirru)
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
@@ -467,8 +433,7 @@
           :code $ quote $ defatom *initial-db
             if
               path-exists? $ w-log storage-file
-              do
-                println "|Found local EDN data"
+              do (println "|Found local EDN data")
                 assert-type
                   parse-cirru-edn (read-file storage-file)
                     {} (:Database schema/database) (:Session schema/session) (:User schema/user) (:Router schema/router)
@@ -517,9 +482,7 @@
                   :port config/site
               run-server! port
               println $ str "|Server started on port:" port
-            do
-              ; "|init it before doing multi-threading"
-              identity @*reader-reel
+            do (; "|init it before doing multi-threading") (identity @*reader-reel)
             set-interval 200 $ fn () $ render-loop!
             set-interval 600000 $ fn () $ persist-db!
             on-control-c on-exit!
@@ -536,9 +499,7 @@
           :code $ quote $ defn persist-db! ()
             let
                 reel $ assert-type @*reel 'cumulo-reel.core/ReelState
-                file-content $ format-cirru-edn $ assoc
-                  assert-type reel.:db 'cumulo-reel.schema/Database
-                  , :sessions ({})
+                file-content $ format-cirru-edn $ assoc (assert-type reel.:db 'cumulo-reel.schema/Database) :sessions ({})
                 storage-path storage-file
                 backup-path $ get-backup-path!
               check-write-file! storage-path file-content
@@ -547,8 +508,7 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
         'reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reload! () (println "|Code updated.")
-            clear-twig-caches!
+          :code $ quote $ defn reload! () (println "|Code updated.") (clear-twig-caches!)
             reset! *reel $ refresh-reel @*reel @*initial-db updater
             sync-clients! @*reader-reel
           :examples $ []
@@ -574,18 +534,13 @@
                       dispatch! (:: :session/connect) sid
                       println "|New client."
                   (:message sid msg)
-                    match
-                      try-parse-cirru-edn-as msg 'cumulo-reel.schema/Op
+                    match (try-parse-cirru-edn-as msg 'cumulo-reel.schema/Op)
                       (:ok action) (dispatch! action sid)
-                      (:err error)
-                        eprintln "|Invalid client action:" error
+                      (:err error) (eprintln "|Invalid client action:" error)
                   (:disconnect sid)
                     do (println "|Client closed!")
-                      dispatch!
-                        :: :session/disconnect
-                        , sid
-                  (:blob sid _)
-                    eprintln "|Unexpected binary message from:" sid
+                      dispatch! (:: :session/disconnect) sid
+                  (:blob sid _) (eprintln "|Unexpected binary message from:" sid)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'FfiTask)
             :args $ [] 'Number
@@ -597,8 +552,7 @@
           :examples $ []
           :schema $ :: 'String
         'sync-clients! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn sync-clients! (reel)
-            begin-twig-frame!
+          :code $ quote $ defn sync-clients! (reel) (begin-twig-frame!)
             wss-each! $ fn (sid)
               let
                   db $ assert-type reel.:db 'cumulo-reel.schema/Database
@@ -624,8 +578,7 @@
             :args $ [] 'cumulo-reel.core/ReelState
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server
-          :require
-            cumulo-reel.schema :as schema
+          :require (cumulo-reel.schema :as schema)
             cumulo-reel.app.updater :refer $ updater
             cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
             cumulo-reel.app.config :as config
@@ -671,8 +624,7 @@
                   , nil
               , 'cumulo-reel.schema/ClientStore
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/ClientStore
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)
         'twig-members $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-members (sessions users)
@@ -688,9 +640,7 @@
               pairs-map
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ []
-              :: 'Map 'Number 'cumulo-reel.schema/Session
-              :: 'Map 'String 'cumulo-reel.schema/User
+            :args $ [] (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
             :return $ :: 'Map 'Number $ :: 'JsNullish 'String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.twig.container
@@ -709,8 +659,7 @@
               :nickname $ :nickname user
               :avatar $ :avatar user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/ClientUser
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientUser)
             :args $ [] 'cumulo-reel.schema/User
           :tests $ [] $ %{} 'TestEntry (:name |omits-password)
             :code $ quote $ let
@@ -729,26 +678,19 @@
           :code $ quote $ defn updater (db op sid op-id op-time)
             match op
               (:session/connect) (session/connect db sid op-id op-time)
-              (:session/disconnect)
-                session/disconnect db sid op-id op-time
-              (:session/remove-message op-data)
-                session/remove-message db op-data sid op-id op-time
+              (:session/disconnect) (session/disconnect db sid op-id op-time)
+              (:session/remove-message op-data) (session/remove-message db op-data sid op-id op-time)
               (:user/log-in username password) (user/log-in db username password sid op-id op-time)
               (:user/sign-up username password) (user/sign-up db username password sid op-id op-time)
               (:user/log-out) (user/log-out db sid op-id op-time)
               (:router/change data) (router/change db data sid op-id op-time)
               _ $ do (eprintln "|Unknown op" op) db
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Op 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater
-          :require
-            [] cumulo-reel.app.updater.session :as session
-            [] cumulo-reel.app.updater.user :as user
-            [] cumulo-reel.app.updater.router :as router
-            [] cumulo-reel.schema :as schema
+          :require ([] cumulo-reel.app.updater.session :as session) ([] cumulo-reel.app.updater.user :as user) ([] cumulo-reel.app.updater.router :as router) ([] cumulo-reel.schema :as schema)
             [] respo-message.updater :refer $ [] update-messages
     'cumulo-reel.app.updater.router $ %{} 'FileEntry
       :defs $ {} $ 'change
@@ -764,8 +706,7 @@
                   struct-with schema/router $ :name route-name
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Tag 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.router
@@ -777,15 +718,13 @@
             struct-with db $ :sessions $ assoc db.:sessions sid
               struct-with schema/session $ :id sid
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
             struct-with db $ :sessions $ dissoc db.:sessions sid
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
         'remove-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn remove-message (db message-id sid op-id op-time)
@@ -795,12 +734,10 @@
                     (:some found) found
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
-                next-session $ struct-with session $ :messages
-                  dissoc session.:messages message-id
+                next-session $ struct-with session $ :messages (dissoc session.:messages message-id)
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'String 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.session
@@ -836,8 +773,7 @@
                         :text $ str "|No user named: " username
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
         'log-out $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-out (db sid op-id op-time)
@@ -850,8 +786,7 @@
                 next-session $ struct-with session $ :user-id nil
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
@@ -883,8 +818,7 @@
                     :sessions $ assoc db.:sessions sid next-session
                     :users $ assoc db.:users op-id next-user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.user
@@ -911,8 +845,7 @@
                 :on-click $ fn (e d!)
                   d! $ :: :effect/persist
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'Number $ :: 'Map 'Tag 'Dynamic
         'css-click $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-click
@@ -986,15 +919,13 @@
                       assert-type (:db reel) 'Db
                       , op sid op-id op-time
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.core/ReelState
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.core/ReelState)
             :args $ [] 'cumulo-reel.core/ReelState
               :: 'Fn $ {} (:return 'Db)
                 :args $ [] 'Db 'Op 'Sid 'OpId 'Number
               , 'Op 'Sid 'OpId 'Number 'Bool
             :generics $ [] 'Db 'Op 'Sid 'OpId
-          :tests $ [] $ %{} 'TestEntry
-            :name |resets-from-base
+          :tests $ [] $ %{} 'TestEntry (:name |resets-from-base)
             :code $ quote $ let
                 reel $ ReelState :base 1 :db 2 :records ([]) :merged? false
                 updater $ fn (db op sid op-id op-time)
@@ -1021,8 +952,7 @@
                 next-db $ play-records next-base reel.:records updater
               struct-with reel (:base next-base) (:db next-db)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'cumulo-reel.core/ReelState
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.core/ReelState)
             :args $ [] 'cumulo-reel.core/ReelState 'Db $ :: 'Fn
               {} (:return 'Db)
                 :args $ [] 'Db 'Op 'Sid 'OpId 'Number
@@ -1054,19 +984,7 @@
           :examples $ []
           :schema $ :: 'StructDef
         'Op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum Op (:session/connect)
-            :session/disconnect
-            :session/remove-message 'String
-            :user/log-in 'String 'String
-            :user/sign-up 'String 'String
-            :user/log-out
-            :router/change 'Tag
-            :effect/persist
-            :effect/ping
-            :effect/pong
-            :effect/connect
-            :reel/reset
-            :reel/merge
+          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'String) (:user/log-in 'String 'String) (:user/sign-up 'String 'String) (:user/log-out) (:router/change 'Tag) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
           :examples $ []
           :schema $ :: 'Enum
         'Router $ %{} 'CodeEntry (:doc |)

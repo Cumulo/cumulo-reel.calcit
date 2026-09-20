@@ -25,15 +25,17 @@
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! ()
             ws-connect!
-              str |ws:// js/location.hostname |: $ :port config/site
+              str |ws://
+                :hostname $ browser/location-snapshot
+                , |: $ :port config/site
               {}
                 :on-open $ fn (event) (simulate-login!)
-                :on-close $ fn (event) (reset! *store nil) (js/console.error "|Lost connection!")
+                :on-close $ fn (event) (reset! *store nil) (shared/console-error! "|Lost connection!")
                 :on-data $ fn (data)
                   case (&map:get data :kind)
                     :patch $ let
                         changes $ assert-type (&map:get data :data) (:: 'List 'recollect.schema/change-op)
-                      js/console.log |Changes changes
+                      shared/console-log! $ str |Changes changes
                       reset! *store $ assert-type (patch-twig @*store changes) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                     (&map:get data :kind) (println "|unknown kind:" data)
           :examples $ []
@@ -67,10 +69,11 @@
             connect!
             add-watch *store :changes $ fn (store prev) (render-app! render!)
             add-watch *states :changes $ fn (states prev) (render-app! render!)
-            js/window.addEventListener |visibilitychange $ fn (event)
+            browser/add-event-listener! |visibilitychange $ fn (event)
               when
                 and (js-nullish? @*store) (page-visible?)
                 connect!
+              , &unit
             println "|App started!"
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -78,7 +81,7 @@
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
-            option:unwrap $ query-selector |.app
+            option:unwrap $ browser/query-selector |.app
           :examples $ []
           :schema $ :: 'js-ffi.browser/DomElementHost
         'reload! $ %{} 'CodeEntry (:doc |)
@@ -107,7 +110,7 @@
         'simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn simulate-login! ()
             match
-              storage-get $ :storage-key config/site
+              browser/storage-get $ :storage-key config/site
               (:some raw)
                 match
                   try-parse-cirru-edn-as raw $ :: 'List 'String
@@ -127,7 +130,7 @@
             :features $ #{} :js-ffi
         'ssr? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def ssr?
-            option:some? $ query-selector |meta.respo-ssr
+            option:some? $ browser/query-selector |meta.respo-ssr
           :examples $ []
           :schema $ :: 'Bool
       :ns $ %{} 'NsEntry (:doc |)
@@ -142,7 +145,8 @@
             [] ws-edn.client :refer $ [] ws-connect! ws-send!
             [] recollect.patch :refer $ [] patch-twig
             cumulo-util.activity :refer $ page-visible?
-            js-ffi.browser :refer $ query-selector storage-get
+            js-ffi.browser :as browser
+            js-ffi.shared :as shared
     'cumulo-reel.app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
@@ -288,7 +292,7 @@
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
               dispatch! $ if signup? (:: :user/sign-up username password) (:: :user/log-in username password)
-              js/localStorage.setItem (:storage-key config/site)
+              browser/storage-set! (:storage-key config/site)
                 format-cirru-edn $ [] username password
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/EventHandler)
@@ -304,6 +308,7 @@
             [] cumulo-reel.schema :as schema
             [] cumulo-reel.style :as style
             [] cumulo-reel.app.config :as config
+            js-ffi.browser :as browser
     'cumulo-reel.app.comp.navigation $ %{} 'FileEntry
       :defs $ {}
         'comp-navigation $ %{} 'CodeEntry (:doc |)
@@ -372,7 +377,9 @@
                 button
                   {} (:class-name css/button)
                     :on-click $ fn (e d!)
-                      js/location.replace $ str js/location.origin |?time= $ .now js/Date
+                      browser/location-replace! $ str
+                        :origin $ browser/location-snapshot
+                        , |?time= $ shared/now-ms
                       , &unit
                   <> |Refresh
                 =< 8 nil
@@ -381,7 +388,7 @@
                     :style $ {} (:color :red) (:border-color :red)
                     :on-click $ fn (e dispatch!)
                       dispatch! $ :: :user/log-out
-                      js/localStorage.removeItem $ :storage-key config/site
+                      browser/storage-remove! $ :storage-key config/site
                       , &unit
                   <> "|Log out"
           :examples $ []
@@ -406,6 +413,8 @@
             respo.core :refer $ defcomp list-> <> span div button
             respo.comp.space :refer $ =<
             cumulo-reel.app.config :as config
+            js-ffi.browser :as browser
+            js-ffi.shared :as shared
     'cumulo-reel.app.config $ %{} 'FileEntry
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)

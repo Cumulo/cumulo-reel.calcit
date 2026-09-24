@@ -1,7 +1,11 @@
 {
   "version": "0.0.45",
   "dependencies": {
-    "@calcit/procs": "0.19.1"
+    "@calcit/procs": "0.20.0",
+    "md5": "^2.3.0",
+    "nanoid": "6.0.1",
+    "randomcolor": "^0.6.2",
+    "ws": "^8.13.0"
   },
   "scripts": {
     "check-quality": "calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru",
@@ -11,11 +15,8 @@
     "watch-page": "calcit calcit.cirru js -w"
   },
   "devDependencies": {
-    "md5": "^2.3.0",
-    "randomcolor": "^0.6.2",
     "shortid": "^2.2.16",
-    "vite": "^8.2.2",
-    "ws": "^8.13.0"
+    "vite": "^8.2.2"
   },
   "packageManager": "yarn@4.18.0"
 }

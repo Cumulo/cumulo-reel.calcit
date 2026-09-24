@@ -7,9 +7,9 @@
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |js-ffi/
       :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
-    :server $ {} (:description |) (:init-fn 'cumulo-reel.app.server/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.server/reload!) (:target :node)
+    :server $ {} (:description |) (:init-fn 'cumulo-reel.app.server/main!) (:mode :js) (:reload-fn 'cumulo-reel.app.server/reload!) (:target :node)
       :feature-policy $ {}
-      :modules $ [] |recollect/ |ws-edn.calcit/ |cumulo-util.calcit/ |calcit.std/ |calcit-wss/
+      :modules $ [] |recollect/ |ws-edn.calcit/ |cumulo-util.calcit/ |js-ffi/
       :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
   :files $ {}
     'cumulo-reel.app.client $ %{} 'FileEntry
@@ -441,13 +441,13 @@
         '*initial-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *initial-db
             if
-              path-exists? $ w-log storage-file
+              file-exists? $ w-log storage-file
               do (println "|Found local EDN data")
                 assert-type
-                  parse-cirru-edn (read-file storage-file)
-                    {} (:Database schema/database) (:Session schema/session) (:User schema/user) (:Router schema/router)
+                  parse-cirru-edn (read-text! storage-file)
+                    {} (:Database database) (:Session session) (:User user) (:Router router)
                   'cumulo-reel.schema/Database
-              do (println "|Found no data") schema/database
+              do (println "|Found no data") database
           :examples $ []
           :schema $ :: 'Ref 'cumulo-reel.schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
@@ -463,7 +463,7 @@
           :code $ quote $ defn dispatch! (op sid)
             let
                 op-id $ generate-id!
-                op-time $ -> (get-time!) get-timestamp
+                op-time $ now-ms
               if config/dev? $ println |Dispatch! (str op) sid
               match op
                 (:effect/persist) (persist-db!)
@@ -474,10 +474,10 @@
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
-                now $ extract-time $ get-time!
-              join-path calcit-dirname |backups
-                str $ &map:get now :month
-                str (&map:get now :day) |-snapshot.cirru
+                now $ local-month-day!
+                backup-dir $ path-join calcit-dirname |backups
+                month-dir $ path-join backup-dir $ str (&map:get now :month)
+              path-join month-dir $ str (&map:get now :day) |-snapshot.cirru
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
@@ -492,11 +492,11 @@
               run-server! port
               println $ str "|Server started on port:" port
             do (; "|init it before doing multi-threading") (identity @*reader-reel)
-            set-interval 200 $ fn () $ render-loop!
-            set-interval 600000 $ fn () $ persist-db!
-            on-control-c on-exit!
+            every! 200 $ fn () $ render-loop!
+            every! 600000 $ fn () $ persist-db!
+            on-interrupt! on-exit!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'FfiTask)
+          :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'on-exit! $ %{} 'CodeEntry (:doc |)
@@ -511,8 +511,8 @@
                 file-content $ format-cirru-edn $ assoc (assert-type reel.:db 'cumulo-reel.schema/Database) :sessions ({})
                 storage-path storage-file
                 backup-path $ get-backup-path!
-              check-write-file! storage-path file-content
-              check-write-file! backup-path file-content
+              check-write-text! storage-path file-content
+              check-write-text! backup-path file-content
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -535,24 +535,24 @@
             :args $ []
         'run-server! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn run-server! (port)
-            wss-serve! (&{} :port port)
-              fn (data) (println |Data data)
-                match data
-                  (:connect sid)
-                    do
-                      dispatch! (:: :session/connect) sid
-                      println "|New client."
-                  (:message sid msg)
-                    match (try-parse-cirru-edn-as msg 'cumulo-reel.schema/Op)
-                      (:ok action) (dispatch! action sid)
-                      (:err error) (eprintln "|Invalid client action:" error)
-                  (:disconnect sid)
-                    do (println "|Client closed!")
-                      dispatch! (:: :session/disconnect) sid
-                  (:blob sid _) (eprintln "|Unexpected binary message from:" sid)
+            serve! port $ fn (data)
+              match data
+                (:connect sid)
+                  do
+                    dispatch! (:: :session/connect) sid
+                    println "|New client."
+                (:message sid msg)
+                  match (try-parse-cirru-edn-as msg 'cumulo-reel.schema/Op)
+                    (:ok action) (dispatch! action sid)
+                    (:err error) (eprintln "|Invalid client action:" error)
+                (:disconnect sid)
+                  do (println "|Client closed!")
+                    dispatch! (:: :session/disconnect) sid
+                (:blob sid) (eprintln "|Unexpected binary message from:" sid)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'FfiTask)
+          :schema $ :: 'Fn $ {} (:return 'ws-edn.server/NodeWebSocketServerHost)
             :args $ [] 'Number
+            :features $ #{} :js-ffi
         'storage-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def storage-file
             if (empty? calcit-dirname)
@@ -562,14 +562,14 @@
           :schema $ :: 'String
         'sync-clients! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sync-clients! (reel) (begin-twig-frame!)
-            wss-each! $ fn (sid)
+            each! $ fn (sid)
               let
                   db $ assert-type reel.:db 'cumulo-reel.schema/Database
                   records reel.:records
                   session $ assert-type
                     match (get db.:sessions sid)
                       (:some found) found
-                      (:none) schema/session
+                      (:none) session
                     , 'cumulo-reel.schema/Session
                   old-store $ match (get @*client-caches sid)
                     (:some cached) cached
@@ -579,7 +579,7 @@
                 if
                   not $ empty? changes
                   do
-                    wss-send! sid $ format-cirru-edn $ {} (:kind :patch) (:data changes)
+                    send! sid $ format-cirru-edn $ {} (:kind :patch) (:data changes)
                     swap! *client-caches assoc sid new-store
             finish-twig-frame!
           :examples $ []
@@ -587,22 +587,218 @@
             :args $ [] 'cumulo-reel.core/ReelState
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server
-          :require (cumulo-reel.schema :as schema)
+          :require
+            cumulo-reel.schema :refer $ database session user router
             cumulo-reel.app.updater :refer $ updater
             cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
             cumulo-reel.app.config :as config
             cumulo-reel.app.twig.container :refer $ twig-container
             recollect.diff :refer $ diff-twig
-            wss.core :refer $ wss-serve! wss-send! wss-each!
             recollect.twig :refer $ clear-twig-caches!
             cumulo-reel.$meta :refer $ calcit-dirname
-            calcit.std.fs :refer $ path-exists? check-write-file!
-            calcit.std.time :refer $ set-interval
-            calcit.std.date :refer $ get-time! get-timestamp extract-time
-            calcit.std.path :refer $ join-path
             recollect.memo :refer $ begin-twig-frame! finish-twig-frame!
+            cumulo-reel.app.server-ws :refer $ serve! send! each!
+            js-ffi.node :refer $ file-exists? read-text! path-join
+            js-ffi.shared :refer $ now-ms
+            cumulo-reel.app.server-host :refer $ check-write-text! local-month-day! every! on-interrupt!
+    'cumulo-reel.app.server-host $ %{} 'FileEntry
+      :defs $ {}
+        'LocalDateHost $ %{} 'CodeEntry (:doc "|仅暴露备份命名所需的宿主本地月、日读取。")
+          :code $ quote $ deftrait LocalDateHost
+            .get-month $ :: 'Fn $ {}
+              :args $ [] 'cumulo-reel.app.server-host/LocalDateHost
+              :return 'Number
+            .get-date $ :: 'Fn $ {}
+              :args $ [] 'cumulo-reel.app.server-host/LocalDateHost
+              :return 'Number
+          :examples $ []
+          :ffi $ {} (:backend :js) (:kind :external-object) (:target :node)
+            :names $ {} (:get-date |getDate) (:get-month |getMonth)
+          :schema $ :: 'Trait
+        'NodeProcessHost $ %{} 'CodeEntry (:doc "|仅用于订阅 Node 的 SIGINT 信号。")
+          :code $ quote $ deftrait NodeProcessHost
+            .on $ :: 'Fn $ {}
+              :args $ [] 'cumulo-reel.app.server-host/NodeProcessHost 'String $ :: 'Fn
+                {}
+                  :args $ []
+                  :return 'Unit
+              :return 'cumulo-reel.app.server-host/NodeProcessHost
+          :examples $ []
+          :ffi $ {} (:backend :js) (:kind :external-object) (:target :node)
+            :names $ {} $ :on |on
+          :schema $ :: 'Trait
+        'check-write-text! $ %{} 'CodeEntry (:doc "|内容未变时跳过写入，按需建立一级备份目录。")
+          :code $ quote $ defn check-write-text! (path content)
+            let
+                parent $ path-dirname path
+              ensure-directory! parent
+              if (file-exists? path)
+                if
+                  = (read-text! path) content
+                  , &unit $ write-text! path content
+                write-text! path content
+              , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'String 'String
+            :features $ #{} :js-ffi
+        'ensure-directory! $ %{} 'CodeEntry (:doc "|递归建立缺少的父目录，避免备份月份目录不存在时写入失败。")
+          :code $ quote $ defn ensure-directory! (directory)
+            if (file-exists? directory) &unit $ do
+              ensure-directory! $ path-dirname directory
+              mkdir! directory
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'String
+            :features $ #{} :js-ffi
+        'every! $ %{} 'CodeEntry (:doc "|由 Node 宿主重复调度 Unit 回调。")
+          :code $ quote $ defn every! (delay callback) (js/setInterval callback delay) &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Number $ :: 'Fn
+              {} (:return 'Unit)
+                :args $ []
+            :features $ #{} :js-ffi
+        'local-month-day! $ %{} 'CodeEntry (:doc "|读取 Node 宿主本地时区的月份与日期。")
+          :code $ quote $ defn local-month-day! ()
+            let
+                date $ unsafe-coerce (new js/Date) LocalDateHost
+              {}
+                :month $ inc $ date .get-month
+                :day $ date .get-date
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ []
+            :features $ #{} :js-ffi
+            :return $ :: 'Map 'Tag 'Number
+        'on-interrupt! $ %{} 'CodeEntry (:doc "|将 SIGINT 交给业务退出回调，而不依赖 native CLI 注入。")
+          :code $ quote $ defn on-interrupt! (callback)
+            let
+                process $ unsafe-coerce js/process NodeProcessHost
+              process .on |SIGINT callback
+              , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] $ :: 'Fn
+              {} (:return 'Unit)
+                :args $ []
+            :features $ #{} :js-ffi
+      :ns $ %{} 'NsEntry (:doc |)
+        :code $ quote $ ns cumulo-reel.app.server-host
+          :require $ js-ffi.node :refer $ file-exists? read-text! write-text! mkdir! path-dirname
+    'cumulo-reel.app.server-ws $ %{} 'FileEntry
+      :defs $ {}
+        '*clients $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defatom *clients ({})
+          :examples $ []
+          :schema $ :: 'Ref $ :: 'Map 'Number 'ws-edn.server/NodeWebSocketHost
+        '*next-sid $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defatom *next-sid 0
+          :examples $ []
+          :schema $ :: 'Ref 'Number
+        'SocketEvent $ %{} 'CodeEntry (:doc "|适配器向业务层报告的连接、原始文本消息、断线和二进制通知。")
+          :code $ quote $ defenum SocketEvent (:connect 'Number) (:message 'Number 'String) (:disconnect 'Number) (:blob 'Number)
+          :examples $ []
+          :schema $ :: 'Enum
+        'close-session! $ %{} 'CodeEntry (:doc "|连接关闭或错误只通知业务层一次断线。")
+          :code $ quote $ defn close-session! (sid on-event)
+            match (get @*clients sid)
+              (:some _)
+                do (swap! *clients dissoc sid)
+                  on-event $ SocketEvent :disconnect sid
+              (:none) &unit
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Number $ :: 'Fn
+              {} (:return 'Unit)
+                :args $ [] 'cumulo-reel.app.server-ws/SocketEvent
+          :tests $ [] $ %{} 'TestEntry (:name |ignores-unknown-session)
+            :code $ quote $ let
+                calls $ atom 0
+              reset! *clients $ {}
+              close-session! 12 $ fn (event) (swap! calls inc) &unit
+              assert= 0 @calls
+        'each! $ %{} 'CodeEntry (:doc "|只遍历当前仍连接的 Number session ID。")
+          :code $ quote $ defn each! (handler)
+            each (keys @*clients) handler
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] $ :: 'Fn
+              {} (:return 'Unit)
+                :args $ [] 'Number
+          :tests $ [] $ %{} 'TestEntry (:name |skips-disconnected-sessions)
+            :code $ quote $ let
+                seen $ atom $ []
+              reset! *clients $ {}
+              each! $ fn (sid) (swap! seen conj sid) &unit
+              assert= ([]) @seen
+        'send! $ %{} 'CodeEntry (:doc "|按 Number session ID 发送原始 Cirru EDN 文本。")
+          :code $ quote $ defn send! (sid message)
+            match
+              get
+                assert-type @*clients $ :: 'Map 'Number 'ws-edn.server/NodeWebSocketHost
+                , sid
+              (:some socket)
+                let
+                    socket $ assert-type socket 'ws-edn.server/NodeWebSocketHost
+                  socket .send message
+              (:none) (eprintln |WebSocket-client-missing: sid)
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Number 'String
+            :features $ #{} :js-ffi
+        'serve! $ %{} 'CodeEntry
+          :doc "|启动 Node WebSocket server，并把宿主事件转为保持原有 SID 语义的 SocketEvent。"
+          :code $ quote $ defn serve! (port on-event)
+            let
+                server $ unsafe-coerce
+                  new WebSocketServer $ &js-object :port port
+                  , 'ws-edn.server/NodeWebSocketServerHost
+              server .on |connection $ fn (raw-socket _request)
+                let
+                    socket $ unsafe-coerce raw-socket 'ws-edn.server/NodeWebSocketHost
+                    sid $ inc @*next-sid
+                  reset! *next-sid sid
+                  swap! *clients assoc sid socket
+                  on-event $ SocketEvent :connect sid
+                  socket .on |message $ fn (raw-data binary?)
+                    let
+                        is-binary? $ contract/expect-bool |ws-message-is-binary binary?
+                      if is-binary?
+                        on-event $ SocketEvent :blob sid
+                        on-event $ SocketEvent :message sid $ node-data-string raw-data
+                      , &unit
+                  socket .on |close $ fn (_code _reason) (close-session! sid on-event) &unit
+                  socket .on |error $ fn (error) (eprintln |WebSocket-client-error: error) (close-session! sid on-event) &unit
+                  , &unit
+                , &unit
+              server .on |error $ fn (error) (eprintln |WebSocket-server-error: error) (quit! 1) &unit
+              , server
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'ws-edn.server/NodeWebSocketServerHost)
+            :args $ [] 'Number $ :: 'Fn
+              {} (:return 'Unit)
+                :args $ [] 'cumulo-reel.app.server-ws/SocketEvent
+            :features $ #{} :js-ffi
+      :ns $ %{} 'NsEntry (:doc |)
+        :code $ quote $ ns cumulo-reel.app.server-ws
+          :require
+            |ws :refer $ WebSocketServer
+            ws-edn.server :refer $ node-data-string
+            js-ffi.contract :as contract
     'cumulo-reel.app.twig.container $ %{} 'FileEntry
       :defs $ {}
+        'rand-hex-color! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn rand-hex-color! ()
+            contract/expect-string |randomcolor $ randomcolor-host
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ []
+            :features $ #{} :js-ffi
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
             assert-type
@@ -655,9 +851,10 @@
         :code $ quote $ ns cumulo-reel.app.twig.container
           :require
             cumulo-reel.app.twig.user :refer $ twig-user
-            calcit.std.rand :refer $ rand-hex-color!
             recollect.memo :refer $ memo-twig-by1 memo-twig-by2
             cumulo-reel.schema :as schema
+            |randomcolor :default randomcolor-host
+            js-ffi.contract :as contract
     'cumulo-reel.app.twig.user $ %{} 'FileEntry
       :defs $ {} $ 'twig-user
         %{} 'CodeEntry (:doc |)
@@ -797,6 +994,13 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
+        'md5 $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn md5 (text)
+            contract/expect-string |md5 $ md5-host text
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'String
+            :features $ #{} :js-ffi
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
@@ -831,9 +1035,7 @@
             :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.user
-          :require
-            calcit.std.hash :refer $ md5
-            cumulo-reel.schema :as schema
+          :require (cumulo-reel.schema :as schema) (|md5 :default md5-host) (js-ffi.contract :as contract)
     'cumulo-reel.comp.reel $ %{} 'FileEntry
       :defs $ {}
         'comp-reel $ %{} 'CodeEntry (:doc |)

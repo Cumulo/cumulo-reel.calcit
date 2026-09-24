@@ -90,6 +90,33 @@
       :typeNotFull 0
       :unresolved 4
       :unsafeCoerce 0
+    |cumulo-reel.app.server-host/local-month-day! $ {} (:codeDynamic 0)
+      :codeNil 0
+      :declaredOptional 0
+      :deprecatedCalls 0
+      :schemaDynamic 0
+      :typeNone 0
+      :typeNotFull 0
+      :unresolved 0
+      :unsafeCoerce 1
+    |cumulo-reel.app.server-host/on-interrupt! $ {} (:codeDynamic 0)
+      :codeNil 0
+      :declaredOptional 0
+      :deprecatedCalls 0
+      :schemaDynamic 0
+      :typeNone 0
+      :typeNotFull 0
+      :unresolved 0
+      :unsafeCoerce 1
+    |cumulo-reel.app.server-ws/serve! $ {} (:codeDynamic 0)
+      :codeNil 0
+      :declaredOptional 0
+      :deprecatedCalls 0
+      :schemaDynamic 0
+      :typeNone 0
+      :typeNotFull 0
+      :unresolved 0
+      :unsafeCoerce 2
     |cumulo-reel.app.server/sync-clients! $ {} (:codeDynamic 0)
       :codeNil 1
       :declaredOptional 0
@@ -215,7 +242,7 @@
     :typeNone 0
     :typeNotFull 11
     :unresolved 42
-    :unsafeCoerce 0
+    :unsafeCoerce 4
   :scope $ {} (:includeDependencies false)
     :namespace nil
     :namespacePrefix nil

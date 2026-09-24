@@ -57,3 +57,4 @@ jobs:
         && yarn vite build
         && calcit calcit.cirru --entry server js
         && node --check js-out/cumulo-reel.app.server.mjs
+        && node --input-type=module -e 'await import("./js-out/cumulo-reel.app.server.mjs")'

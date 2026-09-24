@@ -668,6 +668,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nanoid@npm:6.0.1":
+  version: 6.0.1
+  resolution: "nanoid@npm:6.0.1"
+  bin:
+    nanoid: bin/nanoid.js
+  checksum: 10c0/5b362ad9822388dfebdf655849c76d3539e074d1003fbe6eb5dff8687faf93a9abbb19bdc5d134b9b8599f875f9b091feacfd7099b34b5fef23bc3f5be41dd10
+  languageName: node
+  linkType: hard
+
 "nanoid@npm:^2.1.0":
   version: 2.1.11
   resolution: "nanoid@npm:2.1.11"
@@ -866,6 +875,7 @@ __metadata:
   dependencies:
     "@calcit/procs": "npm:0.20.0"
     md5: "npm:^2.3.0"
+    nanoid: "npm:6.0.1"
     randomcolor: "npm:^0.6.2"
     shortid: "npm:^2.2.16"
     vite: "npm:^8.2.2"

@@ -445,9 +445,9 @@
               do (println "|Found local EDN data")
                 assert-type
                   parse-cirru-edn (read-text! storage-file)
-                    {} (:Database schema/database) (:Session schema/session) (:User schema/user) (:Router schema/router)
+                    {} (:Database database) (:Session session) (:User user) (:Router router)
                   'cumulo-reel.schema/Database
-              do (println "|Found no data") schema/database
+              do (println "|Found no data") database
           :examples $ []
           :schema $ :: 'Ref 'cumulo-reel.schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
@@ -569,7 +569,7 @@
                   session $ assert-type
                     match (get db.:sessions sid)
                       (:some found) found
-                      (:none) schema/session
+                      (:none) session
                     , 'cumulo-reel.schema/Session
                   old-store $ match (get @*client-caches sid)
                     (:some cached) cached
@@ -587,7 +587,8 @@
             :args $ [] 'cumulo-reel.core/ReelState
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server
-          :require (cumulo-reel.schema :as schema)
+          :require
+            cumulo-reel.schema :refer $ database session user router
             cumulo-reel.app.updater :refer $ updater
             cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
             cumulo-reel.app.config :as config
@@ -766,7 +767,7 @@
                   on-event $ SocketEvent :connect sid
                   socket .on |message $ fn (raw-data binary?)
                     let
-                        is-binary? $ contract/expect-bool |ws-message-is-binary $ binary?
+                        is-binary? $ contract/expect-bool |ws-message-is-binary binary?
                       if is-binary?
                         on-event $ SocketEvent :blob sid
                         on-event $ SocketEvent :message sid $ node-data-string raw-data

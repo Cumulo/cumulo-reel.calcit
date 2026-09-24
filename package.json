@@ -3,6 +3,7 @@
   "dependencies": {
     "@calcit/procs": "0.20.0",
     "md5": "^2.3.0",
+    "nanoid": "6.0.1",
     "randomcolor": "^0.6.2",
     "ws": "^8.13.0"
   },

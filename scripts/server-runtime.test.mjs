@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -67,6 +68,34 @@ test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconne
     for (const socket of sockets) socket.terminate();
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('WebSocket bind failure exits with a nonzero status', async () => {
+  const adapterUrl = new URL('../js-out/cumulo-reel.app.server-ws.mjs', import.meta.url).href;
+  const source = `
+    import { once } from 'node:events';
+    import { serve_$x_ } from ${JSON.stringify(adapterUrl)};
+    const first = serve_$x_(0, () => {});
+    await once(first, 'listening');
+    serve_$x_(first.address().port, () => {});
+  `;
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['--input-type=module', '-e', source], {
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let stderr = '';
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);
+    child.on('close', (code, signal) => {
+      clearTimeout(timeout);
+      resolve({ code, signal, stderr });
+    });
+  });
+  assert.equal(result.signal, null, result.stderr);
+  assert.equal(result.code, 1, result.stderr);
+  assert.match(result.stderr, /WebSocket-server-error:/);
 });
 
 test('server persistence writes storage and a dated backup', async () => {

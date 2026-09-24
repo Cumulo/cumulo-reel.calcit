@@ -776,7 +776,7 @@
                   socket .on |error $ fn (error) (eprintln |WebSocket-client-error: error) (close-session! sid on-event) &unit
                   , &unit
                 , &unit
-              server .on |error $ fn (error) (eprintln |WebSocket-server-error: error) &unit
+              server .on |error $ fn (error) (eprintln |WebSocket-server-error: error) (quit! 1) &unit
               , server
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'ws-edn.server/NodeWebSocketServerHost)

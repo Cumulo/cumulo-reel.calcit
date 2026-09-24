@@ -13,7 +13,7 @@
 验收命令：
 
 ```bash
-caps --calcit-version 0.20.0 --ci
+caps --calcit-version 0.20.0 --strict --ci
 corepack yarn install --immutable
 calcit calcit.cirru --check-only
 calcit --entry server calcit.cirru --check-only

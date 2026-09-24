@@ -56,3 +56,4 @@ jobs:
         calcit calcit.cirru js
         && yarn vite build
         && calcit calcit.cirru --entry server js
+        && node --check js-out/cumulo-reel.app.server.mjs

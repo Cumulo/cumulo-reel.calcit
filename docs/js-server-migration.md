@@ -6,6 +6,8 @@
 
 持久化仍采用 Cirru EDN。`check-write-text!` 在内容相同时跳过写入，并在需要时建立备份目录；备份路径沿用宿主本地月份和日期，格式为 `backups/<month>/<day>-snapshot.cirru`。服务端时间戳仍是毫秒。
 
+当前直接依赖 `js-ffi@0.1.36`，与现有上游模块的固定版本一致，保留 CI 的 `caps --strict --ci` 门禁。已确认迁移所需的 Node 文件、路径、时间及契约 API 在该版本存在；上游模块统一升级后再推进到更新的 `js-ffi` 版本。
+
 质量基线仅增加四个宿主对象断言：一个 `Date` 到 `LocalDateHost`，一个 `process` 到 `NodeProcessHost`，以及 WebSocket server 与 socket 到对应的 host trait。外部 npm 返回值用 `expect-string` 检查，消息中的布尔值用 `expect-bool` 检查，不再增加 `unsafe-coerce`。这些断言应保持在适配层，不能向业务定义扩散。退出信号由 `process.on('SIGINT')` 注册，不再使用 native CLI 的 `on-control-c`。
 
 验收命令：

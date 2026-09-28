@@ -1122,13 +1122,14 @@
                     do (println "|Unknown op:" op) reel
                 let
                     msg-pack $ [] op sid op-id op-time
-                  -> reel
-                    assoc :records $ if dev?
-                      conj (:records reel) msg-pack
-                      :records reel
-                    assoc :db $ updater
+                    next-db $ updater
                       assert-type (:db reel) 'Db
                       , op sid op-id op-time
+                  struct-with reel
+                    :records $ if dev?
+                      conj (:records reel) msg-pack
+                      :records reel
+                    :db next-db
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.core/ReelState)
             :args $ [] 'cumulo-reel.core/ReelState
@@ -1136,19 +1137,31 @@
                 :args $ [] 'Db 'Op 'Sid 'OpId 'Number
               , 'Op 'Sid 'OpId 'Number 'Bool
             :generics $ [] 'Db 'Op 'Sid 'OpId
-          :tests $ [] $ %{} 'TestEntry (:name |resets-from-base)
-            :code $ quote $ let
-                reel $ ReelState :base 1 :db 2 :records ([]) :merged? false
-                updater $ fn (db op sid op-id op-time)
-                  hint-fn $ {} (:return 'Number)
-                    :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
-                  , db
-                result $ reel-reducer reel updater
-                  assert-type (:: :reel/reset) 'cumulo-reel.schema/Op
-                  , |s |o 0 false
-              assert=
-                ReelState :base 1 :db 1 :records ([]) :merged? false
-                , result
+          :tests $ []
+            %{} 'TestEntry (:name |resets-from-base)
+              :code $ quote $ let
+                  reel $ ReelState :base 1 :db 2 :records ([]) :merged? false
+                  updater $ fn (db op sid op-id op-time)
+                    hint-fn $ {} (:return 'Number)
+                      :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
+                    , db
+                  result $ reel-reducer reel updater
+                    assert-type (:: :reel/reset) 'cumulo-reel.schema/Op
+                    , |s |o 0 false
+                assert=
+                  ReelState :base 1 :db 1 :records ([]) :merged? false
+                  , result
+            %{} 'TestEntry (:name |updates-struct-reel)
+              :code $ quote $ let
+                  reel $ ReelState :base 1 :db 1 :records ([]) :merged? false
+                  updater $ fn (db op sid op-id op-time)
+                    hint-fn $ {} (:return 'Number)
+                      :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
+                    inc db
+                  op $ assert-type (:: :session/connect) 'cumulo-reel.schema/Op
+                  result $ reel-reducer reel updater op |s |o 0 true
+                assert= 2 $ :db result
+                assert= 1 $ count $ :records result
         'reel-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def reel-schema
             %{} ReelState (:base nil) (:db nil)

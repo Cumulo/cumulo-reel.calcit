@@ -1157,7 +1157,7 @@
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ {} (:return 'Number)
                       :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
-                    , $ inc db
+                    inc db
                   op $ assert-type (:: :session/connect) 'cumulo-reel.schema/Op
                   result $ reel-reducer reel updater op |s |o 0 true
                 assert= 2 $ :db result

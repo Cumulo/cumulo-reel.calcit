@@ -48,9 +48,9 @@
                 data $ option:unwrap-or op-data nil
               println |Dispatch op data
               if (list? op)
-                recur (:: :states op data) (%none)
+                recur (:: :states op data) (Option :none)
                 if (tag? op)
-                  recur (:: op data) (%none)
+                  recur (:: op data) (Option :none)
                   match op
                     (:states cursor s)
                       reset! *states $ assert-type (update-states @*states cursor s) (:: 'Map 'Tag 'Dynamic)
@@ -98,7 +98,7 @@
           :code $ quote $ defn render-app! (renderer)
             renderer mount-target (comp-container @*states @*store)
               fn (op)
-                dispatch! op $ %none
+                dispatch! op $ Option :none
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] $ :: 'Fn
@@ -120,7 +120,7 @@
                       do (println "|Found storage.")
                         dispatch!
                           :: :user/log-in (&list:nth pair 0) (&list:nth pair 1)
-                          %none
+                          Option :none
                       eprintln "|Invalid stored login pair"
                   (:err error) (eprintln "|Invalid stored login:" error)
               (:none) (println "|Found no storage.")
@@ -284,8 +284,7 @@
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] $ :: 'Map 'Tag 'Dynamic
         'initial-state $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def initial-state
-            %{} LoginState (:username |) (:password |)
+          :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
           :schema $ :: 'cumulo-reel.app.comp.login/LoginState
         'on-submit $ %{} 'CodeEntry (:doc |)
@@ -424,7 +423,7 @@
           :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
-            %{} cumulo-reel.schema/SiteConfig (:port 5021) (:title |Cumulo) (:icon |http://cdn.tiye.me/logo/cumulo.png) (:dev-ui |http://localhost:8100/main.css) (:release-ui |http://cdn.tiye.me/favored-fonts/main.css) (:cdn-url |http://cdn.tiye.me/cumulo-reel/) (:theme |#eeeeff) (:storage-key |reel-storage) (:storage-file |storage.cirru)
+            cumulo-reel.schema/SiteConfig :port 5021 :title |Cumulo :icon |http://cdn.tiye.me/logo/cumulo.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/cumulo-reel/ :theme |#eeeeff :storage-key |reel-storage :storage-file |storage.cirru
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
@@ -491,7 +490,8 @@
                   :port config/site
               run-server! port
               println $ str "|Server started on port:" port
-            do (; "|init it before doing multi-threading") (identity @*reader-reel)
+            ; "|init it before doing multi-threading"
+            identity @*reader-reel
             every! 200 $ fn () $ render-loop!
             every! 600000 $ fn () $ persist-db!
             on-interrupt! on-exit!
@@ -859,11 +859,7 @@
       :defs $ {} $ 'twig-user
         %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-user (user)
-            %{} schema/ClientUser
-              :name $ :name user
-              :id $ :id user
-              :nickname $ :nickname user
-              :avatar $ :avatar user
+            schema/ClientUser :name (:name user) :id (:id user) :nickname (:nickname user) :avatar $ :avatar user
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientUser)
             :args $ [] 'cumulo-reel.schema/User
@@ -971,12 +967,10 @@
                       = (md5 password) user.:password
                       struct-with session $ :user-id user.:id
                       struct-with session $ :messages $ assoc session.:messages op-id
-                        %{} schema/Message (:id op-id)
-                          :text $ str "|Wrong password for " username
+                        schema/Message :id op-id :text $ str "|Wrong password for " username
                   (:none)
                     struct-with session $ :messages $ assoc session.:messages op-id
-                      %{} schema/Message (:id op-id)
-                        :text $ str "|No user named: " username
+                      schema/Message :id op-id :text $ str "|No user named: " username
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
@@ -1019,8 +1013,7 @@
               if (option:some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
-                      assoc session.:messages op-id $ %{} schema/Message (:id op-id)
-                        :text $ str "|Name is taken: " username
+                      assoc session.:messages op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
                   struct-with db $ :sessions $ assoc db.:sessions sid next-session
                 let
                     next-session $ struct-with session $ :user-id op-id
@@ -1164,9 +1157,7 @@
                 assert= 1 $ count $ :records result
         'reel-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def reel-schema
-            %{} ReelState (:base nil) (:db nil)
-              :records $ []
-              :merged? false
+            ReelState :base nil :db nil :records ([]) :merged? false
           :examples $ []
           :schema $ :: 'cumulo-reel.core/ReelState
         'refresh-reel $ %{} 'CodeEntry (:doc |)
@@ -1237,29 +1228,24 @@
           :schema $ :: 'StructDef
         'database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def database
-            %{} Database
-              :sessions $ {}
-              :users $ {}
-              :pages $ {}
+            Database :sessions ({}) :users ({}) :pages $ {}
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/Database
         'router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def router
-            %{} Router (:name :home) (:title |)
-              :data $ {}
-              :router nil
+            Router :name :home :title | :data ({}) :router nil
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
-            %{} Session (:user-id nil) (:id nil) (:nickname nil)
-              :router $ %{} Router (:name :home) (:title |) (:data nil) (:router nil)
-              :messages $ {}
+            Session :user-id nil :id nil :nickname nil :router
+              Router :name :home :title | :data nil :router nil
+              , :messages $ {}
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/Session
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
-            %{} User (:name |) (:id |) (:nickname |) (:avatar nil) (:password |)
+            User :name | :id | :nickname | :avatar nil :password |
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/User
       :ns $ %{} 'NsEntry (:doc |)

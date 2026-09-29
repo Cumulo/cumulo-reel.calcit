@@ -1,7 +1,7 @@
 {
   "version": "0.0.47",
   "dependencies": {
-    "@calcit/procs": "0.20.0",
+    "@calcit/procs": "0.27.0",
     "md5": "^2.3.0",
     "nanoid": "6.0.1",
     "randomcolor": "^0.6.2",

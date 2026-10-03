@@ -89,9 +89,17 @@ COS Action 1.2 的 public-base-url 是唯一上传校验，保持原 CDN/main/�
 返回 Unit，保留渲染行为。原五条测试、18 项核心/数据公开定义、原质量预算、
 不可变安装和工具链核对通过；严格 Caps 仍有三组已发布模块版本冲突。
 仍有 11 个开放 schema 槽、42 个 unresolved、31 处 nil、4 处 unsafe，预算未放宽。
-完整客户端被已发布 ws-edn 的 WsClient 类型断言阻止；完整服务端另有本项目
-twig-container 把 Map 声明为 ClientStore Struct 的错误。不能用扩大类型或
-coercion 掩盖它，修复前未完成 Vite、WebSocket/持久化运行测试或实际上传。
+完整客户端仍被已发布 ws-edn 的 WsClient 类型断言阻止。twig-container 已改为
+实际构造 ClientStore，服务端严格入口与包含 diff/patch 的 JS 生成通过；没有扩大
+schema 或用 coercion 掩盖原 Map/Struct 不一致。
+
+这仍是不可部署的迁移候选：外层投影从 Map 变成 Struct，不能声称兼容旧协议。
+内存中执行 diff → EDN 序列化 → 普通解析 → patch 后，Struct 定义身份未恢复，
+回放结果不等于原名义值。普通 EDN 的无类型行为符合编译器设计，不应修改相等
+语义绕过它；现有类型化解码又不支持本协议的 JsNullish 字段，Router 也有开放数据。
+下一步需确定一次性的协议解码边界，再完成客户端与端到端验收，不能只增加
+assert-type。未完成 Vite、真实 WebSocket/持久化运行测试或实际上传；COS 仍仅
+针对前端资源，本候选不部署服务端。
 
 ### License
 

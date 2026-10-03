@@ -821,33 +821,27 @@
             :features $ #{} :js-ffi
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
-            assert-type
-              let
-                  logged-in? $ js-present? session.:user-id
-                  router session.:router
-                  router-name router.:name
-                  pages db.:pages
-                  sessions db.:sessions
-                  users db.:users
-                  user-id $ if logged-in? (assert-type session.:user-id 'String) |guest
-                  user $ assert-type
-                    match (get users user-id)
-                      (:some found) found
-                      (:none) schema/user
-                    , 'cumulo-reel.schema/User
-                  base-data $ {} (:logged-in? logged-in?) (:session session)
-                    :reel-length $ count records
-                    :router $ if logged-in?
-                      struct-with router $ :data $ case router-name (:home pages)
-                        :profile $ memo-twig-by2 :members twig-members sessions users
-                        router-name $ {}
-                      , router
-                    :count $ count sessions
-                    :color $ rand-hex-color!
-                merge-dynamic base-data $ if logged-in?
-                  {} $ :user $ memo-twig-by1 user-id twig-user user
-                  , nil
-              , 'cumulo-reel.schema/ClientStore
+            let
+                logged-in? $ js-present? session.:user-id
+                router session.:router
+                router-name router.:name
+                pages db.:pages
+                sessions db.:sessions
+                users db.:users
+                user-id $ if logged-in? (assert-type session.:user-id 'String) |guest
+                user $ assert-type
+                  match (get users user-id)
+                    (:some found) found
+                    (:none) schema/user
+                  , 'cumulo-reel.schema/User
+                absent nil
+              schema/ClientStore :logged-in? logged-in? :session session :reel-length (count records) :router
+                if logged-in?
+                  struct-with router $ :data $ case router-name (:home pages)
+                    :profile $ memo-twig-by2 :members twig-members sessions users
+                    router-name $ {}
+                  , router
+                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in? (memo-twig-by1 user-id twig-user user) absent
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)

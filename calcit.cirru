@@ -67,8 +67,18 @@
             if ssr? $ render-app! realize-ssr!
             render-app! render!
             connect!
-            add-watch *store :changes $ fn (store prev) (render-app! render!)
-            add-watch *states :changes $ fn (states prev) (render-app! render!)
+            add-watch! *store :changes $ fn (store prev)
+              hint-fn $ {}
+                :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                :return 'Unit
+              render-app! render!
+              , &unit
+            add-watch! *states :changes $ fn (states prev)
+              hint-fn $ {}
+                :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+                :return 'Unit
+              render-app! render!
+              , &unit
             browser/add-event-listener! |visibilitychange $ fn (event)
               when
                 and (js-nullish? @*store) (page-visible?)
@@ -85,9 +95,19 @@
           :examples $ []
           :schema $ :: 'js-ffi.browser/DomElementHost
         'reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reload! () (remove-watch *store :changes) (remove-watch *states :changes) (clear-cache!)
-            add-watch *store :changes $ fn (store prev) (render-app! render!)
-            add-watch *states :changes $ fn (states prev) (render-app! render!)
+          :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!)
+            add-watch! *store :changes $ fn (store prev)
+              hint-fn $ {}
+                :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                :return 'Unit
+              render-app! render!
+              , &unit
+            add-watch! *states :changes $ fn (states prev)
+              hint-fn $ {}
+                :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+                :return 'Unit
+              render-app! render!
+              , &unit
             render-app! render!
             println "|Code updated."
           :examples $ []

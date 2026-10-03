@@ -10,10 +10,9 @@ Server side:
 
 ```cirru
 ; create reel state
-defatom *reel $ merge cumulo-reel.core/reel-schema
-  {}
-    :base initial-db
-    :db initial-db
+defatom *reel $ struct-with cumulo-reel.core/reel-schema
+  :base initial-db
+  :db initial-db
 
 ; "action update, `dev?` is optional, turn it on to record states"
 cumulo-reel.core/reel-reducer @*reel updater op op-data sid op-id op-time dev?
@@ -76,6 +75,23 @@ work.
 分歧，并选择兼容的最高 SemVer 继续验证。
 For reducer, reload, and replay guidance usable from the CLI, see
 [Realtime Reel state and replay](docs/realtime-reel.md).
+
+### Calcit 0.28 迁移进度
+
+CLI 与 procs 固定正式 0.28.0，UI 跟进已发布 alpha.3；其余模块当前正式发布
+仍与项目版本一致，不为严格解析冲突盲降 API 或使用 commit hash。
+CI 移除迁移用 fix workflow 和重复统计，客户端与服务端分别保留严格入口检查，
+动态方法诊断并入入口；原质量预算、五条 Calcit 测试、服务端运行测试保留。
+COS Action 1.2 的 public-base-url 是唯一上传校验，保持原 CDN/main/共享 PR
+前缀，只上传前端 dist，不上传或部署服务端。共享 PR 上传串行排队。
+
+四处 watcher 明确为实际 JsNullish<ClientStore> 或 Map<Tag,Dynamic> 参数，
+返回 Unit，保留渲染行为。原五条测试、18 项核心/数据公开定义、原质量预算、
+不可变安装和工具链核对通过；严格 Caps 仍有三组已发布模块版本冲突。
+仍有 11 个开放 schema 槽、42 个 unresolved、31 处 nil、4 处 unsafe，预算未放宽。
+完整客户端被已发布 ws-edn 的 WsClient 类型断言阻止；完整服务端另有本项目
+twig-container 把 Map 声明为 ClientStore Struct 的错误。不能用扩大类型或
+coercion 掩盖它，修复前未完成 Vite、WebSocket/持久化运行测试或实际上传。
 
 ### License
 

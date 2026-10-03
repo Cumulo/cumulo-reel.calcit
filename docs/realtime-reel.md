@@ -19,15 +19,16 @@ entry_for:
 
 # Cumulo Reel state and replay
 
-`cumulo-reel` keeps the application database, a stable base state, and optional development records in one explicit value. It is the state-transition boundary for a realtime server: the updater stays pure, while WebSocket delivery, persistence, and projections remain outside the reducer.
+`cumulo-reel` keeps the application database, a stable base state, and optional development records in one explicit Struct value. It is the state-transition boundary for a realtime server: the updater stays pure, while WebSocket delivery, persistence, and projections remain outside the reducer.
 
 ## Create and reduce state
 
-Start from `reel-schema`, merge in an application database, and store the result in an atom. Each dispatched operation goes through `reel-reducer` with the same updater used by replay.
+Start from `reel-schema`, update its Struct fields with an application database, and store the result in an atom. Each dispatched operation goes through `reel-reducer` with the same updater used by replay.
 
 ```cirru.no-check
-defatom *reel $ merge cumulo-reel.core/reel-schema
-  {} (:base initial-db) (:db initial-db)
+defatom *reel $ struct-with cumulo-reel.core/reel-schema
+  :base initial-db
+  :db initial-db
 
 reset! *reel $ cumulo-reel.core/reel-reducer
   @*reel updater op op-data sid op-id op-time dev?

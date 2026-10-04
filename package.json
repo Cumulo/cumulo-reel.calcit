@@ -9,8 +9,8 @@
   },
   "scripts": {
     "check-quality": "calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru",
-    "watch-server": "calcit calcit.cirru --entry server js -w",
-    "compile-server": "calcit calcit.cirru --entry server js",
+    "watch-server": "calcit calcit.cirru --entry server --emit-path js-server-out js -w",
+    "compile-server": "calcit calcit.cirru --entry server --emit-path js-server-out js",
     "compile-page": "calcit calcit.cirru js",
     "watch-page": "calcit calcit.cirru js -w"
   },

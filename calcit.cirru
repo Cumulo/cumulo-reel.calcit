@@ -32,12 +32,11 @@
                 :on-open $ fn (event) (simulate-login!)
                 :on-close $ fn (event) (reset! *store nil) (shared/console-error! "|Lost connection!")
                 :on-data $ fn (data)
-                  case (&map:get data :kind)
-                    :patch $ let
-                        changes $ assert-type (&map:get data :data) (:: 'List 'recollect.schema/change-op)
-                      shared/console-log! $ str |Changes changes
-                      reset! *store $ assert-type (patch-twig @*store changes) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                    (&map:get data :kind) (println "|unknown kind:" data)
+                  match (protocol/receive-server-patch! *store data)
+                    (:ok _) (shared/console-log! |Applied-server-patch)
+                    (:err detail)
+                      shared/console-error! $ str |Rejected-server-patch: detail
+                :class-mapper protocol/patch-class-mapper
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'ws-edn.client/WsClient)
             :args $ []
@@ -53,7 +52,13 @@
                   recur (:: op data) (Option :none)
                   match op
                     (:states cursor s)
-                      reset! *states $ assert-type (update-states @*states cursor s) (:: 'Map 'Tag 'Dynamic)
+                      reset! *states $ assert-type
+                        &map:get
+                          update-states
+                            {} $ :states @*states
+                            , cursor s
+                          , :states
+                        :: 'Map 'Tag 'Dynamic
                     (:effect/connect) (connect!)
                     _ $ ws-send! op
           :examples $ []
@@ -163,10 +168,10 @@
             [] cumulo-reel.schema :as schema
             [] cumulo-reel.app.config :as config
             [] ws-edn.client :refer $ [] ws-connect! ws-send!
-            [] recollect.patch :refer $ [] patch-twig
             cumulo-util.activity :refer $ page-visible?
             js-ffi.browser :as browser
             js-ffi.shared :as shared
+            cumulo-reel.app.protocol :as protocol
     'cumulo-reel.app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
@@ -192,7 +197,11 @@
                       either states $ {}
                       , :login
                   comp-status-color store-typed.:color
-                  comp-messages (session.:messages) ({})
+                  comp-messages
+                    filter-map-kv (session.:messages)
+                      fn (id message)
+                        MapEntryDecision :keep id $ &struct:to-map message
+                    {}
                     fn (info d!)
                       d! $ :: :session/remove-message $ assert-type (&map:get info :id) 'String
                   when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
@@ -451,6 +460,659 @@
           :require
             cumulo-reel.schema :refer $ SiteConfig
             [] cumulo-util.core :refer $ [] get-env!
+    'cumulo-reel.app.protocol $ %{} 'FileEntry
+      :defs $ {}
+        'apply-server-patch $ %{} 'CodeEntry (:doc "|验证消息与 change-op，应用 patch 后验证完整结果；失败不发布状态。")
+          :code $ quote $ defn apply-server-patch (store data)
+            match (decode-source data)
+              (:err detail) (Result :err detail)
+              (:ok source)
+                match (decode-field source :kind decode-tag)
+                  (:err detail) (Result :err detail)
+                  (:ok kind)
+                    if (= kind :patch)
+                      match (get source :data)
+                        (:none) (Result :err |Missing-patch-data)
+                        (:some raw-changes)
+                          match
+                            try-decode-map-as raw-changes $ :: 'List 'recollect.schema/change-op
+                            (:err detail)
+                              Result :err $ str |Invalid-changes: detail
+                            (:ok changes)
+                              match
+                                .apply-to (patch-batch changes) store
+                                (:err error)
+                                  Result :err $ str |Invalid-patch: error
+                                (:ok next-store) (decode-nullable-store next-store)
+                      Result :err $ str |Unknown-message-kind: kind
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'Dynamic
+            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'String
+          :tests $ []
+            %{} 'TestEntry (:name |restores-initial-edn-snapshot)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ diff-twig nil expected $ {}
+                    , patch-class-mapper
+                  outcome $ apply-server-patch nil wire
+                match outcome
+                  (:err detail) (raise detail)
+                  (:ok actual)
+                    if (js-present? actual) (assert= expected actual) (assert |Expected-present-store false)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |restores-incremental-edn-patch)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  old $ struct-with expected (:count 0) (:user nil)
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ diff-twig old expected $ {}
+                    , patch-class-mapper
+                  outcome $ apply-server-patch old wire
+                match outcome
+                  (:err detail) (raise detail)
+                  (:ok actual)
+                    if (js-present? actual) (assert= expected actual) (assert |Expected-present-store false)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |accepts-legacy-map-snapshot)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  legacy $ &struct:to-map expected
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ diff-twig nil legacy $ {}
+                    , patch-class-mapper
+                  outcome $ apply-server-patch nil wire
+                match outcome
+                  (:err detail) (raise detail)
+                  (:ok actual)
+                    if (js-present? actual) (assert= expected actual) (assert |Expected-present-store false)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |preserves-nil-reset)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ diff-twig expected nil $ {}
+                    , patch-class-mapper
+                match (apply-server-patch expected wire)
+                  (:err detail) (raise detail)
+                  (:ok actual)
+                    assert= true $ js-nullish? actual
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-invalid-envelope-and-changes)
+              :code $ quote $ do
+                each
+                  [] |bad ({})
+                    {} (:kind 42)
+                      :data $ []
+                    {} (:kind :wrong)
+                      :data $ []
+                    {} (:kind :patch) (:data 42)
+                  fn (data)
+                    match (apply-server-patch nil data)
+                      (:err detail)
+                        assert= true $ string? detail
+                      (:ok state) (assert |Invalid-message-was-accepted false)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-invalid-nested-fields)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  bad-session $ &struct:assoc session :id $ &list:nth
+                    decode-map-as
+                      parse-cirru-edn
+                        format-cirru-edn $ [] |bad-id
+                        , patch-class-mapper
+                      :: 'List 'Dynamic
+                    , 0
+                  bad-router $ &struct:assoc router :name $ &list:nth
+                    decode-map-as
+                      parse-cirru-edn
+                        format-cirru-edn $ [] 42
+                        , patch-class-mapper
+                      :: 'List 'Dynamic
+                    , 0
+                  bad-user $ &struct:assoc fixture-user :avatar $ &list:nth
+                    decode-map-as
+                      parse-cirru-edn
+                        format-cirru-edn $ [] 42
+                        , patch-class-mapper
+                      :: 'List 'Dynamic
+                    , 0
+                  bad-message $ &struct:assoc (schema/Message :id |m1 :text |valid) :text $ &list:nth
+                    decode-map-as
+                      parse-cirru-edn
+                        format-cirru-edn $ [] 42
+                        , patch-class-mapper
+                      :: 'List 'Dynamic
+                    , 0
+                  bad-messages $ &struct:assoc session :messages $ {} (|m1 bad-message)
+                each
+                  [] (&struct:assoc expected :session bad-session) (&struct:assoc expected :router bad-router) (&struct:assoc expected :user bad-user) (&struct:assoc expected :session bad-messages)
+                  fn (invalid)
+                    let
+                        wire $ parse-cirru-edn
+                          format-cirru-edn $ {} (:kind :patch)
+                            :data $ diff-twig nil invalid $ {}
+                          , patch-class-mapper
+                      match (apply-server-patch nil wire)
+                        (:err detail)
+                          assert= true $ string? detail
+                        (:ok actual) (assert |Corrupt-nested-field-was-accepted false)
+              :tags $ #{} :protocol :unit
+        'decode-bool $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-bool (value) (try-decode-map-as value 'Bool)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'Bool 'String
+        'decode-client-action $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-client-action (value)
+            if (enum? value)
+              case-default (&enum:nth value 0) (Result :err "|Unknown client operation")
+                :session/connect $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :session/connect
+                  Result :err "|Operation payload arity mismatch"
+                :session/disconnect $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :session/disconnect
+                  Result :err "|Operation payload arity mismatch"
+                :session/remove-message $ if
+                  = 2 $ &enum:count value
+                  match
+                    try-decode-map-as (&enum:params value) (:: 'List 'String)
+                    (:ok params)
+                      Result :ok $ schema/Op :session/remove-message $ &list:nth params 0
+                    (:err detail) (Result :err detail)
+                  Result :err "|Operation payload arity mismatch"
+                :user/log-in $ if
+                  = 3 $ &enum:count value
+                  match
+                    try-decode-map-as (&enum:params value) (:: 'List 'String)
+                    (:ok params)
+                      Result :ok $ schema/Op :user/log-in (&list:nth params 0) (&list:nth params 1)
+                    (:err detail) (Result :err detail)
+                  Result :err "|Operation payload arity mismatch"
+                :user/sign-up $ if
+                  = 3 $ &enum:count value
+                  match
+                    try-decode-map-as (&enum:params value) (:: 'List 'String)
+                    (:ok params)
+                      Result :ok $ schema/Op :user/sign-up (&list:nth params 0) (&list:nth params 1)
+                    (:err detail) (Result :err detail)
+                  Result :err "|Operation payload arity mismatch"
+                :user/log-out $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :user/log-out
+                  Result :err "|Operation payload arity mismatch"
+                :router/change $ if
+                  = 2 $ &enum:count value
+                  match
+                    try-decode-map-as (&enum:params value) (:: 'List 'Tag)
+                    (:ok params)
+                      Result :ok $ schema/Op :router/change $ &list:nth params 0
+                    (:err detail) (Result :err detail)
+                  Result :err "|Operation payload arity mismatch"
+                :effect/persist $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :effect/persist
+                  Result :err "|Operation payload arity mismatch"
+                :effect/ping $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :effect/ping
+                  Result :err "|Operation payload arity mismatch"
+                :effect/pong $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :effect/pong
+                  Result :err "|Operation payload arity mismatch"
+                :effect/connect $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :effect/connect
+                  Result :err "|Operation payload arity mismatch"
+                :reel/reset $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :reel/reset
+                  Result :err "|Operation payload arity mismatch"
+                :reel/merge $ if
+                  = 1 $ &enum:count value
+                  Result :ok $ schema/Op :reel/merge
+                  Result :err "|Operation payload arity mismatch"
+              Result :err "|Expected an operation enum"
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'cumulo-reel.schema/Op 'String
+        'decode-client-store $ %{} 'CodeEntry (:doc "|在传输边界验证全部具名字段并重建 ClientStore；Router.data 保留开放值。")
+          :code $ quote $ defn decode-client-store (value)
+            match (decode-source value)
+              (:err detail) (Result :err detail)
+              (:ok source)
+                match (decode-field source :session decode-session)
+                  (:err detail) (Result :err detail)
+                  (:ok session)
+                    match (decode-field source :router decode-router)
+                      (:err detail) (Result :err detail)
+                      (:ok router)
+                        match (decode-field source :logged-in? decode-bool)
+                          (:err detail) (Result :err detail)
+                          (:ok logged-in?)
+                            match (decode-field source :color decode-string)
+                              (:err detail) (Result :err detail)
+                              (:ok color)
+                                match (decode-field source :count decode-number)
+                                  (:err detail) (Result :err detail)
+                                  (:ok count)
+                                    match (decode-field source :reel-length decode-number)
+                                      (:err detail) (Result :err detail)
+                                      (:ok reel-length)
+                                        match (decode-field source :name decode-nullable-string)
+                                          (:err detail) (Result :err detail)
+                                          (:ok name)
+                                            match (decode-field source :user decode-nullable-user)
+                                              (:err detail) (Result :err detail)
+                                              (:ok user)
+                                                Result :ok $ schema/ClientStore :session session :router router :logged-in? logged-in? :color color :count count :reel-length reel-length :name name :user user
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'cumulo-reel.schema/ClientStore 'String
+        'decode-client-user $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-client-user (value)
+            match (decode-source value)
+              (:err detail) (Result :err detail)
+              (:ok source)
+                match (decode-field source :name decode-string)
+                  (:err detail) (Result :err detail)
+                  (:ok name)
+                    match (decode-field source :id decode-string)
+                      (:err detail) (Result :err detail)
+                      (:ok id)
+                        match (decode-field source :nickname decode-string)
+                          (:err detail) (Result :err detail)
+                          (:ok nickname)
+                            match (decode-field source :avatar decode-nullable-string)
+                              (:err detail) (Result :err detail)
+                              (:ok avatar)
+                                Result :ok $ schema/ClientUser :name name :id id :nickname nickname :avatar avatar
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'cumulo-reel.schema/ClientUser 'String
+        'decode-field $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-field (source key decoder)
+            match (get source key)
+              (:none)
+                Result :err $ str |Missing-field: key
+              (:some value)
+                match (decoder value)
+                  (:err detail)
+                    Result :err $ str key |: detail
+                  (:ok decoded) (Result :ok decoded)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag $ :: 'Fn
+              {}
+                :args $ [] 'Dynamic
+                :return $ :: 'Result 'T 'String
+            :generics $ [] 'T
+            :return $ :: 'Result 'T 'String
+        'decode-message $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-message (value)
+            match (decode-source value)
+              (:err detail) (Result :err detail)
+              (:ok source)
+                match (decode-field source :id decode-string)
+                  (:err detail) (Result :err detail)
+                  (:ok id)
+                    match (decode-field source :text decode-string)
+                      (:err detail) (Result :err detail)
+                      (:ok text)
+                        Result :ok $ schema/Message :id id :text text
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'cumulo-reel.schema/Message 'String
+        'decode-messages $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-messages (value)
+            match
+              try-decode-map-as value $ :: 'Map 'String 'Dynamic
+              (:err detail) (Result :err detail)
+              (:ok entries)
+                foldl
+                  &set:to-list $ &map:keys entries
+                  assert-type
+                    Result :ok $ {}
+                    :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+                  fn (acc key)
+                    match acc
+                      (:err detail) (Result :err detail)
+                      (:ok decoded)
+                        match
+                          decode-message $ &map:get entries key
+                          (:err detail)
+                            Result :err $ str key |: detail
+                          (:ok message)
+                            Result :ok $ assoc decoded key message
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+        'decode-nullable-number $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-nullable-number (value)
+            if (nil? value) (Result :ok value) (decode-number value)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'JsNullish 'Number) 'String
+        'decode-nullable-router $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-nullable-router (value)
+            if (nil? value) (Result :ok value) (decode-router value)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/Router) 'String
+        'decode-nullable-store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-nullable-store (value)
+            if (nil? value) (Result :ok value) (decode-client-store value)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'String
+        'decode-nullable-string $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-nullable-string (value)
+            if (nil? value) (Result :ok value) (decode-string value)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'JsNullish 'String) 'String
+        'decode-nullable-user $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-nullable-user (value)
+            if (nil? value) (Result :ok value) (decode-client-user value)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientUser) 'String
+        'decode-number $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-number (value) (try-decode-map-as value 'Number)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'Number 'String
+        'decode-open $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-open (value) (Result :ok value)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'Dynamic 'String
+        'decode-router $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-router (value)
+            match (decode-source value)
+              (:err detail) (Result :err detail)
+              (:ok source)
+                match (decode-field source :name decode-tag)
+                  (:err detail) (Result :err detail)
+                  (:ok name)
+                    match (decode-field source :title decode-string)
+                      (:err detail) (Result :err detail)
+                      (:ok title)
+                        match (decode-field source :data decode-open)
+                          (:err detail) (Result :err detail)
+                          (:ok data)
+                            match (decode-field source :router decode-nullable-router)
+                              (:err detail) (Result :err detail)
+                              (:ok router)
+                                Result :ok $ schema/Router :name name :title title :data data :router router
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'cumulo-reel.schema/Router 'String
+        'decode-session $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-session (value)
+            match (decode-source value)
+              (:err detail) (Result :err detail)
+              (:ok source)
+                match (decode-field source :user-id decode-nullable-string)
+                  (:err detail) (Result :err detail)
+                  (:ok user-id)
+                    match (decode-field source :id decode-nullable-number)
+                      (:err detail) (Result :err detail)
+                      (:ok id)
+                        match (decode-field source :nickname decode-nullable-string)
+                          (:err detail) (Result :err detail)
+                          (:ok nickname)
+                            match (decode-field source :router decode-router)
+                              (:err detail) (Result :err detail)
+                              (:ok router)
+                                match (decode-field source :messages decode-messages)
+                                  (:err detail) (Result :err detail)
+                                  (:ok messages)
+                                    Result :ok $ schema/Session :user-id user-id :id id :nickname nickname :router router :messages messages
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'cumulo-reel.schema/Session 'String
+        'decode-source $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-source (value)
+            try-decode-map-as
+              if (struct? value) (&struct:to-map value) value
+              :: 'Map 'Tag 'Dynamic
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'Map 'Tag 'Dynamic) 'String
+        'decode-string $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-string (value) (try-decode-map-as value 'String)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'String 'String
+        'decode-tag $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-tag (value) (try-decode-map-as value 'Tag)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result 'Tag 'String
+        'parse-client-action $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn parse-client-action (raw)
+            match (.parse-cirru-edn raw)
+              (:ok value) (decode-client-action value)
+              (:err detail) (Result :err detail)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String
+            :return $ :: 'Result 'cumulo-reel.schema/Op 'String
+          :tests $ []
+            %{} 'TestEntry (:name |accepts-anonymous-sign-up)
+              :code $ quote $ assert=
+                Result :ok $ schema/Op :user/sign-up |Ada |secret
+                parse-client-action $ format-cirru-edn $ :: :user/sign-up |Ada |secret
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |accepts-nominal-log-in)
+              :code $ quote $ assert=
+                Result :ok $ schema/Op :user/log-in |Ada |secret
+                parse-client-action $ format-cirru-edn $ schema/Op :user/log-in |Ada |secret
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |accepts-router-and-empty-actions)
+              :code $ quote $ do
+                assert=
+                  Result :ok $ schema/Op :router/change :profile
+                  parse-client-action $ format-cirru-edn $ :: :router/change :profile
+                assert=
+                  Result :ok $ schema/Op :user/log-out
+                  parse-client-action $ format-cirru-edn $ :: :user/log-out
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-invalid-action-payload)
+              :code $ quote $ assert= true
+                result:err? $ parse-client-action $ format-cirru-edn (:: :user/sign-up |Ada 3)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-extra-and-missing-action-payload)
+              :code $ quote $ do
+                assert= true $ result:err? $ parse-client-action
+                  format-cirru-edn $ :: :user/sign-up |Ada
+                assert= true $ result:err? $ parse-client-action
+                  format-cirru-edn $ :: :user/log-out |extra
+                assert= true $ result:err? $ parse-client-action
+                  format-cirru-edn $ :: :router/change |profile
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-unknown-and-malformed-action)
+              :code $ quote $ do
+                assert= true $ result:err? $ parse-client-action
+                  format-cirru-edn $ :: :unknown
+                assert= true $ result:err? $ parse-client-action |{}
+                assert= true $ result:err? $ parse-client-action |not-cirru-edn
+              :tags $ #{} :protocol :unit
+        'patch-class-mapper $ %{} 'CodeEntry
+          :doc "|恢复传输 change-op 的名义定义；payload 仍由 apply-server-patch 验证，不把 class mapper 当作 decoder。"
+          :code $ quote $ def patch-class-mapper
+            {} $ :change-op patch-schema/change-op
+          :examples $ []
+          :schema $ :: 'Map 'Tag 'Dynamic
+        'receive-server-patch! $ %{} 'CodeEntry (:doc "|只在 patch 与完整结果解码都成功后更新客户端 Ref。")
+          :code $ quote $ defn receive-server-patch! (target data)
+            match
+              apply-server-patch (deref target) data
+              (:err detail) (Result :err detail)
+              (:ok next-store)
+                do (reset! target next-store) (Result :ok &unit)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ []
+              :: 'Ref $ :: 'JsNullish 'cumulo-reel.schema/ClientStore
+              , 'Dynamic
+            :return $ :: 'Result 'Unit 'String
+          :tests $ []
+            %{} 'TestEntry (:name |rejects-invalid-result-without-publishing)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  before $ do (reset! target expected) (deref target)
+                  invalid $ &struct:assoc expected :count $ &list:nth
+                    decode-map-as
+                      parse-cirru-edn
+                        format-cirru-edn $ [] |wrong-count
+                        , patch-class-mapper
+                      :: 'List 'Dynamic
+                    , 0
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ diff-twig nil invalid $ {}
+                    , patch-class-mapper
+                match (receive-server-patch! target wire)
+                  (:err detail)
+                    assert= true $ includes? detail |count
+                  (:ok value) (assert |Invalid-store-was-published false)
+                assert= before $ deref target
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-partially-applied-invalid-patch)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  before $ do (reset! target expected) (deref target)
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ [] (patch-schema/change-op :assoc :count 2)
+                        patch-schema/change-op :update-in ([] :session :missing) (patch-schema/change-op :replace 3)
+                    , patch-class-mapper
+                match (receive-server-patch! target wire)
+                  (:err detail)
+                    assert= true $ includes? detail |Invalid-patch:
+                  (:ok value) (assert |Malformed-patch-was-published false)
+                assert= before $ deref target
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-invalid-operation-payload)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  before $ do (reset! target expected) (deref target)
+                  raw-ops $ parse-cirru-edn "|[] $ %:: 'change-op 'vec-drop |bad" patch-class-mapper
+                  wire $ {} (:kind :patch) (:data raw-ops)
+                match (receive-server-patch! target wire)
+                  (:err detail)
+                    assert= true $ includes? detail |Invalid-changes:
+                  (:ok value) (assert |Bad-operation-payload-was-published false)
+                assert= before $ deref target
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |publishes-valid-edn-snapshot)
+              :code $ quote $ let
+                  router $ schema/Router :name :profile :title |Profile :data
+                    {} $ :open $ [] 1 |two
+                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
+                  session $ struct-with schema/session (:id 1) (:router router)
+                    :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  before $ do (reset! target expected) (deref target)
+                  wire $ parse-cirru-edn
+                    format-cirru-edn $ {} (:kind :patch)
+                      :data $ diff-twig nil expected $ {}
+                    , patch-class-mapper
+                reset! target nil
+                match (receive-server-patch! target wire)
+                  (:err detail) (raise detail)
+                  (:ok value) (assert= &unit value)
+                let
+                    actual $ deref target
+                  if (js-present? actual) (assert= expected actual) (assert |Valid-store-was-not-published false)
+              :tags $ #{} :protocol :unit
+      :ns $ %{} 'NsEntry (:doc |)
+        :code $ quote $ ns cumulo-reel.app.protocol
+          :require (cumulo-reel.schema :as schema)
+            recollect.patch :refer $ patch-batch
+            recollect.diff :refer $ diff-twig
+            recollect.schema :as patch-schema
     'cumulo-reel.app.server $ %{} 'FileEntry
       :defs $ {}
         '*client-caches $ %{} 'CodeEntry (:doc |)
@@ -564,7 +1226,7 @@
                     dispatch! (:: :session/connect) sid
                     println "|New client."
                 (:message sid msg)
-                  match (try-parse-cirru-edn-as msg 'cumulo-reel.schema/Op)
+                  match (cumulo-reel.app.protocol/parse-client-action msg)
                     (:ok action) (dispatch! action sid)
                     (:err error) (eprintln "|Invalid client action:" error)
                 (:disconnect sid)
@@ -1288,9 +1950,9 @@
     'cumulo-reel.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientStore $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ClientStore (:session 'Session) (:router 'Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number)
+          :code $ quote $ defstruct ClientStore (:session 'cumulo-reel.schema/Session) (:router 'cumulo-reel.schema/Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number)
             :name $ :: 'JsNullish 'String
-            :user $ :: 'JsNullish 'ClientUser
+            :user $ :: 'JsNullish 'cumulo-reel.schema/ClientUser
           :examples $ []
           :schema $ :: 'StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
@@ -1315,7 +1977,7 @@
           :schema $ :: 'Enum
         'Router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Router (:name 'Tag) (:title 'String) (:data 'Dynamic)
-            :router $ :: 'JsNullish 'Router
+            :router $ :: 'JsNullish 'cumulo-reel.schema/Router
           :examples $ []
           :schema $ :: 'StructDef
         'Session $ %{} 'CodeEntry (:doc |)
@@ -1323,8 +1985,8 @@
             :user-id $ :: 'JsNullish 'String
             :id $ :: 'JsNullish 'Number
             :nickname $ :: 'JsNullish 'String
-            :router 'Router
-            :messages $ :: 'Map 'String 'Message
+            :router 'cumulo-reel.schema/Router
+            :messages $ :: 'Map 'String 'cumulo-reel.schema/Message
           :examples $ []
           :schema $ :: 'StructDef
         'SiteConfig $ %{} 'CodeEntry (:doc |)

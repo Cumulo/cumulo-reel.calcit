@@ -79,3 +79,18 @@ nullable 泛型比较后，完整客户端严格检查和 JS 生成通过，服�
 仍通过。编译器的共享 watcher 用例已在 native 与 JS 回放，但尚未验证本 demo
 在浏览器中的完整交互。真实网络、浏览器、全部发布
 依赖解析和发布交付未完成。不可将核心及一个下游通过扩大为整个项目或 milestone 完成。
+
+## 协议边界的最新验证
+
+当前客户端在 patch 完成后逐层解码并重建具名 Store，失败时保留原 Ref 值。
+change-op class mapper 仅恢复 Enum 身份，payload 仍由 decoder 验证。Router.data
+保留 Dynamic；nil 用户、头像、路由和其他 nullable 字段保留现有语义。服务端输入
+操作检查 tag、参数数量和类型，再构造 Op，兼容现有客户端匿名 Enum wire 格式。
+
+24 项 native 测试在正式/候选编译器中通过，其中 16 项协议用例从同一附带 AST
+回放到新生成 JS，两种编译器都通过。4 项 Node 运行测试、候选严格检查和 Vite 构建
+通过。隔离浏览器实际验证了初始同步、错误消息、注册输入、资料路由和退出同步。
+客户端与服务端分别输出到 js-out/ 和 js-server-out/，生成文件不入库。
+
+发布依赖与质量验收仍未完成。当前质量门禁报告 80 项逐定义回归，预算没有放宽；
+正式编译器的 nullable watcher 修复及本地 ws-edn、Recollect、Respo 覆盖尚待发布。

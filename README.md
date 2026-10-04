@@ -65,6 +65,8 @@ yarn vite build
 yarn compile-server
 ```
 
+客户端生成到 `js-out/`，服务端生成到 `js-server-out/`。两个入口应使用独立目录，避免后一次编译按入口裁剪共享模块，覆盖另一入口所需的导出。生成目录均不入库。
+
 `deps.cirru :calcit-version` and `package.json @calcit/procs` must stay on the
 same Calcit release. Actions use the maintained `calcit-lang/setup-calcit@v1`
 tag with explicit `calcit,caps` tools; application workflows should not pin an
@@ -178,6 +180,35 @@ JS 通过；服务端严格检查和 8/8 附带测试也通过。编译器自身
 这验证了保留现有数据语义的实现路径，尚未实施或验证完整 ClientStore 解码。
 探针日志：`/private/tmp/cumulo-reel-194-wire-decode-probe.log`、
 `/private/tmp/cumulo-reel-194-nullable-adapter-{formal-,}probe.log`。
+
+### 后续：真实协议解码与浏览器验收
+
+`cumulo-reel.app.protocol` 现在是客户端输入边界：先验证 `:patch` envelope 与
+change-op payload，再执行 patch；成功后逐层重建 ClientStore、Session、Router、
+ClientUser 和 Message。`patch-class-mapper` 仅恢复 change-op 的名义身份，不替代
+payload 检查。nullable 字段保留 nil，Router.data 保持开放数据。只有整个结果验证
+成功才 reset Store；非法字段或部分执行后失败的 patch 不发布状态。
+
+服务端通过 `parse-client-action` 接收现有匿名 Enum 操作，也接受具名 Op 文本。
+按已声明的操作检查 tag、payload 数量和基础类型，验证后构造具名 Op；未知操作、
+缺少/多余参数、错误类型和无效 EDN 返回错误。客户端 local states 按 `update-states`
+要求先包装成带 `:states` 的 Store，再取出状态树；消息组件调用处将 Message 转为 Map，
+Store 内部继续保留具名值。这两处合同差异由真实浏览器交互暴露。
+
+当前正式 0.28 与候选编译器均通过 24/24 native 附带测试；16 项协议附带测试由
+同一 AST 回放到两者新生成的 JS，使用项目 procs 0.28。候选的完整 client/server
+严格检查、Vite 生产构建及 4/4 Node 运行测试通过。两个入口生成目录已分离，避免
+服务端编译覆盖客户端模块导出。实际浏览器在隔离临时数据库中验证了 WebSocket
+初始快照、错误消息、输入状态、注册、资料路由、具名用户与成员投影、退出后的 nil
+用户同步；没有向远程服务或生产数据库发送这些测试操作。
+
+日志位于 `/private/tmp/cumulo-reel-194-action-{tests,tests-formal,runtime}.log`、
+`/private/tmp/cumulo-reel-194-final-{client-check,vite,protocol-formal-js,quality}.log`。
+这些证据不覆盖正式发布依赖。正式 0.28 客户端的两条 nullable watcher 告警仍依赖
+尚未发布的编译器修复，其他本地模块覆盖也尚未发布。质量门禁仍失败：80 项逐定义
+回归，typeNotFull 36、schemaDynamic 49、unresolved 80、deprecatedCalls 3；
+codeNil 31 和 unsafeCoerce 4 保持原预算，没有提高任何预算。输入边界的 Dynamic
+是真实开放输入，不能仅为统计通过而伪装成泛型。milestone 仍在进行中。
 
 ### License
 

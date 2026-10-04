@@ -4,6 +4,7 @@
 .calcit/
 
 js-out/
+js-server-out/
 node_modules/
 dist/
 out-page/

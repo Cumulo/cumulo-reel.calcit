@@ -75,9 +75,9 @@ jobs:
 
     - name: Compile Node server
       run: |
-        calcit calcit.cirru --entry server js
-        node --check js-out/cumulo-reel.app.server.mjs
-        node --input-type=module -e 'await import("./js-out/cumulo-reel.app.server.mjs")'
+        calcit calcit.cirru --entry server --emit-path js-server-out js
+        node --check js-server-out/cumulo-reel.app.server.mjs
+        node --input-type=module -e 'await import("./js-server-out/cumulo-reel.app.server.mjs")'
 
     - name: Exercise Node server runtime
       run: node --test scripts/server-runtime.test.mjs

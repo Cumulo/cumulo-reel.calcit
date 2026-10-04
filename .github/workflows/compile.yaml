@@ -83,7 +83,7 @@ jobs:
       run: node --test scripts/server-runtime.test.mjs
 
     - name: Upload static assets to COS
-      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft)
       uses: worktools/cos-upload-action@v1.2.0
       timeout-minutes: 10
       with:

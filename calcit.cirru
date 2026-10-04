@@ -539,7 +539,7 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
         'reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reload! () (println "|Code updated.") (clear-twig-caches!)
+          :code $ quote $ defn reload! () (println "|Code updated.") (clear-twig-caches!) (reset-twig-memos!)
             reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
@@ -647,7 +647,7 @@
             cumulo-reel.app.updater :refer $ updater
             cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
             cumulo-reel.app.config :as config
-            cumulo-reel.app.twig.container :refer $ twig-container
+            cumulo-reel.app.twig.container :refer $ twig-container reset-twig-memos!
             recollect.diff :refer $ diff-twig
             recollect.twig :refer $ clear-twig-caches!
             cumulo-reel.$meta :refer $ calcit-dirname
@@ -847,6 +847,20 @@
             js-ffi.contract :as contract
     'cumulo-reel.app.twig.container $ %{} 'FileEntry
       :defs $ {}
+        '*members-memo $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defatom *members-memo
+            new-twig-memo2 twig-members $ assert-type ({})
+              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry2 (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
+                :: 'Map 'Number $ :: 'JsNullish 'String
+          :examples $ []
+          :schema $ :: 'Ref $ :: 'recollect.memo/TwigMemo2 (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
+            :: 'Map 'Number $ :: 'JsNullish 'String
+        '*user-memo $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defatom *user-memo
+            new-twig-memo1 twig-user $ assert-type ({})
+              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry1 'cumulo-reel.schema/User 'cumulo-reel.schema/ClientUser
+          :examples $ []
+          :schema $ :: 'Ref $ :: 'recollect.memo/TwigMemo1 'cumulo-reel.schema/User 'cumulo-reel.schema/ClientUser
         'rand-hex-color! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn rand-hex-color! ()
             contract/expect-string |randomcolor $ randomcolor-host
@@ -854,6 +868,40 @@
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
             :features $ #{} :js-ffi
+        'reset-twig-memos! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn reset-twig-memos! ()
+            release-twig-memo! $ :id @*user-memo
+            release-twig-memo! $ :id @*members-memo
+            reset! *user-memo $ new-twig-memo1 twig-user $ assert-type ({})
+              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry1 'cumulo-reel.schema/User 'cumulo-reel.schema/ClientUser
+            reset! *members-memo $ new-twig-memo2 twig-members $ assert-type ({})
+              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry2 (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
+                :: 'Map 'Number $ :: 'JsNullish 'String
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ []
+          :tests $ [] $ %{} 'TestEntry
+            :name |keeps-typed-projections-and-releases-old-contexts
+            :code $ quote $ do (recollect.memo/reset-twig-memo!)
+              let
+                  first-view $ memo-twig1! @*user-memo :user schema/user
+                  same-view $ memo-twig1! @*user-memo :user schema/user
+                assert= true $ identical? first-view same-view
+                assert= (twig-user schema/user) first-view
+              assert= 1 $ recollect.memo/twig-memo-size
+              let
+                  members $ memo-twig2! @*members-memo :members (:sessions schema/database) (:users schema/database)
+                assert= ({}) members
+              assert= 2 $ recollect.memo/twig-memo-size
+              reset-twig-memos!
+              assert= 0 $ recollect.memo/twig-memo-size
+              let
+                  new-view $ memo-twig1! @*user-memo :user schema/user
+                assert= (twig-user schema/user) new-view
+              assert= 1 $ recollect.memo/twig-memo-size
+              recollect.memo/reset-twig-memo!
+            :tags $ #{} :server :unit
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
             let
@@ -873,10 +921,10 @@
               schema/ClientStore :logged-in? logged-in? :session session :reel-length (count records) :router
                 if logged-in?
                   struct-with router $ :data $ case router-name (:home pages)
-                    :profile $ memo-twig-by2 :members twig-members sessions users
+                    :profile $ memo-twig2! @*members-memo :members sessions users
                     router-name $ {}
                   , router
-                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in? (memo-twig-by1 user-id twig-user user) absent
+                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in? (memo-twig1! @*user-memo user-id user) absent
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)
@@ -900,7 +948,7 @@
         :code $ quote $ ns cumulo-reel.app.twig.container
           :require
             cumulo-reel.app.twig.user :refer $ twig-user
-            recollect.memo :refer $ memo-twig-by1 memo-twig-by2
+            recollect.memo :refer $ new-twig-memo1 new-twig-memo2 memo-twig1! memo-twig2! release-twig-memo!
             cumulo-reel.schema :as schema
             |randomcolor :default randomcolor-host
             js-ffi.contract :as contract

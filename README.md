@@ -34,7 +34,7 @@ cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 数据库合同时使用新的构造器与明确的 schema，不能把这个开放模板断言成已验证状态。
 
 当前泛型迁移尚未发布。核心和 Calcium 下游通过两种编译器的严格检查与回归；
-本项目 demo 的正式服务端检查通过，候选服务端仍有 Recollect memo 合同警告。
+本项目 demo 使用下述本地依赖覆盖后，正式与候选服务端严格检查均通过。
 客户端使用本地 ws-edn 修复后越过旧 WsClient 断言，继续暴露 Respo 和 watcher
 合同问题。不能作为完整发布验收结果。
 
@@ -119,7 +119,7 @@ assert-type。未完成 Vite、真实 WebSocket/持久化运行测试或实际�
 含客户端 handle 修复及 Node callback 的源码 `Fn` 合同。manifest 的 0.0.32
 仍指已发布旧源码，不能据本地覆盖认定正式依赖解析成功。缓存和原 checkout 未修改。
 
-候选服务端严格检查的告警从 7 条降到 2 条，剩余为 Recollect memo-twig-by1/by2
+接入 ws-edn 时，候选服务端严格检查的告警从 7 条降到 2 条，剩余为 Recollect memo-twig-by1/by2
 从开放 memo 实现返回 Dynamic 却声明 R。正式服务端严格检查、两种编译器下
 7 个附带回归均通过。客户端现在越过旧 WsClient 断言，正式检查暴露 10 条
 Respo ToString/add-event 及 watcher callback 合同告警，仍未通过完整验收。
@@ -128,6 +128,29 @@ ws-edn 自身客户端 JS 生成还暴露 Option<Fn> reset! 诊断；不使用�
 日志位于 `/private/tmp/cumulo-reel-194-callback-{client,server}-{formal,candidate}.log`、
 `/private/tmp/cumulo-reel-194-callback-{tests,candidate-tests}.log`。下一步继续修正
 memo 的返回证据、客户端及依赖合同，再进行真实协议、浏览器和发布验收。
+
+### 后续：泛型 memo 容器
+
+当前 Recollect 忽略链接指向
+`/Users/chenyong/repo/calcit-lang/recollect-memo-types-194` 本地提交 `3007237`，
+不是 manifest 中已发布的 0.0.53。旧异构缓存不能从 Dynamic 返回值证明 R，
+旧 memo-twig-by0/1/2 现在如实返回 Dynamic，新的 TwigMemo1/2 将参数与结果保留
+在泛型容器中。没有对命中值强转或重新解码，也没有删除 memo 改为每次重算。
+
+用户和成员投影分别使用独立容器，保留 nil bypass、参数变化重算、命中复用和
+frame pruning。重载时 reset-twig-memos! 先 release 旧容器，再创建新容器，
+避免保留旧 builder 与生命周期注册项。空 seed 的类型说明只用于全新空 Map。
+
+正式与候选编译器的完整服务端 main!/reload! 严格检查均通过，8/8 附带测试通过。
+新增下游测试验证具名 ClientUser/成员投影、缓存数量及重载释放旧上下文。
+Recollect 两者 23/23 附带测试、原 yarn test 和重新生成 JS 的对象身份、参数变化、
+独立容器、nil bypass、frame/reset/release 回归通过；Number 参数传入 String
+在两者的严格检查中被拒绝。此处没有声称整个 demo 的 JS 构建或网络运行完成。
+
+日志：`/private/tmp/cumulo-reel-194-typed-memo-{formal,candidate}.log`、
+`/private/tmp/cumulo-reel-194-typed-memo-{tests,candidate-tests}.log`。
+Recollect 严格 Caps 仍被两组发布依赖版本分歧阻断，默认 demo 构建仍有八条
+Respo 告警；本项目客户端与协议解码的既有问题也未完成。milestone 保持进行中。
 
 ### License
 

@@ -35,8 +35,9 @@ cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 
 当前泛型迁移尚未发布。核心和 Calcium 下游通过两种编译器的严格检查与回归；
 本项目 demo 使用下述本地依赖覆盖后，正式与候选服务端严格检查均通过。
-客户端使用本地 ws-edn 修复后越过旧 WsClient 断言，继续暴露 Respo 和 watcher
-合同问题。不能作为完整发布验收结果。
+客户端进一步接入本地 Respo 类型边界修复后，正式 0.28 仍报告两条 watcher
+合同告警；候选编译器修正泛型 nullable callback 比较后，完整客户端严格检查和
+JS 生成通过。真实协议与浏览器运行仍待验证，不能作为完整发布验收结果。
 
 use `mode=dev` to enable dev mode:
 
@@ -151,6 +152,32 @@ Recollect 两者 23/23 附带测试、原 yarn test 和重新生成 JS 的对象
 `/private/tmp/cumulo-reel-194-typed-memo-{tests,candidate-tests}.log`。
 Recollect 严格 Caps 仍被两组发布依赖版本分歧阻断，默认 demo 构建仍有八条
 Respo 告警；本项目客户端与协议解码的既有问题也未完成。milestone 保持进行中。
+
+#### 客户端 nullable watcher 回归
+
+当前 Respo 忽略链接指向
+`/Users/chenyong/repo/respo/respo-render-node-boundaries-194` 本地提交 `7644b19`，
+不是 manifest 中的发布版本。这次覆盖消除了前述客户端 Respo 告警，正式 0.28
+剩下两条 `add-watch!` callback 告警：已经绑定为 `JsNullish<ClientStore>` 的泛型
+在参数比较时被提前剥掉 nullable wrapper。
+
+候选编译器本地提交 `54a62eeb` 保留整个已绑定的泛型后，完整客户端 main!/reload! 严格检查与重新生成
+JS 通过；服务端严格检查和 8/8 附带测试也通过。编译器自身的同一份附带 watcher
+测试在 native 与 JS 回放中通过，另有拒绝非空参数、错误 payload 和错误返回值的
+负例。正式 0.28 的客户端检查仍失败，这些本地源码覆盖尚未发布。
+
+日志：`/private/tmp/cumulo-reel-194-watch-fixed-client.log`、
+`/private/tmp/cumulo-reel-194-client-watch-js.log`、
+`/private/tmp/cumulo-reel-194-watch-server-current.log`、
+`/private/tmp/cumulo-reel-194-watch-tests-current.log`。
+此处的客户端证据覆盖类型检查与 JS 生成；协议解码、浏览器和端到端运行仍需完成。
+
+协议探针再次确认，`try-decode-map-as` 不能为包含 JsNullish 字段的 ClientStore
+推导完整 decoder。EDN 边界的单字段探针改为先用 `nil?` 保留 nil，再对非空值
+调用基础 String decoder；正式 0.28 与候选版本均接受 String/nil 并拒绝 Number。
+这验证了保留现有数据语义的实现路径，尚未实施或验证完整 ClientStore 解码。
+探针日志：`/private/tmp/cumulo-reel-194-wire-decode-probe.log`、
+`/private/tmp/cumulo-reel-194-nullable-adapter-{formal-,}probe.log`。
 
 ### License
 

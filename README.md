@@ -210,6 +210,16 @@ Store 内部继续保留具名值。这两处合同差异由真实浏览器交�
 codeNil 31 和 unsafeCoerce 4 保持原预算，没有提高任何预算。输入边界的 Dynamic
 是真实开放输入，不能仅为统计通过而伪装成泛型。milestone 仍在进行中。
 
+#### 废弃调用清理
+
+已将容器的 turn-string 改为 to-string，两处用户查找的 vals 改为
+其等价的 distinct-values。24/24 native 回归与候选完整客户端严格检查通过。
+质量门禁中 deprecatedCalls 从 3 降为 0，逐定义回归从 80 降为 77；
+其余输入边界/泛型统计与预算保持不变，完整质量验收仍未通过。
+日志：`/private/tmp/cumulo-reel-194-deprecation-tests.log`、
+`/private/tmp/cumulo-reel-194-deprecation-client-check.log`、
+`/private/tmp/cumulo-reel-194-quality-after-deprecation.log`。
+
 ### License
 
 MIT

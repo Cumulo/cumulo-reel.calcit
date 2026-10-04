@@ -190,7 +190,7 @@
                   comp-navigation store-typed.:logged-in? store-typed.:count
                   if store-typed.:logged-in?
                     case-default router.:name
-                      <> $ turn-string router.:name
+                      <> $ to-string router.:name
                       :home $ <> |Home
                       :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/ClientUser) router.:data
                     comp-login $ >>
@@ -1709,7 +1709,7 @@
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals db.:users
+                  &set:to-list $ distinct-values db.:users
                   fn (user)
                     hint-fn $ {}
                       :args $ [] 'cumulo-reel.schema/User
@@ -1758,7 +1758,7 @@
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals db.:users
+                  &set:to-list $ distinct-values db.:users
                   fn (user)
                     hint-fn $ {}
                       :args $ [] 'cumulo-reel.schema/User

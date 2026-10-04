@@ -71,6 +71,7 @@ play-records 按顺序重放，并保持 Db 类型。异常向调用方传播；
 服务端严格检查和附带回归通过。原子创建、实时结果、历史顺序与 merged base 均有
 实际测试，记录布局没有改成另一套 wire 格式。
 
-本项目 demo 的正式服务端检查通过；候选服务端还有 Node callback 和 Recollect memo
-合同警告，客户端还有 ws-edn 的既有 WsClient 断言问题。真实网络、浏览器、全部发布
+本项目 demo 的正式服务端检查通过；使用本地 ws-edn 5ce8958 后，候选服务端的
+Node callback 警告消除，仍有两条 Recollect memo 合同警告。客户端越过旧 WsClient
+断言后继续暴露 Respo 和 watcher 合同问题。真实网络、浏览器、全部发布
 依赖解析和发布交付未完成。不可将核心及一个下游通过扩大为整个项目或 milestone 完成。

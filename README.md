@@ -34,8 +34,9 @@ cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 数据库合同时使用新的构造器与明确的 schema，不能把这个开放模板断言成已验证状态。
 
 当前泛型迁移尚未发布。核心和 Calcium 下游通过两种编译器的严格检查与回归；
-本项目 demo 的正式服务端检查通过，候选服务端仍有 Node callback/memo 合同警告，
-demo 客户端仍被已发布 ws-edn 的旧 WsClient 断言阻断。不能作为完整发布验收结果。
+本项目 demo 的正式服务端检查通过，候选服务端仍有 Recollect memo 合同警告。
+客户端使用本地 ws-edn 修复后越过旧 WsClient 断言，继续暴露 Respo 和 watcher
+合同问题。不能作为完整发布验收结果。
 
 use `mode=dev` to enable dev mode:
 
@@ -99,7 +100,7 @@ COS Action 1.2 的 public-base-url 是唯一上传校验，保持原 CDN/main/�
 返回 Unit，保留渲染行为。原五条测试、18 项核心/数据公开定义、原质量预算、
 不可变安装和工具链核对通过；严格 Caps 仍有三组已发布模块版本冲突。
 仍有 11 个开放 schema 槽、42 个 unresolved、31 处 nil、4 处 unsafe，预算未放宽。
-完整客户端仍被已发布 ws-edn 的 WsClient 类型断言阻止。twig-container 已改为
+该阶段的完整客户端被已发布 ws-edn 的 WsClient 类型断言阻止。twig-container 已改为
 实际构造 ClientStore，服务端严格入口与包含 diff/patch 的 JS 生成通过；没有扩大
 schema 或用 coercion 掩盖原 Map/Struct 不一致。
 
@@ -110,6 +111,23 @@ schema 或用 coercion 掩盖原 Map/Struct 不一致。
 下一步需确定一次性的协议解码边界，再完成客户端与端到端验收，不能只增加
 assert-type。未完成 Vite、真实 WebSocket/持久化运行测试或实际上传；COS 仍仅
 针对前端资源，本候选不部署服务端。
+
+### 后续：Node callback 与本地依赖覆盖
+
+当前忽略链接中的 ws-edn 改用
+`/Users/chenyong/repo/mvc-works/ws-edn-client-traits-194` 本地提交 `5ce8958`，
+含客户端 handle 修复及 Node callback 的源码 `Fn` 合同。manifest 的 0.0.32
+仍指已发布旧源码，不能据本地覆盖认定正式依赖解析成功。缓存和原 checkout 未修改。
+
+候选服务端严格检查的告警从 7 条降到 2 条，剩余为 Recollect memo-twig-by1/by2
+从开放 memo 实现返回 Dynamic 却声明 R。正式服务端严格检查、两种编译器下
+7 个附带回归均通过。客户端现在越过旧 WsClient 断言，正式检查暴露 10 条
+Respo ToString/add-event 及 watcher callback 合同告警，仍未通过完整验收。
+ws-edn 自身客户端 JS 生成还暴露 Option<Fn> reset! 诊断；不使用旧产物证明迁移成功。
+
+日志位于 `/private/tmp/cumulo-reel-194-callback-{client,server}-{formal,candidate}.log`、
+`/private/tmp/cumulo-reel-194-callback-{tests,candidate-tests}.log`。下一步继续修正
+memo 的返回证据、客户端及依赖合同，再进行真实协议、浏览器和发布验收。
 
 ### License
 

@@ -472,12 +472,14 @@
         '*reader-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *reader-reel @*reel
           :examples $ []
-          :schema $ :: 'Ref 'cumulo-reel.core/ReelState
+          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *reel
-            struct-with reel-schema (:base @*initial-db) (:db @*initial-db)
+            %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
+              :records $ []
+              :merged? false
           :examples $ []
-          :schema $ :: 'Ref 'cumulo-reel.core/ReelState
+          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op sid)
             let
@@ -538,7 +540,7 @@
             :args $ []
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println "|Code updated.") (clear-twig-caches!)
-            reset! *reel $ refresh-reel @*reel @*initial-db updater
+            reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -604,7 +606,40 @@
             finish-twig-frame!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'cumulo-reel.core/ReelState
+            :args $ [] $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
+        'updater-from-record $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn updater-from-record (db op sid op-id op-time)
+            let
+                normalized $ if (enum? op)
+                  assoc op 0 $ turn-tag $ &enum:nth op 0
+                  , op
+                typed-op $ match normalized
+                  (:session/connect) (cumulo-reel.schema/Op :session/connect)
+                  (:session/disconnect) (cumulo-reel.schema/Op :session/disconnect)
+                  (:session/remove-message id)
+                    cumulo-reel.schema/Op :session/remove-message $ decode-map-as id 'String
+                  (:user/log-in name password)
+                    cumulo-reel.schema/Op :user/log-in (decode-map-as name 'String) (decode-map-as password 'String)
+                  (:user/sign-up name password)
+                    cumulo-reel.schema/Op :user/sign-up (decode-map-as name 'String) (decode-map-as password 'String)
+                  (:user/log-out) (cumulo-reel.schema/Op :user/log-out)
+                  (:router/change name)
+                    cumulo-reel.schema/Op :router/change $ decode-map-as name 'Tag
+                  (:effect/persist) (cumulo-reel.schema/Op :effect/persist)
+                  (:effect/ping) (cumulo-reel.schema/Op :effect/ping)
+                  (:effect/pong) (cumulo-reel.schema/Op :effect/pong)
+                  (:effect/connect) (cumulo-reel.schema/Op :effect/connect)
+                  (:reel/reset) (cumulo-reel.schema/Op :reel/reset)
+                  (:reel/merge) (cumulo-reel.schema/Op :reel/merge)
+                  _ $ raise |Invalid-record-operation
+              updater db typed-op (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
+            :args $ [] 'cumulo-reel.schema/Database 'Dynamic 'Dynamic 'Dynamic 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |replays-legacy-connect-operation)
+            :code $ quote $ assert=
+              updater database (cumulo-reel.schema/Op :session/connect) 1 |op-1 0
+              updater-from-record database (:: :session/connect) 1 |op-1 0
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server
           :require
@@ -931,7 +966,7 @@
       :defs $ {}
         'connect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect (db sid op-id op-time)
-            struct-with db $ :sessions $ assoc db.:sessions sid
+            struct-with db $ :sessions $ assoc (:sessions db) sid
               struct-with schema/session $ :id sid
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
@@ -1091,81 +1126,78 @@
     'cumulo-reel.core $ %{} 'FileEntry
       :defs $ {}
         'ReelState $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ReelState (:base 'Dynamic) (:db 'Dynamic)
+          :code $ quote $ defstruct ReelState ([] 'Db) (:base 'Db) (:db 'Db)
             :records $ :: 'List $ :: 'List 'Dynamic
             :merged? 'Bool
           :examples $ []
           :schema $ :: 'StructDef
         'play-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn play-records (db records updater)
-            if (&list:empty? records) db $ let-sugar
-                  [] op sid op-id op-time
-                  &list:nth records 0
-                typed-op $ assert-type op 'Op
-                typed-sid $ assert-type sid 'Sid
-                typed-op-id $ assert-type op-id 'OpId
-                typed-op-time $ assert-type op-time 'Number
-                next-db $ updater db typed-op typed-sid typed-op-id typed-op-time
-              recur next-db (rest records) updater
+            if (&list:empty? records) db $ let[] (op sid op-id op-time) (&list:nth records 0)
+              recur (updater db op sid op-id op-time) (rest records) updater
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Db)
             :args $ [] 'Db
               :: 'List $ :: 'List 'Dynamic
               :: 'Fn $ {} (:return 'Db)
-                :args $ [] 'Db 'Op 'Sid 'OpId 'Number
-            :generics $ [] 'Db 'Op 'Sid 'OpId
+                :args $ [] 'Db 'Dynamic 'Dynamic 'Dynamic 'Dynamic
+            :generics $ [] 'Db
         'reel-reducer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reel-reducer (reel updater op sid op-id op-time dev?)
             let
-                tag-name $ assert-type
-                  if (enum? op) (&enum:nth op 0) :unknown
-                  , 'Tag
+                tag-name $ if (enum? op) (&enum:nth op 0) :unknown
               if
                 starts-with? (str tag-name) |:reel/
                 if (= tag-name :reel/reset)
-                  ReelState :base (:base reel) :db (:base reel) :records ([]) :merged? $ :merged? reel
+                  struct-with reel
+                    :db $ :base reel
+                    :records $ []
                   if (= tag-name :reel/merge)
-                    ReelState :base (:db reel) :db (:db reel) :records ([]) :merged? true
+                    struct-with reel
+                      :base $ :db reel
+                      :records $ []
+                      :merged? true
                     do (println "|Unknown op:" op) reel
                 let
                     msg-pack $ [] op sid op-id op-time
-                    next-db $ updater
-                      assert-type (:db reel) 'Db
-                      , op sid op-id op-time
+                    next-db $ updater (:db reel) op sid op-id op-time
                   struct-with reel
                     :records $ if dev?
                       conj (:records reel) msg-pack
                       :records reel
                     :db next-db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.core/ReelState)
-            :args $ [] 'cumulo-reel.core/ReelState
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'cumulo-reel.core/ReelState 'Db)
               :: 'Fn $ {} (:return 'Db)
                 :args $ [] 'Db 'Op 'Sid 'OpId 'Number
               , 'Op 'Sid 'OpId 'Number 'Bool
             :generics $ [] 'Db 'Op 'Sid 'OpId
+            :return $ :: 'cumulo-reel.core/ReelState 'Db
           :tests $ []
             %{} 'TestEntry (:name |resets-from-base)
               :code $ quote $ let
-                  reel $ ReelState :base 1 :db 2 :records ([]) :merged? false
+                  reel $ assert-type
+                    ReelState :base 1 :db 2 :records ([]) :merged? false
+                    :: 'cumulo-reel.core/ReelState 'Number
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ {} (:return 'Number)
                       :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
                     , db
-                  result $ reel-reducer reel updater
-                    assert-type (:: :reel/reset) 'cumulo-reel.schema/Op
-                    , |s |o 0 false
-                assert=
-                  ReelState :base 1 :db 1 :records ([]) :merged? false
-                  , result
+                  op $ cumulo-reel.schema/Op :reel/reset
+                  result $ reel-reducer reel updater op |s |o 0 false
+                assert= 1 $ :db result
+                assert= ([]) (:records result)
             %{} 'TestEntry (:name |updates-struct-reel)
               :code $ quote $ let
-                  reel $ ReelState :base 1 :db 1 :records ([]) :merged? false
+                  reel $ assert-type
+                    ReelState :base 1 :db 1 :records ([]) :merged? false
+                    :: 'cumulo-reel.core/ReelState 'Number
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ {} (:return 'Number)
                       :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
                     inc db
-                  op $ assert-type (:: :session/connect) 'cumulo-reel.schema/Op
+                  op $ cumulo-reel.schema/Op :session/connect
                   result $ reel-reducer reel updater op |s |o 0 true
                 assert= 2 $ :db result
                 assert= 1 $ count $ :records result
@@ -1173,19 +1205,36 @@
           :code $ quote $ def reel-schema
             ReelState :base nil :db nil :records ([]) :merged? false
           :examples $ []
-          :schema $ :: 'cumulo-reel.core/ReelState
+          :schema $ :: 'cumulo-reel.core/ReelState 'Dynamic
         'refresh-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn refresh-reel (reel base updater)
             let
-                next-base $ if reel.:merged? (assert-type reel.:base 'Db) base
-                next-db $ play-records next-base reel.:records updater
+                next-base $ if (:merged? reel) (:base reel) base
+                next-db $ play-records next-base (:records reel) updater
               struct-with reel (:base next-base) (:db next-db)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.core/ReelState)
-            :args $ [] 'cumulo-reel.core/ReelState 'Db $ :: 'Fn
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'cumulo-reel.core/ReelState 'Db) 'Db $ :: 'Fn
               {} (:return 'Db)
-                :args $ [] 'Db 'Op 'Sid 'OpId 'Number
-            :generics $ [] 'Db 'Op 'Sid 'OpId
+                :args $ [] 'Db 'Dynamic 'Dynamic 'Dynamic 'Dynamic
+            :generics $ [] 'Db
+            :return $ :: 'cumulo-reel.core/ReelState 'Db
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-database-type-and-merged-base)
+            :code $ quote $ let
+                reel $ assert-type
+                  ReelState :base 1 :db 99 :records
+                    [] $ [] 2 :opaque |legacy-id 3
+                    , :merged? true
+                  :: 'cumulo-reel.core/ReelState 'Number
+                replay $ fn (db op sid op-id op-time)
+                  hint-fn $ {}
+                    :args $ [] 'Number 'Dynamic 'Dynamic 'Dynamic 'Dynamic
+                    :return 'Number
+                  + db $ decode-map-as op 'Number
+                refreshed $ refresh-reel reel 1000 replay
+              assert= 1 $ :base refreshed
+              assert= 3 $ :db refreshed
+              assert= (:records reel) (:records refreshed)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.core
     'cumulo-reel.schema $ %{} 'FileEntry

@@ -6,19 +6,20 @@ Cumulo Reel in calcit-js
 
 ### Usage
 
-Server side:
+服务端：新建 ReelState，并在定义 schema 中声明 `Ref<ReelState<Db>>`。
 
 ```cirru
-; create reel state
-defatom *reel $ struct-with cumulo-reel.core/reel-schema
+defatom *reel $ %{} cumulo-reel.core/ReelState
   :base initial-db
   :db initial-db
+  :records $ []
+  :merged? false
 
 ; "action update, `dev?` is optional, turn it on to record states"
-cumulo-reel.core/reel-reducer @*reel updater op op-data sid op-id op-time dev?
+cumulo-reel.core/reel-reducer @*reel updater op sid op-id op-time dev?
 
 ; "do this on reload"
-reset! *reel (cumulo-reel.core/refresh-reel @*reel initial-db updater)
+reset! *reel (cumulo-reel.core/refresh-reel @*reel initial-db replay-updater)
 ```
 
 Client side:
@@ -26,6 +27,15 @@ Client side:
 ```cirru
 cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 ```
+
+`ReelState<Db>` 的 base/db 使用同一类型，实时 updater 的返回值也必须为 Db。
+历史记录仍是四项 List；replay-updater 在使用其操作和元数据前负责验证，数据库类型
+由状态直接保留。`reel-schema` 保留为开放的 `ReelState<Dynamic>` 模板；需要具名
+数据库合同时使用新的构造器与明确的 schema，不能把这个开放模板断言成已验证状态。
+
+当前泛型迁移尚未发布。核心和 Calcium 下游通过两种编译器的严格检查与回归；
+本项目 demo 的正式服务端检查通过，候选服务端仍有 Node callback/memo 合同警告，
+demo 客户端仍被已发布 ws-edn 的旧 WsClient 断言阻断。不能作为完整发布验收结果。
 
 use `mode=dev` to enable dev mode:
 

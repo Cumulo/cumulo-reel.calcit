@@ -53,3 +53,16 @@ String/Number 两参数，宿主适配器忽略它们并以零参数调用业务
 JS-FFI 的传递版本差异；本仓库继续使用原有非 strict 下载流程并显示这些
 警告，不据本轮结果声称其他消费者的严格依赖解析已通过。
 发布和完整质量验收仍未完成。
+
+## 开放数据的类型保留
+
+`decode-open` 只把输入原样放入 `Result :ok`，改为
+`Fn<Value>(Value) -> Result<Value, String>`，保留实际输入与输出的关系。
+Router.data 仍是开放数据，其他外部解码入口的 Dynamic 保持原有合同。
+新增两条附属回归验证 Number 返回类型以及包含 nil 和异构 List 的开放
+Map 原样保留，并纳入同一 AST 的 native/新生成 JS 协议回放。
+
+原生测试 35/35，两入口严格检查通过，Node 运行回归 5/5。
+质量回归从 77 降至 74：schemaDynamic 49→47、unresolved 80→78、
+typeNotFull 36→35。预算、unsafeCoerce 及真实外部数据校验未改变。
+README 更新为当前发布依赖和验证状态，历史迁移细节保留在 history 中。

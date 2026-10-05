@@ -21,14 +21,15 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
     await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
     run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
-    const tests = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action'].flatMap((name) => {
+    const tests = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open'].flatMap((name) => {
       const response = JSON.parse(run('query', 'def', `cumulo-reel.app.protocol/${name}`, '--raw', '--format', 'json'));
       return response.data.tests.filter((definition) => definition.tags.includes('protocol'));
     });
     const names = new Set(tests.map((definition) => definition.name));
     for (const name of ['restores-initial-edn-snapshot', 'restores-incremental-edn-patch',
       'publishes-valid-edn-snapshot', 'rejects-partially-applied-invalid-patch', 'rejects-invalid-operation-payload',
-      'accepts-anonymous-sign-up', 'rejects-extra-and-missing-action-payload']) {
+      'accepts-anonymous-sign-up', 'rejects-extra-and-missing-action-payload',
+      'preserves-opaque-router-data', 'preserves-number-result-type']) {
       assert.ok(names.has(name), `Missing shared protocol contract: ${name}`);
     }
     run('edit', 'def', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'json-ast', '--code',

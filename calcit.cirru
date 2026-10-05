@@ -872,8 +872,25 @@
           :code $ quote $ defn decode-open (value) (Result :ok value)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Result 'Dynamic 'String
+            :args $ [] 'Value
+            :generics $ [] 'Value
+            :return $ :: 'Result 'Value 'String
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-opaque-router-data)
+              :code $ quote $ let
+                  value $ {}
+                    :nested $ [] 1 |two nil
+                    :enabled? true
+                match (decode-open value)
+                  (:ok actual) (assert= value actual)
+                  (:err detail) (raise detail)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |preserves-number-result-type)
+              :code $ quote $ match (decode-open 41)
+                (:ok value)
+                  assert= 42 $ + value 1
+                (:err detail) (raise detail)
+              :tags $ #{} :protocol :unit
         'decode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-router (value)
             match (decode-source value)

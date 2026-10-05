@@ -69,10 +69,10 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 发布后修复；原有普通 `caps --ci` 会显示版本差异并选择兼容的最高 SemVer。
 非 strict 下载成功不能作为其他消费者严格依赖解析通过的证据。
 
-## 0.28 迁移当前状态
+## 发布工具链迁移当前状态
 
-正式 Calcit/procs 固定为 `0.28.0`，使用已发布的 cumulo-util `0.0.24`、
-ws-edn `0.0.33`、Respo `0.16.114-alpha.6`、JS-FFI `0.2.1-alpha.11` 和
+Calcit/procs 固定为已发布的 `0.29.0-alpha.6`，使用已发布的 cumulo-util `0.0.24`、
+ws-edn `0.0.33`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
 Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 模块/package 准备版本为 `0.0.48`，尚未发布。
 
@@ -95,6 +95,7 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 
 - [类型边界与协议交付记录](history/20261004-type-boundary-delivery.md)
 - [发布依赖与宿主回调回归](history/20261005-published-dependencies-and-host-callbacks.md)
+- [Respo alpha.7 正式依赖下游回归](history/20261005-respo-alpha7-published-consumer.md)
 
 COS Actions 只上传前端 `dist`，不部署服务端。main 与共享 PR 前缀保持原有
 配置；draft PR 不上传，PR 共享前缀的上传按队列串行执行。

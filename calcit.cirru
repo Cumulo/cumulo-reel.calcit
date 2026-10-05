@@ -185,10 +185,10 @@
                   {} $ :class-name $ str-spaced css/global css/fullscreen css/column
                   comp-navigation store-typed.:logged-in? store-typed.:count
                   if store-typed.:logged-in?
-                    case-default router.:name
-                      <> $ to-string router.:name
+                    match router.:name
                       :home $ <> |Home
                       :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/ClientUser) router.:data
+                      _ $ <> $ to-string router.:name
                     comp-login $ >>
                       either states $ {}
                       , :login
@@ -638,7 +638,7 @@
         'decode-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-action (value)
             if (enum? value)
-              case-default (&enum:nth value 0) (Result :err "|Unknown client operation")
+              match (&enum:nth value 0)
                 :session/connect $ if
                   = 1 $ &enum:count value
                   Result :ok $ schema/Op :session/connect
@@ -707,6 +707,7 @@
                   = 1 $ &enum:count value
                   Result :ok $ schema/Op :reel/merge
                   Result :err "|Operation payload arity mismatch"
+                _ $ Result :err "|Unknown client operation"
               Result :err "|Expected an operation enum"
           :examples $ []
           :schema $ :: 'Fn $ {}

@@ -155,3 +155,36 @@ test('server persistence writes storage and a dated backup', async () => {
     await rm(temporaryDir, { recursive: true, force: true });
   }
 });
+
+test('server entry unwraps the configured port and persists on SIGINT', async () => {
+  const temporaryDir = await mkdtemp(join(tmpdir(), 'cumulo-reel-entry-'));
+  const entryUrl = new URL('../js-server-out/cumulo-reel.app.server.mjs', import.meta.url).href;
+  const child = spawn(process.execPath, ['--input-type=module', '-e',
+    `const app = await import(${JSON.stringify(entryUrl)}); app.main_$x_();`], {
+    cwd: temporaryDir,
+    env: { ...process.env, mode: 'release', port: '0' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const closed = once(child, 'close');
+  const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);
+  try {
+    await waitFor(() => stdout.includes('Server started on port:0'), 'server entry startup');
+    child.kill('SIGINT');
+    const [code, signal] = await closed;
+    assert.equal(signal, null, stderr);
+    assert.equal(code, 0, stderr);
+    assert.match(await readFile(join(temporaryDir, 'storage.cirru'), 'utf8'), /Database/);
+    assert.doesNotMatch(stderr, /expected 0 params|ERR_INVALID_ARG_VALUE/);
+  } finally {
+    clearTimeout(timeout);
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    await closed;
+    await rm(temporaryDir, { recursive: true, force: true });
+  }
+});

@@ -72,12 +72,7 @@
             if ssr? $ render-app! realize-ssr!
             render-app! render!
             connect!
-            add-watch! *store :changes $ fn (store prev)
-              hint-fn $ {}
-                :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                :return 'Unit
-              render-app! render!
-              , &unit
+            add-watch! *store :changes on-store-change!
             add-watch! *states :changes $ fn (states prev)
               hint-fn $ {}
                 :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
@@ -99,14 +94,15 @@
             option:unwrap $ browser/query-selector |.app
           :examples $ []
           :schema $ :: 'js-ffi.browser/DomElementHost
+        'on-store-change! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Current 'Previous
+            :features $ #{} :js-ffi
+            :generics $ [] 'Current 'Previous
         'reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!)
-            add-watch! *store :changes $ fn (store prev)
-              hint-fn $ {}
-                :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                :return 'Unit
-              render-app! render!
-              , &unit
+          :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (add-watch! *store :changes on-store-change!)
             add-watch! *states :changes $ fn (states prev)
               hint-fn $ {}
                 :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
@@ -1169,9 +1165,7 @@
             println "|Running mode:" $ if config/dev? |dev |release
             let
                 p? $ get-env |port
-                port $ if (option:some? p?)
-                  parse-float $ option:unwrap-or p? |
-                  :port config/site
+                port $ resolve-server-port p? $ :port config/site
               run-server! port
               println $ str "|Server started on port:" port
             ; "|init it before doing multi-threading"
@@ -1217,6 +1211,83 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+        'resolve-server-port $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn resolve-server-port (configured default-port)
+            match configured
+              (:none) default-port
+              (:some text)
+                match (parse-float text)
+                  (:ok port)
+                    if
+                      and (>= port 0) (<= port 65535)
+                        = (floor port) port
+                      , port $ raise $ str |Invalid-server-port: text
+                  (:err _)
+                    raise $ str |Invalid-server-port: text
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Number)
+            :args $ [] (:: 'Option 'String) 'Number
+          :tests $ []
+            %{} 'TestEntry (:name |accepts-configured-integer)
+              :code $ quote $ assert= 9000
+                resolve-server-port (Option :some |9000) 5021
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |uses-default-for-missing-setting)
+              :code $ quote $ assert= 5021
+                resolve-server-port (Option :none) 5021
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |supports-ephemeral-port)
+              :code $ quote $ assert= 0
+                resolve-server-port (Option :some |0) 5021
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |rejects-invalid-text)
+              :code $ quote $ assert= true
+                try
+                  do
+                    resolve-server-port (Option :some |oops) 5021
+                    , false
+                  fn (error) (starts-with? error |Invalid-server-port:)
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |rejects-negative)
+              :code $ quote $ assert= true
+                try
+                  do
+                    resolve-server-port (Option :some |-1) 5021
+                    , false
+                  fn (error) (starts-with? error |Invalid-server-port:)
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |rejects-out-of-range)
+              :code $ quote $ assert= true
+                try
+                  do
+                    resolve-server-port (Option :some |65536) 5021
+                    , false
+                  fn (error) (starts-with? error |Invalid-server-port:)
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |rejects-fractional)
+              :code $ quote $ assert= true
+                try
+                  do
+                    resolve-server-port (Option :some |2.5) 5021
+                    , false
+                  fn (error) (starts-with? error |Invalid-server-port:)
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |rejects-nan)
+              :code $ quote $ assert= true
+                try
+                  do
+                    resolve-server-port (Option :some |NaN) 5021
+                    , false
+                  fn (error) (starts-with? error |Invalid-server-port:)
+              :tags $ #{} :server :unit
+            %{} 'TestEntry (:name |rejects-infinity)
+              :code $ quote $ assert= true
+                try
+                  do
+                    resolve-server-port (Option :some |Infinity) 5021
+                    , false
+                  fn (error) (starts-with? error |Invalid-server-port:)
+              :tags $ #{} :server :unit
         'run-server! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn run-server! (port)
             serve! port $ fn (data)
@@ -1337,7 +1408,7 @@
             .on $ :: 'Fn $ {}
               :args $ [] 'cumulo-reel.app.server-host/NodeProcessHost 'String $ :: 'Fn
                 {}
-                  :args $ []
+                  :args $ [] 'String 'Number
                   :return 'Unit
               :return 'cumulo-reel.app.server-host/NodeProcessHost
           :examples $ []
@@ -1393,7 +1464,12 @@
           :code $ quote $ defn on-interrupt! (callback)
             let
                 process $ unsafe-coerce js/process NodeProcessHost
-              process .on |SIGINT callback
+              process .on |SIGINT $ fn (signal-name signal-number)
+                hint-fn $ {}
+                  :args $ [] 'String 'Number
+                  :return 'Unit
+                callback
+                , &unit
               , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -1509,20 +1585,6 @@
             js-ffi.contract :as contract
     'cumulo-reel.app.twig.container $ %{} 'FileEntry
       :defs $ {}
-        '*members-memo $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *members-memo
-            new-twig-memo2 twig-members $ assert-type ({})
-              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry2 (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
-                :: 'Map 'Number $ :: 'JsNullish 'String
-          :examples $ []
-          :schema $ :: 'Ref $ :: 'recollect.memo/TwigMemo2 (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
-            :: 'Map 'Number $ :: 'JsNullish 'String
-        '*user-memo $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *user-memo
-            new-twig-memo1 twig-user $ assert-type ({})
-              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry1 'cumulo-reel.schema/User 'cumulo-reel.schema/ClientUser
-          :examples $ []
-          :schema $ :: 'Ref $ :: 'recollect.memo/TwigMemo1 'cumulo-reel.schema/User 'cumulo-reel.schema/ClientUser
         'rand-hex-color! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn rand-hex-color! ()
             contract/expect-string |randomcolor $ randomcolor-host
@@ -1531,15 +1593,7 @@
             :args $ []
             :features $ #{} :js-ffi
         'reset-twig-memos! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reset-twig-memos! ()
-            release-twig-memo! $ :id @*user-memo
-            release-twig-memo! $ :id @*members-memo
-            reset! *user-memo $ new-twig-memo1 twig-user $ assert-type ({})
-              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry1 'cumulo-reel.schema/User 'cumulo-reel.schema/ClientUser
-            reset! *members-memo $ new-twig-memo2 twig-members $ assert-type ({})
-              :: 'Map 'Dynamic $ :: 'recollect.memo/TwigMemoEntry2 (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
-                :: 'Map 'Number $ :: 'JsNullish 'String
-            , &unit
+          :code $ quote $ defn reset-twig-memos! () (reset-twig-memo!) &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -1547,19 +1601,19 @@
             :name |keeps-typed-projections-and-releases-old-contexts
             :code $ quote $ do (recollect.memo/reset-twig-memo!)
               let
-                  first-view $ memo-twig1! @*user-memo :user schema/user
-                  same-view $ memo-twig1! @*user-memo :user schema/user
+                  first-view $ memo-twig-by1 :user twig-user schema/user
+                  same-view $ memo-twig-by1 :user twig-user schema/user
                 assert= true $ identical? first-view same-view
                 assert= (twig-user schema/user) first-view
               assert= 1 $ recollect.memo/twig-memo-size
               let
-                  members $ memo-twig2! @*members-memo :members (:sessions schema/database) (:users schema/database)
+                  members $ memo-twig-by2 :members twig-members (:sessions schema/database) (:users schema/database)
                 assert= ({}) members
               assert= 2 $ recollect.memo/twig-memo-size
               reset-twig-memos!
               assert= 0 $ recollect.memo/twig-memo-size
               let
-                  new-view $ memo-twig1! @*user-memo :user schema/user
+                  new-view $ memo-twig-by1 :user twig-user schema/user
                 assert= (twig-user schema/user) new-view
               assert= 1 $ recollect.memo/twig-memo-size
               recollect.memo/reset-twig-memo!
@@ -1583,10 +1637,10 @@
               schema/ClientStore :logged-in? logged-in? :session session :reel-length (count records) :router
                 if logged-in?
                   struct-with router $ :data $ case router-name (:home pages)
-                    :profile $ memo-twig2! @*members-memo :members sessions users
+                    :profile $ memo-twig-by2 :members twig-members sessions users
                     router-name $ {}
                   , router
-                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in? (memo-twig1! @*user-memo user-id user) absent
+                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in? (memo-twig-by1 user-id twig-user user) absent
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)
@@ -1610,7 +1664,7 @@
         :code $ quote $ ns cumulo-reel.app.twig.container
           :require
             cumulo-reel.app.twig.user :refer $ twig-user
-            recollect.memo :refer $ new-twig-memo1 new-twig-memo2 memo-twig1! memo-twig2! release-twig-memo!
+            recollect.memo :refer $ memo-twig-by1 memo-twig-by2 reset-twig-memo!
             cumulo-reel.schema :as schema
             |randomcolor :default randomcolor-host
             js-ffi.contract :as contract

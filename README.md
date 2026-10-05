@@ -92,7 +92,7 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
   `RecordValue` 关系，数据库仍为 Db；应用 replay decoder 的四个输入泛型独立。
 - 已验证重新生成 JS 的协议回放、真实 WebSocket、端口占用失败、持久化、
   服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
-- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 9 项
+- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 6 项
   逐定义指标回归，预算未提高；unsafeCoerce 保持 4。
 - Caps 仍报告 UI、Respo、JS-FFI 的传递版本差异。严格依赖解析、完整质量
   门禁与发布验收尚未完成。
@@ -102,6 +102,7 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 - [类型边界与协议交付记录](history/20261004-type-boundary-delivery.md)
 - [发布依赖与宿主回调回归](history/20261005-published-dependencies-and-host-callbacks.md)
 - [Respo alpha.7 正式依赖下游回归](history/20261005-respo-alpha7-published-consumer.md)
+- [空 Reel 模板的真实类型与静态检查限制](history/20261005-empty-reel-nil-contract.md)
 
 COS Actions 只上传前端 `dist`，不部署服务端。生产前缀仍为
 `Cumulo/cumulo-reel.calcit/`；PR 使用 `pr/<number>/<run-id>/<attempt>/`，

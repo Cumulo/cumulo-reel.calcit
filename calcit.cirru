@@ -2032,11 +2032,12 @@
                   result $ reel-reducer reel updater op |s |o 0 true
                 assert= 2 $ :db result
                 assert= 1 $ count $ :records result
-        'reel-schema $ %{} 'CodeEntry (:doc |)
+        'reel-schema $ %{} 'CodeEntry
+          :doc "|兼容空 Reel 模板：base/db 为 nil，records 为空，merged? 为 false，精确类型为 ReelState<Nil>。业务数据库应直接构造带具体 base/db 的 ReelState；不能把本空模板当成 ReelState<Db>。"
           :code $ quote $ def reel-schema
             ReelState :base nil :db nil :records ([]) :merged? false
           :examples $ []
-          :schema $ :: 'cumulo-reel.core/ReelState 'Dynamic
+          :schema $ :: 'cumulo-reel.core/ReelState 'Nil
         'refresh-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn refresh-reel (reel base updater)
             let

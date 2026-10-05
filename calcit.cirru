@@ -483,7 +483,8 @@
                       Result :err $ str |Unknown-message-kind: kind
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'Dynamic
+            :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'String
           :tests $ []
             %{} 'TestEntry (:name |restores-initial-edn-snapshot)
@@ -712,7 +713,8 @@
               Result :err "|Expected an operation enum"
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'cumulo-reel.schema/Op 'String
         'decode-client-store $ %{} 'CodeEntry (:doc "|在传输边界验证全部具名字段并重建 ClientStore；Router.data 保留开放值。")
           :code $ quote $ defn decode-client-store (value)
@@ -746,7 +748,8 @@
                                                 Result :ok $ schema/ClientStore :session session :router router :logged-in? logged-in? :color color :count count :reel-length reel-length :name name :user user
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'cumulo-reel.schema/ClientStore 'String
         'decode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-user (value)
@@ -768,7 +771,8 @@
                                 Result :ok $ schema/ClientUser :name name :id id :nickname nickname :avatar avatar
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'cumulo-reel.schema/ClientUser 'String
         'decode-field $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-field (source key decoder)
@@ -831,7 +835,8 @@
                         Result :ok $ schema/Message :id id :text text
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'cumulo-reel.schema/Message 'String
         'decode-messages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-messages (value)
@@ -856,42 +861,48 @@
                             Result :ok $ assoc decoded key message
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
         'decode-nullable-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-number (value)
             if (nil? value) (Result :ok value) (decode-number value)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'JsNullish 'Number) 'String
         'decode-nullable-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-router (value)
             if (nil? value) (Result :ok value) (decode-router value)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/Router) 'String
         'decode-nullable-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-store (value)
             if (nil? value) (Result :ok value) (decode-client-store value)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'String
         'decode-nullable-string $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-string (value)
             if (nil? value) (Result :ok value) (decode-string value)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'JsNullish 'String) 'String
         'decode-nullable-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-user (value)
             if (nil? value) (Result :ok value) (decode-client-user value)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientUser) 'String
         'decode-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-number (value) (try-decode-map-as value 'Number)
@@ -943,7 +954,8 @@
                                 Result :ok $ schema/Router :name name :title title :data data :router router
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'cumulo-reel.schema/Router 'String
         'decode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-session (value)
@@ -968,7 +980,8 @@
                                     Result :ok $ schema/Session :user-id user-id :id id :nickname nickname :router router :messages messages
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'cumulo-reel.schema/Session 'String
         'decode-source $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-source (value)
@@ -977,7 +990,8 @@
               :: 'Map 'Tag 'Dynamic
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result (:: 'Map 'Tag 'Dynamic) 'String
         'decode-string $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-string (value) (try-decode-map-as value 'String)
@@ -1059,7 +1073,8 @@
           :schema $ :: 'Fn $ {}
             :args $ []
               :: 'Ref $ :: 'JsNullish 'cumulo-reel.schema/ClientStore
-              , 'Dynamic
+              , 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'Unit 'String
           :tests $ []
             %{} 'TestEntry (:name |rejects-invalid-result-without-publishing)
@@ -1419,7 +1434,8 @@
               updater db typed-op (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'Dynamic 'Dynamic 'Dynamic 'Dynamic
+            :args $ [] 'cumulo-reel.schema/Database 'OpInput 'SidInput 'IdInput 'TimeInput
+            :generics $ [] 'OpInput 'SidInput 'IdInput 'TimeInput
           :tests $ [] $ %{} 'TestEntry (:name |replays-legacy-connect-operation)
             :code $ quote $ assert=
               updater database (cumulo-reel.schema/Op :session/connect) 1 |op-1 0
@@ -1953,10 +1969,10 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Db)
             :args $ [] 'Db
-              :: 'List $ :: 'List 'Dynamic
+              :: 'List $ :: 'List 'RecordValue
               :: 'Fn $ {} (:return 'Db)
-                :args $ [] 'Db 'Dynamic 'Dynamic 'Dynamic 'Dynamic
-            :generics $ [] 'Db
+                :args $ [] 'Db 'RecordValue 'RecordValue 'RecordValue 'RecordValue
+            :generics $ [] 'Db 'RecordValue
         'reel-reducer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reel-reducer (reel updater op sid op-id op-time dev?)
             let

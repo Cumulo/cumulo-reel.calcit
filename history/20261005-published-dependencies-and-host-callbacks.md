@@ -110,3 +110,34 @@ Caps 的三组版本警告保留，不宣称严格依赖图通过。
 COS 预览使用 `pr/<number>/<run-id>/<attempt>/` 并按 PR 分组排队。
 生产前缀、dist 范围、draft/fork 不上传策略与内置 verify 保持；本地
 CDN 构建不是实际上传验收，PR 继续 draft，未发版或部署服务端。
+
+## 保留原门禁继续收敛源码合同
+
+退役旧计数器的方案尚未获批准，本轮使用另一个以 c075e7b 为基线的工作树。
+原 baseline 文件、预算、workflow、package 与生成属性全部保留，未将被拒绝
+的 gate 退役变更混入此提交。
+
+逐个查询并审阅实际 AST 后，五个 nullable decoder、八个嵌套/数据源 decoder、
+两个 patch 入口的输入改为 Input 泛型。返回的具体 Result、nil 分支、原字段与
+payload 检查、完整 patch 验证和失败不发布逻辑均不变，metadata/tests 不变。
+数据源的异构 `Map<Tag,Dynamic>` 输出保留，不伪造已验证业务数据。
+
+`play-records` 的 records 改为 `List<List<RecordValue>>`，回调四个参数使用
+相同元素类型；Db 输入/输出关系不变。真实异构 List 仍绑定其开放元素类型，
+没有改变四项 List wire 格式。应用 `updater-from-record` 的四个输入使用
+独立 OpInput/SidInput/IdInput/TimeInput；所有原运行时解码保留。
+
+第一次将这四个输入共用 RecordValue 被原 legacy-connect 回归否定，native
+38/39 与明确的 Enum/Number/String 参数诊断记录为失败；随后改为独立泛型，
+原断言不改，native 39/39 重新通过。不能为了降低计数忽略这个反例。
+
+精确 Calcit/procs alpha.6 与真实九个发布模块：两入口严格检查、原 native39、
+同一协议 AST 的 native/新 JS 与原 Node5、双 JS 目录、Node24 CDN base/Vite
+构建通过，browser 公共55/55、node71/71通过，canonical 无变化。
+本轮没有重复完整浏览器 UI，没新增脚本、helper、测试或修改 compiler。
+
+原质量门禁仍失败，但逐定义回归由56降为9：schemaDynamic40→16、
+typeNotFull29→13、unresolved71→47；unsafeCoerce仍4、codeNil31。
+剩余仅 decode-source 的异构 Map 输出、reel-schema 开放兼容模板和
+refresh-reel 未验证历史记录回调。三处保持真实开放语义，未用虚假类型
+覆盖它们。PR仍draft，完整CI、上游发版和Calcium严格graph仍未完成。

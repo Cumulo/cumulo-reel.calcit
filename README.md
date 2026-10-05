@@ -87,9 +87,12 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 - Number、String、Bool、Tag 标量 decoder 使用 `Fn<Input>(Input)`，返回对应
   具体类型的 `Result`。任意输入仍经 `try-decode-map-as` 校验，不将输入泛型
   当作已验证数据；外部协议、nullable 数据与历史记录的开放边界保持。
+- nullable、嵌套对象与 patch 接口也保留输入泛型；原 envelope、字段、参数数量、
+  payload 和 patch 结果校验不变。`play-records` 保留 List 元素与回调参数的
+  `RecordValue` 关系，数据库仍为 Db；应用 replay decoder 的四个输入泛型独立。
 - 已验证重新生成 JS 的协议回放、真实 WebSocket、端口占用失败、持久化、
   服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
-- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 56 项
+- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 9 项
   逐定义指标回归，预算未提高；unsafeCoerce 保持 4。
 - Caps 仍报告 UI、Respo、JS-FFI 的传递版本差异。严格依赖解析、完整质量
   门禁与发布验收尚未完成。

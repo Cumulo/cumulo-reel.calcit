@@ -66,3 +66,22 @@ Map 原样保留，并纳入同一 AST 的 native/新生成 JS 协议回放。
 质量回归从 77 降至 74：schemaDynamic 49→47、unresolved 80→78、
 typeNotFull 36→35。预算、unsafeCoerce 及真实外部数据校验未改变。
 README 更新为当前发布依赖和验证状态，历史迁移细节保留在 history 中。
+
+## 字段读取器与定义映射
+
+`decode-field` 的 source 使用 `Map<Tag,Value>`，decoder 接收相同的 Value，
+返回的 Result 保留独立的 T。实际 Map 存取与 decoder 调用直接证明这一关系，
+开放的协议 source 仍绑定为 Dynamic，外部字段的受检 decoder 保持不变。
+新增四条附属回归覆盖 Number、nil、字段缺失与 decoder 错误的字段上下文，
+并纳入同一 AST 的 native/重新生成 JS 回放。
+
+严格检查负例先接受 String Map 与 String decoder，再把同一调用的 Map 值
+改为 Number，确认检查拒绝该调用。此 probe 只由 Calcit CLI 创建于临时
+Snapshot，检查后清理，不将错误代码或生成 JSON 入库。
+
+class mapper 的实际值是 change-op 的 Enum 定义，声明改为
+`Map<Tag,EnumDef>`。它仍不验证 change-op 的 payload；普通 Enum 实例类型
+与定义值不同，不能用 `Map<Tag,Enum>` 代替。
+
+正式两入口严格检查、39/39 原生与 5/5 Node 运行回归通过。
+质量回归进一步从 74 降至 68，原预算与 unsafeCoerce 保持不变。

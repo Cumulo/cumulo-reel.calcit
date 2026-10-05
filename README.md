@@ -76,14 +76,17 @@ ws-edn `0.0.33`、Respo `0.16.114-alpha.6`、JS-FFI `0.2.1-alpha.11` 和
 Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 模块/package 准备版本为 `0.0.48`，尚未发布。
 
-- 客户端和服务端严格检查通过；原生附属测试 35/35。
+- 客户端和服务端严格检查通过；原生附属测试 39/39。
 - 协议输入先验证 envelope、change-op 和操作 payload，再构造具名值。
   nullable 字段保留 nil，Router.data 继续接受开放数据。非法 patch 不发布状态。
 - `decode-open` 原样返回输入，以泛型保留输入/输出的类型关系。它不验证
   Router.data，也不会把开放的路由数据变成已验证业务值。
+- `decode-field` 以泛型保留 Map 值与 decoder 参数的关系。String 专用
+  decoder 接到 Number Map 时被静态拒绝；开放协议字段仍逐项验证。
+  class mapper 使用 `Map<Tag,EnumDef>`，只恢复定义身份，不证明 payload。
 - 已验证重新生成 JS 的协议回放、真实 WebSocket、端口占用失败、持久化、
   服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
-- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前有 74 项
+- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前有 68 项
   逐定义指标回归，预算未提高；unsafeCoerce 保持 4。
 - Caps 仍报告 UI、Respo、JS-FFI 的传递版本差异。严格依赖解析、完整质量
   门禁与发布验收尚未完成。

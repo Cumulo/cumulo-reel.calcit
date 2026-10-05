@@ -21,7 +21,7 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
     await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
     run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
-    const tests = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open'].flatMap((name) => {
+    const tests = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field'].flatMap((name) => {
       const response = JSON.parse(run('query', 'def', `cumulo-reel.app.protocol/${name}`, '--raw', '--format', 'json'));
       return response.data.tests.filter((definition) => definition.tags.includes('protocol'));
     });
@@ -29,7 +29,8 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     for (const name of ['restores-initial-edn-snapshot', 'restores-incremental-edn-patch',
       'publishes-valid-edn-snapshot', 'rejects-partially-applied-invalid-patch', 'rejects-invalid-operation-payload',
       'accepts-anonymous-sign-up', 'rejects-extra-and-missing-action-payload',
-      'preserves-opaque-router-data', 'preserves-number-result-type']) {
+      'preserves-opaque-router-data', 'preserves-number-result-type', 'preserves-typed-map-value',
+      'preserves-nullable-map-value', 'rejects-missing-field', 'keeps-decoder-error-context']) {
       assert.ok(names.has(name), `Missing shared protocol contract: ${name}`);
     }
     run('edit', 'def', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'json-ast', '--code',
@@ -41,6 +42,30 @@ test('protocol definition tests replay on native and fresh generated JS', async 
       '--reload-fn', 'cumulo-reel.app.protocol/run-protocol-tests', '--emit-path', output, 'js');
     const generated = await import(pathToFileURL(join(output, 'cumulo-reel.app.protocol.mjs')).href);
     generated.run_protocol_tests();
+
+    // The same helper must reject a decoder whose input contradicts the Map value type.
+    run('edit', 'def', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'json-ast', '--code',
+      JSON.stringify(['defn', 'string-only-field-decoder', ['value'], ['Result', ':ok', 'value']]));
+    run('edit', 'schema', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'cirru', '--code',
+      "quote $ :: 'Fn $ {} (:args $ [] 'String) (:return $ :: 'Result 'String 'String)");
+    const probe = (value) => ['defn', 'field-decoder-type-probe', [],
+      ['decode-field', ['{}', [':name', value]], ':name', 'string-only-field-decoder'], '&unit'];
+    const setProbe = (value) => run('edit', 'def', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--overwrite',
+      '--input-format', 'json-ast', '--code', JSON.stringify(probe(value)));
+    setProbe('|Ada');
+    run('edit', 'schema', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--input-format', 'cirru', '--code',
+      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
+    const checkProbe = () => run('--entry', 'server', '--init-fn', 'cumulo-reel.app.protocol/field-decoder-type-probe',
+      '--reload-fn', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--check-only');
+    checkProbe();
+    setProbe('41');
+    assert.throws(checkProbe, (error) => {
+      const diagnostic = `${error.stdout ?? ''}\n${error.stderr ?? ''}`;
+      assert.match(diagnostic, /decode-field/);
+      assert.match(diagnostic, /string/i);
+      assert.match(diagnostic, /number/i);
+      return true;
+    });
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }

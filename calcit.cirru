@@ -780,12 +780,41 @@
                   (:ok decoded) (Result :ok decoded)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag $ :: 'Fn
+            :args $ [] (:: 'Map 'Tag 'Value) 'Tag $ :: 'Fn
               {}
-                :args $ [] 'Dynamic
+                :args $ [] 'Value
                 :return $ :: 'Result 'T 'String
-            :generics $ [] 'T
+            :generics $ [] 'Value 'T
             :return $ :: 'Result 'T 'String
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-typed-map-value)
+              :code $ quote $ match
+                decode-field
+                  {} $ :count 41
+                  , :count decode-open
+                (:ok value)
+                  assert= 42 $ + value 1
+                (:err detail) (raise detail)
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |preserves-nullable-map-value)
+              :code $ quote $ assert= (Result :ok nil)
+                decode-field
+                  {} $ :data nil
+                  , :data decode-open
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |rejects-missing-field)
+              :code $ quote $ assert= (Result :err |Missing-field::name)
+                decode-field ({}) :name decode-string
+              :tags $ #{} :protocol :unit
+            %{} 'TestEntry (:name |keeps-decoder-error-context)
+              :code $ quote $ match
+                decode-field
+                  {} $ :name 41
+                  , :name decode-string
+                (:ok value) (raise |Unexpected-decoder-success)
+                (:err detail)
+                  assert= true $ starts-with? detail |:name:
+              :tags $ #{} :protocol :unit
         'decode-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-message (value)
             match (decode-source value)
@@ -1013,7 +1042,7 @@
           :code $ quote $ def patch-class-mapper
             {} $ :change-op patch-schema/change-op
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Map 'Tag 'EnumDef
         'receive-server-patch! $ %{} 'CodeEntry (:doc "|只在 patch 与完整结果解码都成功后更新客户端 Ref。")
           :code $ quote $ defn receive-server-patch! (target data)
             match

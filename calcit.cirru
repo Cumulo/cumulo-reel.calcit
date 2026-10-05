@@ -633,7 +633,8 @@
           :code $ quote $ defn decode-bool (value) (try-decode-map-as value 'Bool)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'Bool 'String
         'decode-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-action (value)
@@ -896,7 +897,8 @@
           :code $ quote $ defn decode-number (value) (try-decode-map-as value 'Number)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'Number 'String
         'decode-open $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-open (value) (Result :ok value)
@@ -981,13 +983,15 @@
           :code $ quote $ defn decode-string (value) (try-decode-map-as value 'String)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'String 'String
         'decode-tag $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-tag (value) (try-decode-map-as value 'Tag)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
+            :args $ [] 'Input
+            :generics $ [] 'Input
             :return $ :: 'Result 'Tag 'String
         'parse-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-client-action (raw)

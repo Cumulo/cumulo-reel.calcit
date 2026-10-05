@@ -84,9 +84,12 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 - `decode-field` 以泛型保留 Map 值与 decoder 参数的关系。String 专用
   decoder 接到 Number Map 时被静态拒绝；开放协议字段仍逐项验证。
   class mapper 使用 `Map<Tag,EnumDef>`，只恢复定义身份，不证明 payload。
+- Number、String、Bool、Tag 标量 decoder 使用 `Fn<Input>(Input)`，返回对应
+  具体类型的 `Result`。任意输入仍经 `try-decode-map-as` 校验，不将输入泛型
+  当作已验证数据；外部协议、nullable 数据与历史记录的开放边界保持。
 - 已验证重新生成 JS 的协议回放、真实 WebSocket、端口占用失败、持久化、
   服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
-- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前有 68 项
+- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 56 项
   逐定义指标回归，预算未提高；unsafeCoerce 保持 4。
 - Caps 仍报告 UI、Respo、JS-FFI 的传递版本差异。严格依赖解析、完整质量
   门禁与发布验收尚未完成。
@@ -97,8 +100,10 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
 - [发布依赖与宿主回调回归](history/20261005-published-dependencies-and-host-callbacks.md)
 - [Respo alpha.7 正式依赖下游回归](history/20261005-respo-alpha7-published-consumer.md)
 
-COS Actions 只上传前端 `dist`，不部署服务端。main 与共享 PR 前缀保持原有
-配置；draft PR 不上传，PR 共享前缀的上传按队列串行执行。
+COS Actions 只上传前端 `dist`，不部署服务端。生产前缀仍为
+`Cumulo/cumulo-reel.calcit/`；PR 使用 `pr/<number>/<run-id>/<attempt>/`，
+避免不同 PR 或重跑覆盖资源。draft 与 fork PR 不上传；同一 PR 的运行排队，
+不同 PR 使用独立前缀。上传校验仅使用 Action 内置 `public-base-url`，无额外脚本。
 
 ## License
 

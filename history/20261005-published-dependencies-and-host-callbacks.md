@@ -85,3 +85,28 @@ class mapper 的实际值是 change-op 的 Enum 定义，声明改为
 
 正式两入口严格检查、39/39 原生与 5/5 Node 运行回归通过。
 质量回归进一步从 74 降至 68，原预算与 unsafeCoerce 保持不变。
+
+## 标量 decoder 与隔离 CDN 路径
+
+Number/String/Bool/Tag 四个 decoder 只将输入交给 `try-decode-map-as`，
+输入合同改为独立 `Input` 泛型，具体 `Result` 返回及受检解码实现不变。
+泛型只声明可接收任意输入类型，不表示输入合法；外部协议、nullable 与
+历史记录的开放边界保持。没有新增 helper、脚本、测试或放宽 baseline。
+
+最初在正式 0.28 的 e9d2f2b 独立工作树验证。推送前发现远端已更新为
+02913ed 的 Respo alpha.7 / Calcit alpha.6，未覆盖它，改在最新 head 用
+匹配 CLI 的 guarded transaction 重做相同四项 schema 和 COS 修改。
+最新验证使用实际 Caps 发布模块、Calcit/procs `0.29.0-alpha.6`：两入口
+严格检查、原 native 39/39、原 Node 回归 5/5、独立 client/server JS、Node24
+Vite 隔离 CDN base 构建通过。Node 回归包含同一附属 AST 的 native/JS、
+字段 decoder 静态拒绝错配、真实 WebSocket、端口占用、持久化与 SIGINT。
+canonical 无修改；本轮没有重复浏览器 UI 验证，不把前一 head 的 UI 结果
+冒充当前 head 全量验收。
+
+最新本地质量回归 68→56；schemaDynamic 44→40、typeNotFull 33→29、
+unresolved 75→71，unsafeCoerce 仍为 4。整体质量门禁尚未通过。
+Caps 的三组版本警告保留，不宣称严格依赖图通过。
+
+COS 预览使用 `pr/<number>/<run-id>/<attempt>/` 并按 PR 分组排队。
+生产前缀、dist 范围、draft/fork 不上传策略与内置 verify 保持；本地
+CDN 构建不是实际上传验收，PR 继续 draft，未发版或部署服务端。

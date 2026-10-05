@@ -141,3 +141,16 @@ typeNotFull29→13、unresolved71→47；unsafeCoerce仍4、codeNil31。
 剩余仅 decode-source 的异构 Map 输出、reel-schema 开放兼容模板和
 refresh-reel 未验证历史记录回调。三处保持真实开放语义，未用虚假类型
 覆盖它们。PR仍draft，完整CI、上游发版和Calcium严格graph仍未完成。
+
+## 接入已发布 UI alpha.4 / Router alpha.5
+
+依赖清单只把 UI alpha.3 更新到已发布 alpha.4，传递 Router 使用 alpha.5。
+两份实际发布清单均对齐当前 Calcit/procs alpha.6、Respo alpha.7 与
+JS-FFI alpha.13；没有用 main、hash 或未发布源码覆盖。旧 Message、Value、
+Recollect、Util/WS 的发布请求冲突仍保留，不声称严格图已通过。
+
+九模块安装/toolchain、两入口严格检查、原native39/39、双JS生成、原Node5/5、
+Node24/Vite8.2.2隔离CDNbase构建及canonical/diff检查通过。原Node第一次
+因sandbox监听EPERM失败，同一测试获得本机监听权限后全部通过。
+源码Snapshot精确保持8c07ac4b071d6ccd6d68d23a46120cf0；原质量门禁仍FAIL9，
+预算/CI/脚本完全不变。未运行完整浏览器UI、COS上传、合并或发版。

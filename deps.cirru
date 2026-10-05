@@ -3,7 +3,7 @@
   :version |0.0.48
   :dependencies $ {} (|Cumulo/cumulo-util.calcit |0.0.24)
     |Respo/respo-message.calcit |0.0.28
-    |Respo/respo-ui.calcit |0.7.32-alpha.3
+    |Respo/respo-ui.calcit |0.7.32-alpha.4
     |Respo/respo.calcit |0.16.114-alpha.7
     |calcit-lang/js-ffi |0.2.1-alpha.13
     |calcit-lang/recollect |0.0.53

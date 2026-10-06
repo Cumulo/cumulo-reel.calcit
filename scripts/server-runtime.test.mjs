@@ -1,17 +1,81 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import WebSocket from 'ws';
+
+test('protocol definition tests replay on native and fresh generated JS', async () => {
+  const project = fileURLToPath(new URL('../', import.meta.url));
+  const fixture = await mkdtemp(join(tmpdir(), 'cumulo-reel-protocol-'));
+  const snapshot = join(fixture, 'calcit.cirru');
+  const binary = process.env.CALCIT_BIN ?? 'calcit';
+  const run = (...args) => execFileSync(binary, [snapshot, ...args], {
+    cwd: project, encoding: 'utf8', timeout: 60000, stdio: 'pipe',
+  });
+  try {
+    await copyFile(join(project, 'calcit.cirru'), snapshot);
+    await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
+    await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
+    run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
+    const tests = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field'].flatMap((name) => {
+      const response = JSON.parse(run('query', 'def', `cumulo-reel.app.protocol/${name}`, '--raw', '--format', 'json'));
+      return response.data.tests.filter((definition) => definition.tags.includes('protocol'));
+    });
+    const names = new Set(tests.map((definition) => definition.name));
+    for (const name of ['restores-initial-edn-snapshot', 'restores-incremental-edn-patch',
+      'publishes-valid-edn-snapshot', 'rejects-partially-applied-invalid-patch', 'rejects-invalid-operation-payload',
+      'accepts-anonymous-sign-up', 'rejects-extra-and-missing-action-payload',
+      'preserves-opaque-router-data', 'preserves-number-result-type', 'preserves-typed-map-value',
+      'preserves-nullable-map-value', 'rejects-missing-field', 'keeps-decoder-error-context']) {
+      assert.ok(names.has(name), `Missing shared protocol contract: ${name}`);
+    }
+    run('edit', 'def', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'json-ast', '--code',
+      JSON.stringify(['defn', 'run-protocol-tests', [], ...tests.map((definition) => definition.code), '&unit']));
+    run('edit', 'schema', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'cirru', '--code',
+      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
+    const output = join(fixture, 'js-out');
+    run('--entry', 'server', '--init-fn', 'cumulo-reel.app.protocol/run-protocol-tests',
+      '--reload-fn', 'cumulo-reel.app.protocol/run-protocol-tests', '--emit-path', output, 'js');
+    const generated = await import(pathToFileURL(join(output, 'cumulo-reel.app.protocol.mjs')).href);
+    generated.run_protocol_tests();
+
+    // The same helper must reject a decoder whose input contradicts the Map value type.
+    run('edit', 'def', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'json-ast', '--code',
+      JSON.stringify(['defn', 'string-only-field-decoder', ['value'], ['Result', ':ok', 'value']]));
+    run('edit', 'schema', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'cirru', '--code',
+      "quote $ :: 'Fn $ {} (:args $ [] 'String) (:return $ :: 'Result 'String 'String)");
+    const probe = (value) => ['defn', 'field-decoder-type-probe', [],
+      ['decode-field', ['{}', [':name', value]], ':name', 'string-only-field-decoder'], '&unit'];
+    const setProbe = (value) => run('edit', 'def', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--overwrite',
+      '--input-format', 'json-ast', '--code', JSON.stringify(probe(value)));
+    setProbe('|Ada');
+    run('edit', 'schema', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--input-format', 'cirru', '--code',
+      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
+    const checkProbe = () => run('--entry', 'server', '--init-fn', 'cumulo-reel.app.protocol/field-decoder-type-probe',
+      '--reload-fn', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--check-only');
+    checkProbe();
+    setProbe('41');
+    assert.throws(checkProbe, (error) => {
+      const diagnostic = `${error.stdout ?? ''}\n${error.stderr ?? ''}`;
+      assert.match(diagnostic, /decode-field/);
+      assert.match(diagnostic, /string/i);
+      assert.match(diagnostic, /number/i);
+      return true;
+    });
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
 
 import {
   each_$x_ as eachClient,
   send_$x_ as send,
   serve_$x_ as serve,
-} from '../js-out/cumulo-reel.app.server-ws.mjs';
+} from '../js-server-out/cumulo-reel.app.server-ws.mjs';
 
 async function waitFor(predicate, label) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -71,7 +135,7 @@ test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconne
 });
 
 test('WebSocket bind failure exits with a nonzero status', async () => {
-  const adapterUrl = new URL('../js-out/cumulo-reel.app.server-ws.mjs', import.meta.url).href;
+  const adapterUrl = new URL('../js-server-out/cumulo-reel.app.server-ws.mjs', import.meta.url).href;
   const source = `
     import { once } from 'node:events';
     import { serve_$x_ } from ${JSON.stringify(adapterUrl)};
@@ -103,7 +167,7 @@ test('server persistence writes storage and a dated backup', async () => {
   const temporaryDir = await mkdtemp(join(tmpdir(), 'cumulo-reel-persist-'));
   try {
     process.chdir(temporaryDir);
-    const { persist_db_$x_: persist } = await import('../js-out/cumulo-reel.app.server.mjs');
+    const { persist_db_$x_: persist } = await import('../js-server-out/cumulo-reel.app.server.mjs');
     persist();
     const storage = await readFile('storage.cirru', 'utf8');
     assert.match(storage, /Database/);
@@ -114,6 +178,39 @@ test('server persistence writes storage and a dated backup', async () => {
     assert.equal(await readFile(join('backups', months[0], files[0]), 'utf8'), storage);
   } finally {
     process.chdir(originalCwd);
+    await rm(temporaryDir, { recursive: true, force: true });
+  }
+});
+
+test('server entry unwraps the configured port and persists on SIGINT', async () => {
+  const temporaryDir = await mkdtemp(join(tmpdir(), 'cumulo-reel-entry-'));
+  const entryUrl = new URL('../js-server-out/cumulo-reel.app.server.mjs', import.meta.url).href;
+  const child = spawn(process.execPath, ['--input-type=module', '-e',
+    `const app = await import(${JSON.stringify(entryUrl)}); app.main_$x_();`], {
+    cwd: temporaryDir,
+    env: { ...process.env, mode: 'release', port: '0' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const closed = once(child, 'close');
+  const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);
+  try {
+    await waitFor(() => stdout.includes('Server started on port:0'), 'server entry startup');
+    child.kill('SIGINT');
+    const [code, signal] = await closed;
+    assert.equal(signal, null, stderr);
+    assert.equal(code, 0, stderr);
+    assert.match(await readFile(join(temporaryDir, 'storage.cirru'), 'utf8'), /Database/);
+    assert.doesNotMatch(stderr, /expected 0 params|ERR_INVALID_ARG_VALUE/);
+  } finally {
+    clearTimeout(timeout);
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    await closed;
     await rm(temporaryDir, { recursive: true, force: true });
   }
 });

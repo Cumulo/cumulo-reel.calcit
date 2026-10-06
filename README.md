@@ -74,7 +74,7 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 Calcit/procs 固定为已发布的 `0.29.0-alpha.6`，使用已发布的 cumulo-util `0.0.25`、
 ws-edn `0.0.35`、Message `0.0.29`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
 Recollect `0.0.54`。当前验证不使用本地开发模块覆盖。
-模块/package 准备版本为 `0.0.48`，尚未发布。
+模块/package 版本为 `0.0.48`；发布状态以同名 Git tag 与 GitHub Release 为准。
 
 - 客户端和服务端严格检查通过；原生附属测试 39/39。
 - 协议输入先验证 envelope、change-op 和操作 payload，再构造具名值。

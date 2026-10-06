@@ -1,5 +1,18 @@
 # 发布依赖与真实宿主回调回归
 
+## 2026-10-06 配套发布依赖对齐
+
+用户授权发版后，消费真实发布的 Util 0.0.25、Message 0.0.29、Recollect
+0.0.54 和 ws-edn 0.0.34，传递 Value 0.5.13。CLI/procs 保持 alpha.6，
+恢复 CI 的严格 Caps，不新增验证或绕过质量门禁。
+
+本地 HTTPS 标签查询出现多次 TLS 故障，使用 Caps 官方 HTTPS/SSH 回退的
+`caps --strict` 成功安装九个发布模块，精确 toolchain 通过。两入口严格源码
+检查、原生39/39、fresh JS 原 Node 服务/协议/持久化/SIGINT 回归5/5、Node24
+Vite8.2.2 CDN构建和 canonical format/diff check 通过。
+质量门禁独立执行仍6项回归，原预算保持不变；不据此发布0.0.48或宣称PR可合并。
+下文保留各阶段历史证据，不能将旧阶段版本或指标作为当前状态。
+
 ## 发布依赖
 
 使用已发布的 cumulo-util `0.0.24`、ws-edn `0.0.33`、Respo

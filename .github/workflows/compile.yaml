@@ -39,10 +39,8 @@ jobs:
         tools: calcit,caps
         caps-version: "0.1.1"
 
-    # Current Respo/js-ffi manifests still request preceding compatible
-    # releases, so strict Caps resolution rejects the highest SemVer set.
     - name: "load deps"
-      run: caps --ci && yarn install --immutable && caps verify --toolchain
+      run: caps --strict --ci && yarn install --immutable && caps verify --toolchain
 
     - name: Validate Calcit snapshot and types
       run: |

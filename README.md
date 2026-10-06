@@ -71,9 +71,9 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 
 ## 发布工具链迁移当前状态
 
-Calcit/procs 固定为已发布的 `0.29.0-alpha.6`，使用已发布的 cumulo-util `0.0.24`、
-ws-edn `0.0.33`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
-Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
+Calcit/procs 固定为已发布的 `0.29.0-alpha.6`，使用已发布的 cumulo-util `0.0.25`、
+ws-edn `0.0.34`、Message `0.0.29`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
+Recollect `0.0.54`。当前验证不使用本地开发模块覆盖。
 模块/package 准备版本为 `0.0.48`，尚未发布。
 
 - 客户端和服务端严格检查通过；原生附属测试 39/39。
@@ -94,8 +94,8 @@ Recollect `0.0.53`。当前验证不使用本地开发模块覆盖。
   服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
 - Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 6 项
   逐定义指标回归，预算未提高；unsafeCoerce 保持 4。
-- Caps 仍报告 UI、Respo、JS-FFI 的传递版本差异。严格依赖解析、完整质量
-  门禁与发布验收尚未完成。
+- 配套依赖已发版并升级，本地严格 Caps 已通过，CI 安装恢复严格 Caps。完整质量门禁与发布验收
+  尚未完成，不能以依赖对齐声称全部检查通过。
 
 迁移经过与验证范围见：
 

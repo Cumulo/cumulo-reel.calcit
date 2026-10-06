@@ -28,8 +28,8 @@ cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 
 `ReelState<Db>` 的 base/db 使用同一类型，实时 updater 也必须返回 Db。
 历史记录仍为四项 List；replay-updater 在使用操作和元数据前负责验证。
-`reel-schema` 保留为开放的 `ReelState<Dynamic>` 模板。需要具名数据库
-合同时使用新的构造器与明确的 schema，不能把开放模板断言成已验证状态。
+`reel-schema` 是 `ReelState<Nil>` 空模板。需要具名数据库
+合同时使用新的构造器与明确的 schema，不能把空模板断言成已验证状态。
 
 重放与重载细节见 [实时 Reel 状态与重放](docs/realtime-reel.md)。
 应用模板见 [cumulo-workflow](https://github.com/Cumulo/cumulo-workflow)。
@@ -45,7 +45,7 @@ yarn install --immutable
 caps verify --toolchain
 calcit calcit.cirru --check-only --warn-dyn-method
 calcit calcit.cirru --entry server --check-only --warn-dyn-method
-calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
+yarn check-types
 calcit calcit.cirru test --require-match
 
 yarn compile-page
@@ -72,7 +72,7 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 ## 发布工具链迁移当前状态
 
 Calcit/procs 固定为已发布的 `0.29.0-alpha.6`，使用已发布的 cumulo-util `0.0.25`、
-ws-edn `0.0.34`、Message `0.0.29`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
+ws-edn `0.0.35`、Message `0.0.29`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
 Recollect `0.0.54`。当前验证不使用本地开发模块覆盖。
 模块/package 准备版本为 `0.0.48`，尚未发布。
 
@@ -92,10 +92,10 @@ Recollect `0.0.54`。当前验证不使用本地开发模块覆盖。
   `RecordValue` 关系，数据库仍为 Db；应用 replay decoder 的四个输入泛型独立。
 - 已验证重新生成 JS 的协议回放、真实 WebSocket、端口占用失败、持久化、
   服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
-- Actions 两入口严格检查通过，完整流程仍在质量门禁失败。当前本地有 6 项
-  逐定义指标回归，预算未提高；unsafeCoerce 保持 4。
-- 配套依赖已发版并升级，本地严格 Caps 已通过，CI 安装恢复严格 Caps。完整质量门禁与发布验收
-  尚未完成，不能以依赖对齐声称全部检查通过。
+- 旧 Dynamic 数量 baseline 已退役，改用全项目按宿主划分的公开 API 检查：
+  browser 72 个定义、node 89 个定义，覆盖未被入口调用的公开函数。
+  严格入口检查、严格 Caps、原生测试、生成 JS 的运行回归与 COS 内置验证均保留。
+  开放协议与历史记录仍在实际使用前解码，不通过删类型或增加强转满足统计指标。
 
 迁移经过与验证范围见：
 

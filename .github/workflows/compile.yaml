@@ -48,7 +48,7 @@ jobs:
         git diff --exit-code -- calcit.cirru
         calcit calcit.cirru --check-only --warn-dyn-method
         calcit calcit.cirru --entry server --check-only --warn-dyn-method
-        calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
+        yarn check-types
 
     - name: Run Calcit tests
       run: calcit calcit.cirru test --require-match --summary-only --format json

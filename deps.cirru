@@ -7,4 +7,4 @@
     |Respo/respo.calcit |0.16.114-alpha.7
     |calcit-lang/js-ffi |0.2.1-alpha.13
     |calcit-lang/recollect |0.0.54
-    |mvc-works/ws-edn.calcit |0.0.34
+    |mvc-works/ws-edn.calcit |0.0.35

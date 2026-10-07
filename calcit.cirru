@@ -48,9 +48,9 @@
                 data $ option:unwrap-or op-data nil
               println |Dispatch op data
               if (list? op)
-                recur (:: :states op data) (%none)
+                recur (:: :states op data) (Option :none)
                 if (tag? op)
-                  recur (:: op data) (%none)
+                  recur (:: op data) (Option :none)
                   match op
                     (:states cursor s)
                       reset! *states $ assert-type (update-states @*states cursor s) (:: 'Map 'Tag 'Dynamic)
@@ -67,8 +67,8 @@
             if ssr? $ render-app! realize-ssr!
             render-app! render!
             connect!
-            add-watch *store :changes $ fn (store prev) (render-app! render!)
-            add-watch *states :changes $ fn (states prev) (render-app! render!)
+            add-watch! *store :changes $ fn (store prev) (render-app! render!)
+            add-watch! *states :changes $ fn (states prev) (render-app! render!)
             browser/add-event-listener! |visibilitychange $ fn (event)
               when
                 and (js-nullish? @*store) (page-visible?)
@@ -85,9 +85,9 @@
           :examples $ []
           :schema $ :: 'js-ffi.browser/DomElementHost
         'reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reload! () (remove-watch *store :changes) (remove-watch *states :changes) (clear-cache!)
-            add-watch *store :changes $ fn (store prev) (render-app! render!)
-            add-watch *states :changes $ fn (states prev) (render-app! render!)
+          :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!)
+            add-watch! *store :changes $ fn (store prev) (render-app! render!)
+            add-watch! *states :changes $ fn (states prev) (render-app! render!)
             render-app! render!
             println "|Code updated."
           :examples $ []
@@ -98,7 +98,7 @@
           :code $ quote $ defn render-app! (renderer)
             renderer mount-target (comp-container @*states @*store)
               fn (op)
-                dispatch! op $ %none
+                dispatch! op $ Option :none
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] $ :: 'Fn
@@ -120,7 +120,7 @@
                       do (println "|Found storage.")
                         dispatch!
                           :: :user/log-in (&list:nth pair 0) (&list:nth pair 1)
-                          %none
+                          Option :none
                       eprintln "|Invalid stored login pair"
                   (:err error) (eprintln "|Invalid stored login:" error)
               (:none) (println "|Found no storage.")
@@ -164,10 +164,10 @@
                   {} $ :class-name $ str-spaced css/global css/fullscreen css/column
                   comp-navigation store-typed.:logged-in? store-typed.:count
                   if store-typed.:logged-in?
-                    case-default router.:name
-                      <> $ turn-string router.:name
+                    match router.:name
                       :home $ <> |Home
                       :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/ClientUser) router.:data
+                      _ $ <> $ to-string router.:name
                     comp-login $ >>
                       either states $ {}
                       , :login
@@ -580,6 +580,8 @@
                   do
                     send! sid $ format-cirru-edn $ {} (:kind :patch) (:data changes)
                     swap! *client-caches assoc sid new-store
+                    , &unit
+                  , &unit
             finish-twig-frame!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -800,36 +802,33 @@
             :features $ #{} :js-ffi
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
-            assert-type
-              let
-                  logged-in? $ js-present? session.:user-id
-                  router session.:router
-                  router-name router.:name
-                  pages db.:pages
-                  sessions db.:sessions
-                  users db.:users
-                  user-id $ if logged-in? (assert-type session.:user-id 'String) |guest
-                  user $ assert-type
-                    match (get users user-id)
-                      (:some found) found
-                      (:none) schema/user
-                    , 'cumulo-reel.schema/User
-                  base-data $ {} (:logged-in? logged-in?) (:session session)
-                    :reel-length $ count records
-                    :router $ if logged-in?
-                      struct-with router $ :data $ case router-name (:home pages)
-                        :profile $ memo-twig-by2 :members twig-members sessions users
-                        router-name $ {}
-                      , router
-                    :count $ count sessions
-                    :color $ rand-hex-color!
-                merge-dynamic base-data $ if logged-in?
-                  {} $ :user $ memo-twig-by1 user-id twig-user user
-                  , nil
-              , 'cumulo-reel.schema/ClientStore
+            let
+                logged-in? $ js-present? session.:user-id
+                router session.:router
+                router-name router.:name
+                pages db.:pages
+                sessions db.:sessions
+                users db.:users
+                user-id $ if logged-in? (assert-type session.:user-id 'String) |guest
+                user $ assert-type
+                  match (get users user-id)
+                    (:some found) found
+                    (:none) schema/user
+                  , 'cumulo-reel.schema/User
+              %{} schema/ClientStore (:logged-in? logged-in?) (:session session)
+                :reel-length $ count records
+                :router $ if logged-in?
+                  struct-with router $ :data $ case router-name (:home pages)
+                    :profile $ memo-twig-by2 :members twig-members sessions users
+                    router-name $ {}
+                  , router
+                :count $ count sessions
+                :color $ rand-hex-color!
+                :name nil
+                :user $ if logged-in? (twig-user user) nil
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
-            :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)
+            :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'cumulo-reel.core/ReelRecord 'cumulo-reel.schema/Op 'Number 'String)
         'twig-members $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-members (sessions users)
             -> sessions to-pairs
@@ -953,7 +952,7 @@
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals db.:users
+                  &set:to-list $ distinct-values db.:users
                   fn (user)
                     hint-fn $ {}
                       :args $ [] 'cumulo-reel.schema/User
@@ -1004,7 +1003,7 @@
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals db.:users
+                  &set:to-list $ distinct-values db.:users
                   fn (user)
                     hint-fn $ {}
                       :args $ [] 'cumulo-reel.schema/User
@@ -1149,7 +1148,9 @@
           :tests $ []
             %{} 'TestEntry (:name |resets-from-base)
               :code $ quote $ let
-                  reel $ ReelState :base 1 :db 2 :records ([]) :merged? false
+                  reel $ assert-type
+                    ReelState :base 1 :db 2 :records ([]) :merged? false
+                    :: 'cumulo-reel.core/ReelState 'Number 'cumulo-reel.schema/Op 'String 'String
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ {} (:return 'Number)
                       :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
@@ -1162,7 +1163,9 @@
                   , result
             %{} 'TestEntry (:name |updates-struct-reel)
               :code $ quote $ let
-                  reel $ ReelState :base 1 :db 1 :records ([]) :merged? false
+                  reel $ assert-type
+                    ReelState :base 1 :db 1 :records ([]) :merged? false
+                    :: 'cumulo-reel.core/ReelState 'Number 'cumulo-reel.schema/Op 'String 'String
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ {} (:return 'Number)
                       :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number

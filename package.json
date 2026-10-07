@@ -1,16 +1,16 @@
 {
-  "version": "0.0.47",
+  "version": "0.0.49",
   "dependencies": {
-    "@calcit/procs": "0.20.0",
+    "@calcit/procs": "0.29.0-alpha.17",
     "md5": "^2.3.0",
     "nanoid": "6.0.1",
     "randomcolor": "^0.6.2",
     "ws": "^8.13.0"
   },
   "scripts": {
-    "check-quality": "calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru",
-    "watch-server": "calcit calcit.cirru --entry server js -w",
-    "compile-server": "calcit calcit.cirru --entry server js",
+    "check-types": "calcit analyze check-public --ns cumulo-reel.app.client --ns cumulo-reel.app.comp.container --ns cumulo-reel.app.comp.login --ns cumulo-reel.app.comp.navigation --ns cumulo-reel.app.comp.profile --ns cumulo-reel.app.config --ns cumulo-reel.app.protocol --ns cumulo-reel.comp.reel --ns cumulo-reel.core --ns cumulo-reel.partition --ns cumulo-reel.schema --ns cumulo-reel.style --summary-only && calcit --entry server analyze check-public --ns 'cumulo-reel.$meta' --ns cumulo-reel.app.config --ns cumulo-reel.app.protocol --ns cumulo-reel.app.server --ns cumulo-reel.app.server-host --ns cumulo-reel.app.server-ws --ns cumulo-reel.app.twig.container --ns cumulo-reel.app.twig.user --ns cumulo-reel.app.updater --ns cumulo-reel.app.updater.router --ns cumulo-reel.app.updater.session --ns cumulo-reel.app.updater.user --ns cumulo-reel.core --ns cumulo-reel.partition --ns cumulo-reel.schema --summary-only",
+    "watch-server": "calcit calcit.cirru --entry server --emit-path js-server-out js -w",
+    "compile-server": "calcit calcit.cirru --entry server --emit-path js-server-out js",
     "compile-page": "calcit calcit.cirru js",
     "watch-page": "calcit calcit.cirru js -w"
   },

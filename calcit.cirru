@@ -1402,6 +1402,7 @@
                   do
                     send! sid $ format-cirru-edn $ {} (:kind :patch) (:data changes)
                     swap! *client-caches assoc sid new-store
+                , &unit
             finish-twig-frame!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)

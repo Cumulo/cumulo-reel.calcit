@@ -1936,7 +1936,7 @@
         'play-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn play-records (db records updater)
             if (&list:empty? records) db $ let[] (op sid op-id op-time) (&list:nth records 0)
-              recur (updater db op sid op-id op-time) (rest records) updater
+              recur (updater db op sid op-id op-time) (&list:rest records) updater
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Db)
             :args $ [] 'Db
@@ -1965,7 +1965,7 @@
                     next-db $ updater (:db reel) op sid op-id op-time
                   struct-with reel
                     :records $ if dev?
-                      conj (:records reel) msg-pack
+                      append (:records reel) msg-pack
                       :records reel
                     :db next-db
           :examples $ []

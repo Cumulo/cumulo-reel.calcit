@@ -2069,6 +2069,585 @@
               assert= (:records reel) (:records refreshed)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.core
+    'cumulo-reel.partition $ %{} 'FileEntry
+      :defs $ {}
+        'PartitionAction $ %{} 'CodeEntry
+          :doc "|One transport action for a connection: drop a revoked partition, or send its snapshot or delta chain."
+          :code $ quote $ defenum PartitionAction ([] 'K 'V) (:drop 'K)
+            :snapshot $ :: 'cumulo-reel.partition/PartitionState 'K 'V
+            :deltas (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'List 'cumulo-reel.partition/PartitionDelta)
+          :examples $ []
+          :schema $ :: 'EnumDef
+        'PartitionAdvance $ %{} 'CodeEntry
+          :doc "|Outcome of projecting a new partition view: no change, one retained delta, or a reset that forces snapshots."
+          :code $ quote $ defenum PartitionAdvance (:unchanged) (:delta 'cumulo-reel.partition/PartitionDelta 'recollect.diff/DiffStats) (:reset 'recollect.diff/DiffStats)
+          :examples $ []
+          :schema $ :: 'EnumDef
+        'PartitionDelta $ %{} 'CodeEntry
+          :doc "|One retained diff step of a partition, computed once and reused for every subscriber at its base revision."
+          :code $ quote $ defstruct PartitionDelta (:base 'Number) (:revision 'Number)
+            :changes $ :: 'List 'recollect.schema/change-op
+          :examples $ []
+          :schema $ :: 'StructDef
+        'PartitionProgress $ %{} 'CodeEntry
+          :doc "|Per-connection progress for one subscribed partition: acknowledged revision plus at most one unacknowledged send."
+          :code $ quote $ defstruct PartitionProgress (:epoch 'Number) (:acked 'Number)
+            :in-flight $ :: 'Option 'Number
+          :examples $ []
+          :schema $ :: 'StructDef
+        'PartitionSendPlan $ %{} 'CodeEntry
+          :doc "|What one subscriber needs next: nothing, a full snapshot, or the retained contiguous delta chain from its acknowledged revision."
+          :code $ quote $ defenum PartitionSendPlan (:idle) (:snapshot)
+            :deltas $ :: 'List 'cumulo-reel.partition/PartitionDelta
+          :examples $ []
+          :schema $ :: 'EnumDef
+        'PartitionSlot $ %{} 'CodeEntry
+          :doc "|Client cache of one subscribed partition: lineage epoch, applied revision and validated view."
+          :code $ quote $ defstruct PartitionSlot ([] 'V) (:epoch 'Number) (:revision 'Number) (:view 'V)
+          :examples $ []
+          :schema $ :: 'StructDef
+        'PartitionState $ %{} 'CodeEntry
+          :doc "|Server-owned hot state of one partition. epoch changes whenever revisions restart, so old acknowledgements never match a new lineage."
+          :code $ quote $ defstruct PartitionState ([] 'K 'V) (:key 'K) (:epoch 'Number) (:revision 'Number) (:view 'V)
+            :history $ :: 'List 'cumulo-reel.partition/PartitionDelta
+          :examples $ []
+          :schema $ :: 'StructDef
+        'PartitionStep $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct PartitionStep ([] 'K 'V)
+            :state $ :: 'cumulo-reel.partition/PartitionState 'K 'V
+            :advance 'cumulo-reel.partition/PartitionAdvance
+          :examples $ []
+          :schema $ :: 'StructDef
+        'ack-partition-progress $ %{} 'CodeEntry
+          :doc "|Advance the baseline only for the matching epoch and pending revision; stale, duplicate, and reordered ACKs are ignored."
+          :code $ quote $ defn ack-partition-progress (progress epoch revision)
+            match (:in-flight progress)
+              (:some pending)
+                if
+                  and
+                    = epoch $ :epoch progress
+                    = revision pending
+                  struct-with progress (:acked revision)
+                    :in-flight $ Option :none
+                  , progress
+              (:none) progress
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
+            :args $ [] 'cumulo-reel.partition/PartitionProgress 'Number 'Number
+          :tests $ [] $ %{} 'TestEntry (:name |single-pending-send-and-stale-acks)
+            :code $ quote $ let
+                s1 $ new-partition |lobby 7 $ test-view ([] |a)
+                sent $ mark-partition-sent s1 $ Option :none
+                s2 $ :state $ advance-partition s1
+                  test-view $ [] |b
+                  , test-budget 8 64
+                wrong-epoch $ ack-partition-progress sent 6 1
+                wrong-revision $ ack-partition-progress sent 7 2
+                acked $ ack-partition-progress sent 7 1
+              assert= (Option :some 1) (:in-flight sent)
+              assert= (PartitionSendPlan :idle)
+                plan-partition-send s2 $ Option :some sent
+              assert= sent wrong-epoch
+              assert= sent wrong-revision
+              assert= 1 $ :acked acked
+              assert= (Option :none) (:in-flight acked)
+              assert= acked $ ack-partition-progress acked 7 1
+              assert=
+                PartitionSendPlan :deltas $ :history s2
+                plan-partition-send s2 $ Option :some acked
+              assert= 0 $ :acked $ release-partition-send sent
+              assert= (Option :none)
+                :in-flight $ release-partition-send sent
+            :tags $ #{} :partition
+        'advance-partition $ %{} 'CodeEntry
+          :doc "|Diff the retained view against a new projection exactly once. Budget or operation overflow resets history instead of emitting a partial patch."
+          :code $ quote $ defn advance-partition (state view budget history-limit operation-limit)
+            match
+              diff-twig-budgeted (:view state) view
+                {} $ :key :id
+                , budget
+              (:budget-exceeded _reason stats) (reset-step state view stats)
+              (:complete changes stats)
+                cond
+                    empty? changes
+                    %{} PartitionStep (:state state)
+                      :advance $ PartitionAdvance :unchanged
+                  (> (count changes) operation-limit)
+                    reset-step state view stats
+                  true $ let
+                      next-revision $ inc $ :revision state
+                      delta $ %{} PartitionDelta
+                        :base $ :revision state
+                        :revision next-revision
+                        :changes changes
+                    %{} PartitionStep
+                      :state $ struct-with state (:revision next-revision) (:view view)
+                        :history $ trim-history
+                          conj (:history state) delta
+                          , history-limit
+                      :advance $ PartitionAdvance :delta delta stats
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) 'V 'recollect.diff/DiffBudget 'Number 'Number
+            :generics $ [] 'K 'V
+            :return $ :: 'cumulo-reel.partition/PartitionStep 'K 'V
+          :tests $ []
+            %{} 'TestEntry (:name |unchanged-view-keeps-revision)
+              :code $ quote $ let
+                  state $ new-partition |lobby 7 $ test-view ([] |a |b)
+                  step $ advance-partition state
+                    test-view $ [] |a |b
+                    , test-budget 8 64
+                assert= (PartitionAdvance :unchanged) (:advance step)
+                assert= 1 $ :revision $ :state step
+                assert= 0 $ count $ :history (:state step)
+              :tags $ #{} :partition
+            %{} 'TestEntry (:name |one-delta-serves-every-subscriber)
+              :code $ quote $ let
+                  state $ new-partition |lobby 7 $ test-view ([] |a |b)
+                  step $ advance-partition state
+                    test-view $ [] |a |c
+                    , test-budget 8 64
+                  next-state $ :state step
+                  progress $ %{} PartitionProgress (:epoch 7) (:acked 1)
+                    :in-flight $ Option :none
+                  plans $ map (range 5)
+                    fn (_idx)
+                      hint-fn $ {}
+                        :args $ [] 'Number
+                        :return 'cumulo-reel.partition/PartitionSendPlan
+                      plan-partition-send next-state $ Option :some progress
+                match (:advance step)
+                  (:delta delta _stats)
+                    do
+                      assert= 1 $ :base delta
+                      assert= 2 $ :revision delta
+                      assert= 1 $ count $ :history next-state
+                      assert= 1 $ count $ distinct plans
+                      assert=
+                        Option :some $ PartitionSendPlan :deltas $ [] delta
+                        first plans
+                  _ $ raise |Expected-one-delta
+              :tags $ #{} :partition
+            %{} 'TestEntry (:name |operation-overflow-resets-history)
+              :code $ quote $ let
+                  s1 $ new-partition |lobby 7 $ test-view ([] |a)
+                  s2 $ :state $ advance-partition s1
+                    test-view $ [] |b
+                    , test-budget 8 64
+                  step $ advance-partition s2
+                    test-view $ [] |x |y |z
+                    , test-budget 8 0
+                  s3 $ :state step
+                match (:advance step)
+                  (:reset _stats)
+                    do
+                      assert= 3 $ :revision s3
+                      assert= 0 $ count $ :history s3
+                      assert= (PartitionSendPlan :snapshot)
+                        plan-partition-send s3 $ Option :some $ %{} PartitionProgress (:epoch 7) (:acked 2)
+                          :in-flight $ Option :none
+                  _ $ raise |Expected-reset
+              :tags $ #{} :partition
+        'apply-partition-deltas $ %{} 'CodeEntry
+          :doc "|Apply a delta chain atomically: epoch and every base revision must match and decode-view must accept the final view, otherwise the cached slot is left untouched."
+          :code $ quote $ defn apply-partition-deltas (slot epoch deltas decode-view)
+            if
+              not= epoch $ :epoch slot
+              Result :err $ str "|Partition epoch mismatch: " epoch "| vs " $ :epoch slot
+              let
+                  applied $ foldl deltas
+                    assert-type
+                      Result :ok $ [] (:revision slot) (:view slot)
+                      :: 'Result (:: 'List 'Dynamic) 'String
+                    fn (acc delta)
+                      hint-fn $ {}
+                        :args $ []
+                          :: 'Result (:: 'List 'Dynamic) 'String
+                          , 'cumulo-reel.partition/PartitionDelta
+                        :return $ :: 'Result (:: 'List 'Dynamic) 'String
+                      match acc
+                        (:err _) acc
+                        (:ok pair)
+                          let[] (revision view) pair $ if
+                            not= revision $ :base delta
+                            Result :err $ str "|Partition base mismatch: " (:base delta) "| vs " revision
+                            match
+                              .apply-to
+                                patch-batch $ :changes delta
+                                , view
+                              (:ok next-view)
+                                Result :ok $ [] (:revision delta) next-view
+                              (:err error)
+                                Result :err $ patch-error-message error
+                match applied
+                  (:err detail) (Result :err detail)
+                  (:ok pair)
+                    let[] (revision view) pair $ match (decode-view view)
+                      (:ok typed)
+                        Result :ok $ %{} PartitionSlot (:epoch epoch)
+                          :revision $ assert-type revision Number
+                          :view typed
+                      (:err detail) (Result :err detail)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'cumulo-reel.partition/PartitionSlot 'V) 'Number (:: 'List 'cumulo-reel.partition/PartitionDelta)
+              :: 'Fn $ {}
+                :args $ [] 'Dynamic
+                :return $ :: 'Result 'V 'String
+            :generics $ [] 'V
+            :return $ :: 'Result (:: 'cumulo-reel.partition/PartitionSlot 'V) 'String
+          :tests $ [] $ %{} 'TestEntry (:name |atomic-chain-application)
+            :code $ quote $ let
+                v1 $ test-view $ [] |a |b
+                s1 $ new-partition |lobby 7 v1
+                s2 $ :state $ advance-partition s1
+                  test-view $ [] |a |c
+                  , test-budget 8 64
+                s3 $ :state $ advance-partition s2
+                  test-view $ [] |d |c |e
+                  , test-budget 8 64
+                slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
+              assert=
+                Result :ok $ %{} PartitionSlot (:epoch 7) (:revision 3)
+                  :view $ :view s3
+                apply-partition-deltas slot 7 (:history s3) decode-test-view
+              assert= true $ match
+                apply-partition-deltas slot 8 (:history s3) decode-test-view
+                (:err detail) (includes? detail |epoch)
+                _ false
+              assert= true $ match
+                apply-partition-deltas slot 7
+                  slice (:history s3) 1 2
+                  , decode-test-view
+                (:err detail) (includes? detail |base)
+                _ false
+              assert= true $ match
+                apply-partition-deltas slot 7 (:history s3)
+                  fn (_value)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic
+                      :return $ :: 'Result (:: 'Map 'String 'String) 'String
+                    Result :err |rejected-by-decoder
+                (:err detail) (includes? detail |rejected-by-decoder)
+                _ false
+            :tags $ #{} :partition
+        'connection-actions $ %{} 'CodeEntry
+          :doc "|Plan one connection's transport work: drops for partitions it may no longer see, then snapshots or retained delta chains for authorized partitions."
+          :code $ quote $ defn connection-actions (partitions progress desired)
+            let
+                drops $ -> (.to-list progress)
+                  filter $ fn (pair)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic
+                      :return 'Bool
+                    let[] (key _progress) pair $ not $ includes? desired key
+                  map $ fn (pair)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic
+                      :return $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                    let[] (key _progress) pair $ PartitionAction :drop $ assert-type key 'K
+                sends $ assert-type
+                  foldl (.to-list desired)
+                    assert-type ([])
+                      :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                    fn (acc key)
+                      hint-fn $ {}
+                        :args $ []
+                          :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                          , 'K
+                        :return $ :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                      match (get partitions key)
+                        (:none) acc
+                        (:some state)
+                          let
+                              progress-option $ get progress key
+                            match (plan-partition-send state progress-option)
+                              (:idle) acc
+                              (:snapshot)
+                                conj acc $ PartitionAction :snapshot state
+                              (:deltas deltas)
+                                conj acc $ PartitionAction :deltas state deltas
+                  :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+              concat drops sends
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ []
+              :: 'Map 'K $ :: 'cumulo-reel.partition/PartitionState 'K 'V
+              :: 'Map 'K 'cumulo-reel.partition/PartitionProgress
+              :: 'Set 'K
+            :generics $ [] 'K 'V
+            :return $ :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+          :tests $ [] $ %{} 'TestEntry (:name |drops-revoked-and-plans-authorized)
+            :code $ quote $ let
+                lobby $ new-partition |lobby 7 $ test-view ([] |a)
+                lobby2 $ :state $ advance-partition lobby
+                  test-view $ [] |b
+                  , test-budget 8 64
+                partitions $ assert-type
+                  {} $ |lobby lobby2
+                  :: 'Map 'String $ :: 'cumulo-reel.partition/PartitionState 'String $ :: 'Map 'String 'String
+                acked $ %{} PartitionProgress (:epoch 7) (:acked 1)
+                  :in-flight $ Option :none
+                progress $ assert-type
+                  {} (|lobby acked) (|board/gone acked)
+                  :: 'Map 'String 'cumulo-reel.partition/PartitionProgress
+                no-progress $ assert-type ({}) (:: 'Map 'String 'cumulo-reel.partition/PartitionProgress)
+                actions $ connection-actions partitions progress $ #{} |lobby |user/u1
+              assert= 2 $ count actions
+              assert= true $ includes? actions $ PartitionAction :drop |board/gone
+              assert= true $ includes? actions $ PartitionAction :deltas lobby2 (:history lobby2)
+              assert=
+                [] $ PartitionAction :snapshot lobby2
+                connection-actions partitions no-progress $ #{} |lobby
+            :tags $ #{} :partition
+        'decode-test-view $ %{} 'CodeEntry
+          :doc "|View decoder used by partition engine tests; applications pass their own nominal decoder to apply-partition-deltas."
+          :code $ quote $ defn decode-test-view (value)
+            try-decode-map-as value $ :: 'Map 'String 'String
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'Map 'String 'String) 'String
+        'delta-chain $ %{} 'CodeEntry
+          :doc "|Return the complete retained chain from an acknowledged revision to the current revision, or none when any link was trimmed or reset."
+          :code $ quote $ defn delta-chain (history from to)
+            match
+              find-index history $ fn (delta)
+                hint-fn $ {}
+                  :args $ [] 'cumulo-reel.partition/PartitionDelta
+                  :return 'Bool
+                = from $ :base delta
+              (:none) (Option :none)
+              (:some index)
+                let
+                    chain $ &list:slice history index
+                  match (last chain)
+                    (:some tail)
+                      if
+                        = to $ :revision tail
+                        Option :some chain
+                        Option :none
+                    (:none) (Option :none)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'List 'cumulo-reel.partition/PartitionDelta) 'Number 'Number
+            :return $ :: 'Option $ :: 'List 'cumulo-reel.partition/PartitionDelta
+          :tests $ [] $ %{} 'TestEntry (:name |replayed-chain-converges)
+            :code $ quote $ let
+                v1 $ test-view $ [] |a |b
+                s1 $ new-partition |lobby 7 v1
+                s2 $ :state $ advance-partition s1
+                  test-view $ [] |a |c
+                  , test-budget 8 64
+                s3 $ :state $ advance-partition s2
+                  test-view $ [] |d |c |e
+                  , test-budget 8 64
+              match
+                delta-chain (:history s3) 1 3
+                (:some chain)
+                  let
+                      replayed $ foldl chain v1 $ fn (acc delta)
+                        hint-fn $ {}
+                          :args $ [] 'Dynamic 'cumulo-reel.partition/PartitionDelta
+                          :return 'Dynamic
+                        match
+                          .apply-to
+                            patch-batch $ :changes delta
+                            , acc
+                          (:ok next) next
+                          (:err error)
+                            raise $ str |Patch-failed: error
+                    assert= (:view s3) replayed
+                    assert= (Option :none)
+                      delta-chain (:history s3) 5 3
+                (:none) (raise |Expected-complete-chain)
+            :tags $ #{} :partition
+        'mark-partition-sent $ %{} 'CodeEntry
+          :doc "|Record one accepted send of the current revision. The acknowledged baseline only moves when the matching ACK arrives."
+          :code $ quote $ defn mark-partition-sent (state progress-option)
+            let
+                acked $ match progress-option
+                  (:some progress)
+                    if
+                      = (:epoch progress) (:epoch state)
+                      :acked progress
+                      , 0
+                  (:none) 0
+              %{} PartitionProgress
+                :epoch $ :epoch state
+                :acked acked
+                :in-flight $ Option :some $ :revision state
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
+            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'Option 'cumulo-reel.partition/PartitionProgress)
+            :generics $ [] 'K 'V
+        'new-partition $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn new-partition (key epoch view)
+            %{} PartitionState (:key key) (:epoch epoch) (:revision 1) (:view view)
+              :history $ []
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'K 'Number 'V
+            :generics $ [] 'K 'V
+            :return $ :: 'cumulo-reel.partition/PartitionState 'K 'V
+        'plan-partition-send $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn plan-partition-send (state progress-option)
+            match progress-option
+              (:none) (PartitionSendPlan :snapshot)
+              (:some progress)
+                cond
+                    option:some? $ :in-flight progress
+                    PartitionSendPlan :idle
+                  (not= (:epoch progress) (:epoch state))
+                    PartitionSendPlan :snapshot
+                  (= (:acked progress) (:revision state))
+                    PartitionSendPlan :idle
+                  true $ match
+                    delta-chain (:history state) (:acked progress) (:revision state)
+                    (:some deltas) (PartitionSendPlan :deltas deltas)
+                    (:none) (PartitionSendPlan :snapshot)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionSendPlan)
+            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'Option 'cumulo-reel.partition/PartitionProgress)
+            :generics $ [] 'K 'V
+          :tests $ []
+            %{} 'TestEntry (:name |trimmed-history-falls-back-to-snapshot)
+              :code $ quote $ let
+                  s1 $ new-partition |lobby 7 $ test-view ([] |a)
+                  s2 $ :state $ advance-partition s1
+                    test-view $ [] |b
+                    , test-budget 2 64
+                  s3 $ :state $ advance-partition s2
+                    test-view $ [] |c
+                    , test-budget 2 64
+                  s4 $ :state $ advance-partition s3
+                    test-view $ [] |d
+                    , test-budget 2 64
+                  at $ fn (acked)
+                    hint-fn $ {}
+                      :args $ [] 'Number
+                      :return 'cumulo-reel.partition/PartitionSendPlan
+                    plan-partition-send s4 $ Option :some $ %{} PartitionProgress (:epoch 7) (:acked acked)
+                      :in-flight $ Option :none
+                assert= 4 $ :revision s4
+                assert= 2 $ count $ :history s4
+                assert= (PartitionSendPlan :snapshot) (at 1)
+                assert=
+                  PartitionSendPlan :deltas $ :history s4
+                  at 2
+                assert= (PartitionSendPlan :idle) (at 4)
+                assert= (PartitionSendPlan :snapshot) (at 9)
+                assert= (PartitionSendPlan :snapshot)
+                  plan-partition-send s4 $ Option :none
+              :tags $ #{} :partition
+            %{} 'TestEntry (:name |epoch-change-forces-snapshot)
+              :code $ quote $ let
+                  state $ new-partition |lobby 8 $ test-view ([] |a)
+                  stale $ %{} PartitionProgress (:epoch 7) (:acked 1)
+                    :in-flight $ Option :none
+                assert= (PartitionSendPlan :snapshot)
+                  plan-partition-send state $ Option :some stale
+                assert= 0 $ :acked $ mark-partition-sent state (Option :some stale)
+              :tags $ #{} :partition
+        'release-partition-send $ %{} 'CodeEntry
+          :doc "|Forget a send that the transport did not accept or whose ACK may be lost, keeping the acknowledged baseline."
+          :code $ quote $ defn release-partition-send (progress)
+            struct-with progress $ :in-flight $ Option :none
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
+            :args $ [] 'cumulo-reel.partition/PartitionProgress
+        'reset-step $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn reset-step (state view stats)
+            %{} PartitionStep
+              :state $ struct-with state
+                :revision $ inc $ :revision state
+                :view view
+                :history $ []
+              :advance $ PartitionAdvance :reset stats
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) 'V 'recollect.diff/DiffStats
+            :generics $ [] 'K 'V
+            :return $ :: 'cumulo-reel.partition/PartitionStep 'K 'V
+        'struct-tree-input $ %{} 'CodeEntry
+          :doc "|Recursively turn untrusted struct trees, including struct payloads inside nominal enums, into maps so try-decode-map-as can validate them against a nominal schema."
+          :code $ quote $ defn struct-tree-input (value)
+            cond
+                struct? value
+                struct-tree-input $ &struct:to-map value
+              (map? value)
+                filter-map-kv
+                  decode-map-as value $ :: 'Map 'Dynamic 'Dynamic
+                  fn (key item)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic 'Dynamic
+                      :return $ :: 'MapEntryDecision 'Dynamic 'Dynamic
+                    MapEntryDecision :keep key $ struct-tree-input item
+              (list? value)
+                map
+                  decode-map-as value $ :: 'List 'Dynamic
+                  , struct-tree-input
+              (enum? value)
+                foldl
+                  range 1 $ count value
+                  , value $ fn (acc idx)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic 'Number
+                      :return 'Dynamic
+                    assoc acc idx $ struct-tree-input $ option:unwrap (nth value idx)
+              true value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |structs-become-maps)
+            :code $ quote $ let
+                progress $ %{} PartitionProgress (:epoch 7) (:acked 1)
+                  :in-flight $ Option :some 2
+                input $ struct-tree-input progress
+              assert= true $ map? input
+              assert= (Result :ok progress) (try-decode-map-as input 'cumulo-reel.partition/PartitionProgress)
+            :tags $ #{} :partition
+        'test-budget $ %{} 'CodeEntry
+          :doc "|Generous deterministic budget used by partition engine tests."
+          :code $ quote $ def test-budget
+            %{} DiffBudget
+              :max-visited $ Option :some 10000
+              :max-emitted $ Option :some 10000
+          :examples $ []
+          :schema $ :: 'recollect.diff/DiffBudget
+        'test-view $ %{} 'CodeEntry
+          :doc "|Deterministic keyed view used by partition engine tests: different labels give different views."
+          :code $ quote $ defn test-view (labels)
+            foldl labels
+              assert-type ({}) (:: 'Map 'String 'String)
+              fn (acc label)
+                hint-fn $ {}
+                  :args $ [] (:: 'Map 'String 'String) 'String
+                  :return $ :: 'Map 'String 'String
+                assoc acc label $ str |item- label
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'List 'String
+            :return $ :: 'Map 'String 'String
+        'trim-history $ %{} 'CodeEntry
+          :doc "|Keep only the newest deltas; subscribers older than the retained chain receive a snapshot."
+          :code $ quote $ defn trim-history (history limit)
+            let
+                size $ count history
+              if (> size limit)
+                slice history (- size limit) size
+                , history
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'List 'cumulo-reel.partition/PartitionDelta) 'Number
+            :return $ :: 'List 'cumulo-reel.partition/PartitionDelta
+      :ns $ %{} 'NsEntry
+        :doc "|Pure partition synchronization: one bounded diff per partition revision shared by every subscriber, epoch-scoped ACK progress, per-connection send planning, and atomic client-side delta application. Key and view types are generic."
+        :code $ quote $ ns cumulo-reel.partition
+          :require
+            recollect.diff :refer $ diff-twig-budgeted DiffBudget DiffStats
+            recollect.patch :refer $ patch-batch patch-error-message
     'cumulo-reel.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientStore $ %{} 'CodeEntry (:doc |)

@@ -74,10 +74,10 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 
 ## 发布工具链迁移当前状态
 
-Calcit/procs 固定为已发布的 `0.29.0-alpha.6`，使用已发布的 cumulo-util `0.0.25`、
-ws-edn `0.0.35`、Message `0.0.29`、Respo `0.16.114-alpha.7`、JS-FFI `0.2.1-alpha.13` 和
-Recollect `0.0.54`。当前验证不使用本地开发模块覆盖。
-模块/package 版本为 `0.0.49`；发布状态以同名 Git tag 与 GitHub Release 为准。
+Calcit/procs 固定为已发布的 `0.29.0-alpha.16`，使用已发布的 cumulo-util `0.0.25`、
+ws-edn `0.0.35`、Message `0.0.30`、Respo UI `0.7.32-alpha.5`、Respo `0.16.114-alpha.8`、
+JS-FFI `0.2.1-alpha.13` 和 Recollect `0.0.56`。当前验证不使用本地开发模块覆盖。
+模块/package 版本为 `0.0.50`；发布状态以同名 Git tag 与 GitHub Release 为准。
 
 - 客户端和服务端严格检查通过；原生附属测试 49/49（含分区引擎 10 项）。
 - 协议输入先验证 envelope、change-op 和操作 payload，再构造具名值。
@@ -105,6 +105,7 @@ Recollect `0.0.54`。当前验证不使用本地开发模块覆盖。
 - [类型边界与协议交付记录](history/20261004-type-boundary-delivery.md)
 - [发布依赖与宿主回调回归](history/20261005-published-dependencies-and-host-callbacks.md)
 - [Respo alpha.7 正式依赖下游回归](history/20261005-respo-alpha7-published-consumer.md)
+- [Calcit alpha.16 与 Recollect 0.0.56](history/20261007-alpha16.md)
 - [空 Reel 模板的真实类型与静态检查限制](history/20261005-empty-reel-nil-contract.md)
 
 COS Actions 只上传前端 `dist`，不部署服务端。生产前缀仍为

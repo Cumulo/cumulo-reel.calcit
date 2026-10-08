@@ -588,42 +588,18 @@
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
                   fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
                   expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  bad-session $ &struct:assoc session :id $ &list:nth
-                    decode-map-as
-                      parse-cirru-edn
-                        format-cirru-edn $ [] |bad-id
-                        , patch-class-mapper
-                      :: 'List 'Dynamic
-                    , 0
-                  bad-router $ &struct:assoc router :name $ &list:nth
-                    decode-map-as
-                      parse-cirru-edn
-                        format-cirru-edn $ [] 42
-                        , patch-class-mapper
-                      :: 'List 'Dynamic
-                    , 0
-                  bad-user $ &struct:assoc fixture-user :avatar $ &list:nth
-                    decode-map-as
-                      parse-cirru-edn
-                        format-cirru-edn $ [] 42
-                        , patch-class-mapper
-                      :: 'List 'Dynamic
-                    , 0
-                  bad-message $ &struct:assoc (schema/Message :id |m1 :text |valid) :text $ &list:nth
-                    decode-map-as
-                      parse-cirru-edn
-                        format-cirru-edn $ [] 42
-                        , patch-class-mapper
-                      :: 'List 'Dynamic
-                    , 0
-                  bad-messages $ &struct:assoc session :messages $ {} (|m1 bad-message)
+                  valid-ops $ diff-twig nil expected $ {}
                 each
-                  [] (&struct:assoc expected :session bad-session) (&struct:assoc expected :router bad-router) (&struct:assoc expected :user bad-user) (&struct:assoc expected :session bad-messages)
-                  fn (invalid)
+                  []
+                    patch-schema/change-op :update-in ([] :session) (patch-schema/change-op :assoc :id |bad-id)
+                    patch-schema/change-op :update-in ([] :router) (patch-schema/change-op :assoc :name 42)
+                    patch-schema/change-op :update-in ([] :user) (patch-schema/change-op :assoc :avatar 42)
+                    patch-schema/change-op :update-in ([] :session :messages |m1) (patch-schema/change-op :assoc :text 42)
+                  fn (bad-op)
                     let
                         wire $ parse-cirru-edn
                           format-cirru-edn $ {} (:kind :patch)
-                            :data $ diff-twig nil invalid $ {}
+                            :data $ append valid-ops bad-op
                           , patch-class-mapper
                       match (apply-server-patch nil wire)
                         (:err detail)
@@ -1088,16 +1064,9 @@
                   expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
                   target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                   before $ do (reset! target expected) (deref target)
-                  invalid $ &struct:assoc expected :count $ &list:nth
-                    decode-map-as
-                      parse-cirru-edn
-                        format-cirru-edn $ [] |wrong-count
-                        , patch-class-mapper
-                      :: 'List 'Dynamic
-                    , 0
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
-                      :data $ diff-twig nil invalid $ {}
+                      :data $ [] $ patch-schema/change-op :assoc :count |wrong-count
                     , patch-class-mapper
                 match (receive-server-patch! target wire)
                   (:err detail)
@@ -1402,7 +1371,8 @@
                   do
                     send! sid $ format-cirru-edn $ {} (:kind :patch) (:data changes)
                     swap! *client-caches assoc sid new-store
-                , &unit
+                    , &unit
+                  , &unit
             finish-twig-frame!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -1966,7 +1936,7 @@
         'play-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn play-records (db records updater)
             if (&list:empty? records) db $ let[] (op sid op-id op-time) (&list:nth records 0)
-              recur (updater db op sid op-id op-time) (rest records) updater
+              recur (updater db op sid op-id op-time) (&list:rest records) updater
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Db)
             :args $ [] 'Db
@@ -1995,7 +1965,7 @@
                     next-db $ updater (:db reel) op sid op-id op-time
                   struct-with reel
                     :records $ if dev?
-                      conj (:records reel) msg-pack
+                      append (:records reel) msg-pack
                       :records reel
                     :db next-db
           :examples $ []

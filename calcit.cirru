@@ -2054,6 +2054,11 @@
           :code $ quote $ defenum PartitionAdvance (:unchanged) (:delta 'cumulo-reel.partition/PartitionDelta 'recollect.diff/DiffStats) (:reset 'recollect.diff/DiffStats)
           :examples $ []
           :schema $ :: 'EnumDef
+        'PartitionApplyCursor $ %{} 'CodeEntry
+          :doc "|内部 patch 链累积状态：revision 保持 Number，view 在整条链完成后才交给业务 decoder 校验。"
+          :code $ quote $ defenum PartitionApplyCursor (:ready 'Number 'Dynamic) (:failed 'String)
+          :examples $ []
+          :schema $ :: 'EnumDef
         'PartitionDelta $ %{} 'CodeEntry
           :doc "|One retained diff step of a partition, computed once and reused for every subscriber at its base revision."
           :code $ quote $ defstruct PartitionDelta (:base 'Number) (:revision 'Number)
@@ -2228,37 +2233,31 @@
               Result :err $ str "|Partition epoch mismatch: " epoch "| vs " $ :epoch slot
               let
                   applied $ foldl deltas
-                    assert-type
-                      Result :ok $ [] (:revision slot) (:view slot)
-                      :: 'Result (:: 'List 'Dynamic) 'String
+                    PartitionApplyCursor :ready (:revision slot) (:view slot)
                     fn (acc delta)
                       hint-fn $ {}
-                        :args $ []
-                          :: 'Result (:: 'List 'Dynamic) 'String
-                          , 'cumulo-reel.partition/PartitionDelta
-                        :return $ :: 'Result (:: 'List 'Dynamic) 'String
+                        :args $ [] 'PartitionApplyCursor 'cumulo-reel.partition/PartitionDelta
+                        :return 'PartitionApplyCursor
                       match acc
-                        (:err _) acc
-                        (:ok pair)
-                          let[] (revision view) pair $ if
+                        (:failed _) acc
+                        (:ready revision view)
+                          if
                             not= revision $ :base delta
-                            Result :err $ str "|Partition base mismatch: " (:base delta) "| vs " revision
+                            PartitionApplyCursor :failed $ str "|Partition base mismatch: " (:base delta) "| vs " revision
                             match
                               .apply-to
                                 patch-batch $ :changes delta
                                 , view
                               (:ok next-view)
-                                Result :ok $ [] (:revision delta) next-view
+                                PartitionApplyCursor :ready (:revision delta) next-view
                               (:err error)
-                                Result :err $ patch-error-message error
+                                PartitionApplyCursor :failed $ patch-error-message error
                 match applied
-                  (:err detail) (Result :err detail)
-                  (:ok pair)
-                    let[] (revision view) pair $ match (decode-view view)
+                  (:failed detail) (Result :err detail)
+                  (:ready revision view)
+                    match (decode-view view)
                       (:ok typed)
-                        Result :ok $ %{} PartitionSlot (:epoch epoch)
-                          :revision $ assert-type revision Number
-                          :view typed
+                        Result :ok $ %{} PartitionSlot (:epoch epoch) (:revision revision) (:view typed)
                       (:err detail) (Result :err detail)
           :examples $ []
           :schema $ :: 'Fn $ {}
@@ -2268,41 +2267,82 @@
                 :return $ :: 'Result 'V 'String
             :generics $ [] 'V
             :return $ :: 'Result (:: 'cumulo-reel.partition/PartitionSlot 'V) 'String
-          :tests $ [] $ %{} 'TestEntry (:name |atomic-chain-application)
-            :code $ quote $ let
-                v1 $ test-view $ [] |a |b
-                s1 $ new-partition |lobby 7 v1
-                s2 $ :state $ advance-partition s1
-                  test-view $ [] |a |c
-                  , test-budget 8 64
-                s3 $ :state $ advance-partition s2
-                  test-view $ [] |d |c |e
-                  , test-budget 8 64
-                slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
-              assert=
-                Result :ok $ %{} PartitionSlot (:epoch 7) (:revision 3)
-                  :view $ :view s3
-                apply-partition-deltas slot 7 (:history s3) decode-test-view
-              assert= true $ match
-                apply-partition-deltas slot 8 (:history s3) decode-test-view
-                (:err detail) (includes? detail |epoch)
-                _ false
-              assert= true $ match
-                apply-partition-deltas slot 7
-                  slice (:history s3) 1 2
-                  , decode-test-view
-                (:err detail) (includes? detail |base)
-                _ false
-              assert= true $ match
-                apply-partition-deltas slot 7 (:history s3)
-                  fn (_value)
+          :tests $ []
+            %{} 'TestEntry (:name |atomic-chain-application)
+              :code $ quote $ let
+                  v1 $ test-view $ [] |a |b
+                  s1 $ new-partition |lobby 7 v1
+                  s2 $ :state $ advance-partition s1
+                    test-view $ [] |a |c
+                    , test-budget 8 64
+                  s3 $ :state $ advance-partition s2
+                    test-view $ [] |d |c |e
+                    , test-budget 8 64
+                  slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
+                assert=
+                  Result :ok $ %{} PartitionSlot (:epoch 7) (:revision 3)
+                    :view $ :view s3
+                  apply-partition-deltas slot 7 (:history s3) decode-test-view
+                assert= true $ match
+                  apply-partition-deltas slot 8 (:history s3) decode-test-view
+                  (:err detail) (includes? detail |epoch)
+                  _ false
+                assert= true $ match
+                  apply-partition-deltas slot 7
+                    slice (:history s3) 1 2
+                    , decode-test-view
+                  (:err detail) (includes? detail |base)
+                  _ false
+                assert= true $ match
+                  apply-partition-deltas slot 7 (:history s3)
+                    fn (_value)
+                      hint-fn $ {}
+                        :args $ [] 'Dynamic
+                        :return $ :: 'Result (:: 'Map 'String 'String) 'String
+                      Result :err |rejected-by-decoder
+                  (:err detail) (includes? detail |rejected-by-decoder)
+                  _ false
+              :tags $ #{} :partition
+            %{} 'TestEntry (:name |late-failure-and-final-only-decode)
+              :code $ quote $ let
+                  v1 $ test-view $ [] |a |b
+                  s1 $ new-partition |lobby 7 v1
+                  s2 $ :state $ advance-partition s1
+                    test-view $ [] |a |c
+                    , test-budget 8 64
+                  s3 $ :state $ advance-partition s2
+                    test-view $ [] |d |c |e
+                    , test-budget 8 64
+                  slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
+                  *decodes $ atom 0
+                  decode $ fn (value)
                     hint-fn $ {}
                       :args $ [] 'Dynamic
                       :return $ :: 'Result (:: 'Map 'String 'String) 'String
-                    Result :err |rejected-by-decoder
-                (:err detail) (includes? detail |rejected-by-decoder)
-                _ false
-            :tags $ #{} :partition
+                    reset! *decodes $ inc @*decodes
+                    decode-test-view value
+                  bad-chain $ []
+                    option:unwrap $ nth (:history s3) 0
+                    struct-with
+                      option:unwrap $ nth (:history s3) 1
+                      :base 99
+                assert= true $ match (apply-partition-deltas slot 7 bad-chain decode)
+                  (:err detail) (includes? detail |base)
+                  _ false
+                assert= 0 @*decodes
+                assert= 1 $ :revision slot
+                assert= v1 $ :view slot
+                assert=
+                  Result :ok $ %{} PartitionSlot (:epoch 7) (:revision 3)
+                    :view $ :view s3
+                  apply-partition-deltas slot 7 (:history s3) decode
+                assert= 1 @*decodes
+                assert= (Result :ok slot)
+                  apply-partition-deltas slot 7
+                    slice (:history s3) 0 0
+                    , decode
+                assert= 2 @*decodes
+              :tags $ #{} :partition
         'connection-actions $ %{} 'CodeEntry
           :doc "|Plan one connection's transport work: drops for partitions it may no longer see, then snapshots or retained delta chains for authorized partitions."
           :code $ quote $ defn connection-actions (partitions progress desired)

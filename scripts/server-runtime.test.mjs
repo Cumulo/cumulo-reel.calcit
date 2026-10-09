@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { copyFile, mkdtemp, readFile, readdir, rm, symlink } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -68,6 +68,43 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     });
   } finally {
     await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+
+test('partition chains replay original atomicity contracts on fresh generated JS', async () => {
+  const project = fileURLToPath(new URL('../', import.meta.url));
+  const fixtureRoot = join(project, '.calcit');
+  await mkdir(fixtureRoot, { recursive: true });
+  const fixture = await mkdtemp(join(fixtureRoot, 'partition-apply-'));
+  const snapshot = join(fixture, 'calcit.cirru');
+  const binary = process.env.CALCIT_BIN ?? 'calcit';
+  const run = (...args) => execFileSync(binary, [snapshot, ...args], {
+    cwd: project, encoding: 'utf8', timeout: 60000, stdio: 'pipe',
+  });
+  const original = await readFile(join(project, 'calcit.cirru'));
+  try {
+    await copyFile(join(project, 'calcit.cirru'), snapshot);
+    await copyFile(join(project, 'deps.cirru'), join(fixture, 'deps.cirru'));
+    await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
+    await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
+    run('docs', 'agents', '--contract');
+    const response = JSON.parse(run('query', 'def', 'cumulo-reel.partition/apply-partition-deltas', '--format', 'json'));
+    const tests = response.data.tests.filter(definition => definition.tags.includes('partition'));
+    for (const name of ['atomic-chain-application', 'late-failure-and-final-only-decode']) {
+      assert.ok(tests.some(definition => definition.name === name), `Missing partition contract: ${name}`);
+    }
+    run('edit', 'def', 'cumulo-reel.partition/run-apply-tests', '--input-format', 'json-ast', '--code',
+      JSON.stringify(['defn', 'run-apply-tests', [], ...tests.map(definition => definition.code), '&unit']));
+    run('edit', 'schema', 'cumulo-reel.partition/run-apply-tests', '--input-format', 'cirru', '--code',
+      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
+    const output = join(fixture, 'js-out');
+    run('--entry', 'server', '--init-fn', 'cumulo-reel.partition/run-apply-tests',
+      '--reload-fn', 'cumulo-reel.partition/run-apply-tests', '--emit-path', output, 'js');
+    (await import(pathToFileURL(join(output, 'cumulo-reel.partition.mjs')).href)).run_apply_tests();
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+    assert.deepEqual(await readFile(join(project, 'calcit.cirru')), original);
   }
 });
 

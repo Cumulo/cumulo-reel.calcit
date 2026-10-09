@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { copyFile, mkdtemp, readFile, readdir, rm, symlink } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -75,6 +75,7 @@ test('protocol definition tests replay on native and fresh generated JS', async 
 test('partition chains replay original atomicity contracts on fresh generated JS', async () => {
   const project = fileURLToPath(new URL('../', import.meta.url));
   const fixtureRoot = join(project, '.calcit');
+  await mkdir(fixtureRoot, { recursive: true });
   const fixture = await mkdtemp(join(fixtureRoot, 'partition-apply-'));
   const snapshot = join(fixture, 'calcit.cirru');
   const binary = process.env.CALCIT_BIN ?? 'calcit';

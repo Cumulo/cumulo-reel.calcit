@@ -15,11 +15,11 @@
     'cumulo-reel.app.client $ %{} 'FileEntry
       :defs $ {}
         '*states $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *states ({})
+          :code $ quote $ defref *states ({})
           :examples $ []
           :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *store nil
+          :code $ quote $ defref *store nil
           :examples $ []
           :schema $ :: 'Ref $ :: 'JsNullish 'cumulo-reel.schema/ClientStore
         'connect! $ %{} 'CodeEntry (:doc |)
@@ -1062,7 +1062,7 @@
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
                   fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
                   expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                   before $ do (reset! target expected) (deref target)
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
@@ -1083,7 +1083,7 @@
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
                   fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
                   expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                   before $ do (reset! target expected) (deref target)
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
@@ -1105,7 +1105,7 @@
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
                   fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
                   expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                   before $ do (reset! target expected) (deref target)
                   raw-ops $ parse-cirru-edn "|[] $ %:: 'change-op 'vec-drop |bad" patch-class-mapper
                   wire $ {} (:kind :patch) (:data raw-ops)
@@ -1124,7 +1124,7 @@
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
                   fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
                   expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ atom $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
                   before $ do (reset! target expected) (deref target)
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
@@ -1147,11 +1147,11 @@
     'cumulo-reel.app.server $ %{} 'FileEntry
       :defs $ {}
         '*client-caches $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *client-caches ({})
+          :code $ quote $ defref *client-caches ({})
           :examples $ []
           :schema $ :: 'Ref $ :: 'Map 'Number 'cumulo-reel.schema/ClientStore
         '*initial-db $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *initial-db
+          :code $ quote $ defref *initial-db
             if
               file-exists? $ w-log storage-file
               do (println "|Found local EDN data")
@@ -1163,11 +1163,11 @@
           :examples $ []
           :schema $ :: 'Ref 'cumulo-reel.schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reader-reel @*reel
+          :code $ quote $ defref *reader-reel @*reel
           :examples $ []
           :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
         '*reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reel
+          :code $ quote $ defref *reel
             %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
               :records $ []
               :merged? false
@@ -1521,11 +1521,11 @@
     'cumulo-reel.app.server-ws $ %{} 'FileEntry
       :defs $ {}
         '*clients $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *clients ({})
+          :code $ quote $ defref *clients ({})
           :examples $ []
           :schema $ :: 'Ref $ :: 'Map 'Number 'ws-edn.server/NodeWebSocketHost
         '*next-sid $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *next-sid 0
+          :code $ quote $ defref *next-sid 0
           :examples $ []
           :schema $ :: 'Ref 'Number
         'SocketEvent $ %{} 'CodeEntry (:doc "|适配器向业务层报告的连接、原始文本消息、断线和二进制通知。")
@@ -1547,7 +1547,7 @@
                 :args $ [] 'cumulo-reel.app.server-ws/SocketEvent
           :tests $ [] $ %{} 'TestEntry (:name |ignores-unknown-session)
             :code $ quote $ let
-                calls $ atom 0
+                calls $ ref 0
               reset! *clients $ {}
               close-session! 12 $ fn (event) (swap! calls inc) &unit
               assert= 0 @calls
@@ -1562,7 +1562,7 @@
                 :args $ [] 'Number
           :tests $ [] $ %{} 'TestEntry (:name |skips-disconnected-sessions)
             :code $ quote $ let
-                seen $ atom $ []
+                seen $ ref $ []
               reset! *clients $ {}
               each! $ fn (sid) (swap! seen conj sid) &unit
               assert= ([]) @seen

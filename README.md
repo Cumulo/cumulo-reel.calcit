@@ -7,7 +7,7 @@ Cumulo 的 Reel 状态、操作记录与重放库。
 服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`：
 
 ```cirru
-defatom *reel $ %{} cumulo-reel.core/ReelState
+defref *reel $ %{} cumulo-reel.core/ReelState
   :base initial-db
   :db initial-db
   :records $ []

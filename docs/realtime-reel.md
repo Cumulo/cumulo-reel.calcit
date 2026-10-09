@@ -27,7 +27,7 @@ ReelState<Db> 同时保存 base 与当前 db，两者使用同一数据库类型
 仍是开放的 ReelState<Dynamic> 模板，不能提供具名数据库的类型证据。
 
 ```cirru.no-check
-defatom *reel $ %{} cumulo-reel.core/ReelState
+defref *reel $ %{} cumulo-reel.core/ReelState
   :base initial-db
   :db initial-db
   :records $ []

@@ -19,9 +19,9 @@
           :examples $ []
           :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defref *store nil
+          :code $ quote $ defref *store (Option :none)
           :examples $ []
-          :schema $ :: 'Ref $ :: 'JsNullish 'cumulo-reel.schema/ClientStore
+          :schema $ :: 'Ref $ :: 'Option 'cumulo-reel.schema/ClientStore
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! ()
             ws-connect!
@@ -30,7 +30,9 @@
                 , |: $ :port config/site
               {}
                 :on-open $ fn (event) (simulate-login!)
-                :on-close $ fn (event) (reset! *store nil) (shared/console-error! "|Lost connection!")
+                :on-close $ fn (event)
+                  reset! *store $ Option :none
+                  shared/console-error! "|Lost connection!"
                 :on-data $ fn (data)
                   match (protocol/receive-server-patch! *store data)
                     (:ok _) (shared/console-log! |Applied-server-patch)
@@ -44,7 +46,7 @@
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op op-data)
             let
-                data $ option:unwrap-or op-data nil
+                data $ .unwrap-or op-data nil
               println |Dispatch op data
               if (list? op)
                 recur (:: :states op data) (Option :none)
@@ -81,7 +83,7 @@
               , &unit
             browser/add-event-listener! |visibilitychange $ fn (event)
               when
-                and (js-nullish? @*store) (page-visible?)
+                and (.none? @*store) (page-visible?)
                 connect!
               , &unit
             println "|App started!"
@@ -91,16 +93,15 @@
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
-            option:unwrap $ browser/query-selector |.app
+            .unwrap $ browser/query-selector |.app
           :examples $ []
           :schema $ :: 'js-ffi.browser/DomElementHost
         'on-store-change! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Current 'Previous
+            :args $ [] (:: 'Option 'cumulo-reel.schema/ClientStore) (:: 'Option 'cumulo-reel.schema/ClientStore)
             :features $ #{} :js-ffi
-            :generics $ [] 'Current 'Previous
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (add-watch! *store :changes on-store-change!)
             add-watch! *states :changes $ fn (states prev)
@@ -151,7 +152,7 @@
             :features $ #{} :js-ffi
         'ssr? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def ssr?
-            option:some? $ browser/query-selector |meta.respo-ssr
+            .some? $ browser/query-selector |meta.respo-ssr
           :examples $ []
           :schema $ :: 'Bool
       :ns $ %{} 'NsEntry (:doc |)
@@ -172,39 +173,42 @@
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (states store)
-            if (js-nullish? store) (comp-offline)
-              let
-                  store-typed $ assert-type store 'cumulo-reel.schema/ClientStore
-                  state $ &map:get
-                    either states $ {}
-                    , :data
-                  session store-typed.:session
-                  router store-typed.:router
-                  router-data router.:data
-                div
-                  {} $ :class-name $ str-spaced css/global css/fullscreen css/column
-                  comp-navigation store-typed.:logged-in? store-typed.:count
-                  if store-typed.:logged-in?
-                    match router.:name
-                      :home $ <> |Home
-                      :profile $ comp-profile (assert-type store-typed.:user 'cumulo-reel.schema/ClientUser) router.:data
-                      _ $ <> $ to-string router.:name
-                    comp-login $ >>
+            match store
+              (:none) (comp-offline)
+              (:some store-typed)
+                let
+                    state $ &map:get
                       either states $ {}
-                      , :login
-                  comp-status-color store-typed.:color
-                  comp-messages
-                    filter-map-kv (session.:messages)
-                      fn (id message)
-                        MapEntryDecision :keep id $ &struct:to-map message
-                    {}
-                    fn (info d!)
-                      d! $ :: :session/remove-message $ assert-type (&map:get info :id) 'String
-                  when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
-                  when config/dev? $ comp-reel store-typed.:reel-length $ {}
+                      , :data
+                    session store-typed.:session
+                    router store-typed.:router
+                    router-data router.:data
+                  div
+                    {} $ :class-name $ str-spaced css/global css/fullscreen css/column
+                    comp-navigation store-typed.:logged-in? store-typed.:count
+                    if store-typed.:logged-in?
+                      match router.:name
+                        :home $ <> |Home
+                        :profile $ comp-profile (.unwrap store-typed.:user) router.:data
+                        _ $ <> $ to-string router.:name
+                      comp-login $ decode-map-as
+                        >>
+                          either states $ {}
+                          , :login
+                        :: 'Map 'Tag 'Dynamic
+                    comp-status-color store-typed.:color
+                    comp-messages
+                      filter-map-kv (session.:messages)
+                        fn (id message)
+                          MapEntryDecision :keep id $ &struct:to-map message
+                      {}
+                      fn (info d!)
+                        d! $ :: :session/remove-message $ assert-type (&map:get info :id) 'String
+                    when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
+                    when config/dev? $ comp-reel store-typed.:reel-length $ {}
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
+            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Option 'cumulo-reel.schema/ClientStore)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline ()
             div
@@ -443,7 +447,7 @@
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def dev?
-            = |dev $ option:unwrap-or (get-env |mode) |release
+            = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
           :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
@@ -476,93 +480,137 @@
                               Result :err $ str |Invalid-changes: detail
                             (:ok changes)
                               match
-                                .apply-to (patch-batch changes) store
+                                .apply-to (patch-batch changes)
+                                  match store
+                                    (:none) nil
+                                    (:some current) (encode-client-store current)
                                 (:err error)
                                   Result :err $ str |Invalid-patch: error
                                 (:ok next-store) (decode-nullable-store next-store)
                       Result :err $ str |Unknown-message-kind: kind
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'Input
+            :args $ [] (:: 'Option 'cumulo-reel.schema/ClientStore) 'Input
             :generics $ [] 'Input
-            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'String
+            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/ClientStore) 'String
           :tests $ []
             %{} 'TestEntry (:name |restores-initial-edn-snapshot)
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  legacy-wire $ parse-cirru-edn "|%{} 'ClientStore (:color |blue) (:count 1) (:logged-in? true) (:name nil) (:reel-length 0)\n  :router $ %{} 'Router (:name :profile) (:title |Profile)\n    :data $ {} $ :open ([] 1 |two)\n    :router $ %{} 'Router (:data nil) (:name :child) (:router nil) (:title |Child)\n  :session $ %{} 'Session (:id 1) (:nickname nil) (:user-id nil)\n    :messages $ {} $ |m1\n      %{} 'Message (:id |m1) (:text |hello)\n    :router $ %{} 'Router (:name :profile) (:title |Profile)\n      :data $ {} $ :open ([] 1 |two)\n      :router $ %{} 'Router (:data nil) (:name :child) (:router nil) (:title |Child)\n  :user $ %{} 'ClientUser (:avatar nil) (:id |u1) (:name |Ada) (:nickname |A)"
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
-                      :data $ diff-twig nil expected $ {}
+                      :data $ diff-twig nil legacy-wire $ {}
                     , patch-class-mapper
-                  outcome $ apply-server-patch nil wire
+                  outcome $ apply-server-patch (Option :none) wire
                 match outcome
                   (:err detail) (raise detail)
                   (:ok actual)
-                    if (js-present? actual) (assert= expected actual) (assert |Expected-present-store false)
+                    if (.some? actual)
+                      assert= expected $ .unwrap actual
+                      assert |Expected-present-store false
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |restores-incremental-edn-patch)
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  old $ struct-with expected (:count 0) (:user nil)
+                    :user-id $ Option :some |u1
+                    :nickname $ Option :some |A
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :some |avatar-a
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :some |Display) :user $ Option :some fixture-user
+                  old $ struct-with expected (:count 0)
+                    :user $ Option :none
+                    :router $ schema/Router :name :home :title |Home :data ({}) :router $ Option :none
+                    :session $ struct-with session
+                      :router $ schema/Router :name :home :title |Home :data ({}) :router $ Option :none
+                      :user-id $ Option :none
+                      :nickname $ Option :none
+                    :name $ Option :none
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
-                      :data $ diff-twig old expected $ {}
+                      :data $ diff-twig (encode-client-store old) (encode-client-store expected) ({})
                     , patch-class-mapper
-                  outcome $ apply-server-patch old wire
+                  outcome $ apply-server-patch (Option :some old) wire
                 match outcome
                   (:err detail) (raise detail)
                   (:ok actual)
-                    if (js-present? actual) (assert= expected actual) (assert |Expected-present-store false)
+                    if (.some? actual)
+                      assert= expected $ .unwrap actual
+                      assert |Expected-present-store false
+                let
+                    old-avatar $ struct-with expected $ :user
+                      Option :some $ struct-with fixture-user $ :avatar (Option :none)
+                    avatar-wire $ parse-cirru-edn
+                      format-cirru-edn $ {} (:kind :patch)
+                        :data $ diff-twig (encode-client-store old-avatar) (encode-client-store expected) ({})
+                      , patch-class-mapper
+                  match
+                    apply-server-patch (Option :some old-avatar) avatar-wire
+                    (:err detail) (raise detail)
+                    (:ok actual)
+                      assert= expected $ .unwrap actual
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |accepts-legacy-map-snapshot)
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  legacy $ &struct:to-map expected
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  legacy $ encode-client-store expected
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ diff-twig nil legacy $ {}
                     , patch-class-mapper
-                  outcome $ apply-server-patch nil wire
+                  outcome $ apply-server-patch (Option :none) wire
                 match outcome
                   (:err detail) (raise detail)
                   (:ok actual)
-                    if (js-present? actual) (assert= expected actual) (assert |Expected-present-store false)
+                    if (.some? actual)
+                      assert= expected $ .unwrap actual
+                      assert |Expected-present-store false
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |preserves-nil-reset)
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
-                      :data $ diff-twig expected nil $ {}
+                      :data $ diff-twig (encode-client-store expected) nil $ {}
                     , patch-class-mapper
-                match (apply-server-patch expected wire)
+                match
+                  apply-server-patch (Option :some expected) wire
                   (:err detail) (raise detail)
                   (:ok actual)
-                    assert= true $ js-nullish? actual
+                    assert= true $ .none? actual
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |rejects-invalid-envelope-and-changes)
               :code $ quote $ do
@@ -574,7 +622,8 @@
                       :data $ []
                     {} (:kind :patch) (:data 42)
                   fn (data)
-                    match (apply-server-patch nil data)
+                    match
+                      apply-server-patch (Option :none) data
                       (:err detail)
                         assert= true $ string? detail
                       (:ok state) (assert |Invalid-message-was-accepted false)
@@ -583,12 +632,15 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  valid-ops $ diff-twig nil expected $ {}
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  valid-ops $ diff-twig nil (encode-client-store expected) ({})
                 each
                   []
                     patch-schema/change-op :update-in ([] :session) (patch-schema/change-op :assoc :id |bad-id)
@@ -601,7 +653,8 @@
                           format-cirru-edn $ {} (:kind :patch)
                             :data $ append valid-ops bad-op
                           , patch-class-mapper
-                      match (apply-server-patch nil wire)
+                      match
+                        apply-server-patch (Option :none) wire
                         (:err detail)
                           assert= true $ string? detail
                         (:ok actual) (assert |Corrupt-nested-field-was-accepted false)
@@ -715,7 +768,7 @@
                                     match (decode-field source :reel-length decode-number)
                                       (:err detail) (Result :err detail)
                                       (:ok reel-length)
-                                        match (decode-field source :name decode-nullable-string)
+                                        match (decode-field source :name decode-optional-string)
                                           (:err detail) (Result :err detail)
                                           (:ok name)
                                             match (decode-field source :user decode-nullable-user)
@@ -741,7 +794,7 @@
                         match (decode-field source :nickname decode-string)
                           (:err detail) (Result :err detail)
                           (:ok nickname)
-                            match (decode-field source :avatar decode-nullable-string)
+                            match (decode-field source :avatar decode-optional-string)
                               (:err detail) (Result :err detail)
                               (:ok avatar)
                                 Result :ok $ schema/ClientUser :name name :id id :nickname nickname :avatar avatar
@@ -842,44 +895,56 @@
             :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
         'decode-nullable-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-number (value)
-            if (nil? value) (Result :ok value) (decode-number value)
+            if (nil? value)
+              Result :ok $ Option :none
+              match (decode-number value)
+                (:err detail) (Result :err detail)
+                (:ok decoded)
+                  Result :ok $ Option :some decoded
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Input
             :generics $ [] 'Input
-            :return $ :: 'Result (:: 'JsNullish 'Number) 'String
+            :return $ :: 'Result (:: 'Option 'Number) 'String
         'decode-nullable-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-router (value)
-            if (nil? value) (Result :ok value) (decode-router value)
+            if (nil? value)
+              Result :ok $ Option :none
+              match (decode-router value)
+                (:err detail) (Result :err detail)
+                (:ok router)
+                  Result :ok $ Option :some router
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Input
             :generics $ [] 'Input
-            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/Router) 'String
+            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/Router) 'String
         'decode-nullable-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-store (value)
-            if (nil? value) (Result :ok value) (decode-client-store value)
+            if (nil? value)
+              Result :ok $ Option :none
+              match (decode-client-store value)
+                (:err detail) (Result :err detail)
+                (:ok store)
+                  Result :ok $ Option :some store
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Input
             :generics $ [] 'Input
-            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientStore) 'String
-        'decode-nullable-string $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn decode-nullable-string (value)
-            if (nil? value) (Result :ok value) (decode-string value)
-          :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'JsNullish 'String) 'String
+            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/ClientStore) 'String
         'decode-nullable-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-user (value)
-            if (nil? value) (Result :ok value) (decode-client-user value)
+            if (nil? value)
+              Result :ok $ Option :none
+              match (decode-client-user value)
+                (:err detail) (Result :err detail)
+                (:ok user)
+                  Result :ok $ Option :some user
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Input
             :generics $ [] 'Input
-            :return $ :: 'Result (:: 'JsNullish 'cumulo-reel.schema/ClientUser) 'String
+            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/ClientUser) 'String
         'decode-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-number (value) (try-decode-map-as value 'Number)
           :examples $ []
@@ -910,6 +975,19 @@
                   assert= 42 $ + value 1
                 (:err detail) (raise detail)
               :tags $ #{} :protocol :unit
+        'decode-optional-string $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-optional-string (value)
+            if (nil? value)
+              Result :ok $ Option :none
+              match (decode-string value)
+                (:err detail) (Result :err detail)
+                (:ok decoded)
+                  Result :ok $ Option :some decoded
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Input
+            :generics $ [] 'Input
+            :return $ :: 'Result (:: 'Option 'String) 'String
         'decode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-router (value)
             match (decode-source value)
@@ -938,13 +1016,13 @@
             match (decode-source value)
               (:err detail) (Result :err detail)
               (:ok source)
-                match (decode-field source :user-id decode-nullable-string)
+                match (decode-field source :user-id decode-optional-string)
                   (:err detail) (Result :err detail)
                   (:ok user-id)
                     match (decode-field source :id decode-nullable-number)
                       (:err detail) (Result :err detail)
                       (:ok id)
-                        match (decode-field source :nickname decode-nullable-string)
+                        match (decode-field source :nickname decode-optional-string)
                           (:err detail) (Result :err detail)
                           (:ok nickname)
                             match (decode-field source :router decode-router)
@@ -983,6 +1061,62 @@
             :args $ [] 'Input
             :generics $ [] 'Input
             :return $ :: 'Result 'Tag 'String
+        'encode-client-store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn encode-client-store (store)
+            assoc
+              assoc
+                assoc
+                  assoc (&struct:to-map store) :user $ match (:user store)
+                    (:none) nil
+                    (:some user) (encode-client-user user)
+                  , :router $ encode-router $ :router store
+                , :session $ encode-session $ :session store
+              , :name $ encode-optional-string $ :name store
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'cumulo-reel.schema/ClientStore
+            :return $ :: 'Map 'Tag 'Dynamic
+        'encode-client-user $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn encode-client-user (user)
+            assoc (&struct:to-map user) :avatar $ encode-optional-string $ :avatar user
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'cumulo-reel.schema/ClientUser
+            :return $ :: 'Map 'Tag 'Dynamic
+        'encode-optional-string $ %{} 'CodeEntry
+          :doc "|Project an internal Option<String> to the legacy wire nil/String representation; not an internal absence model."
+          :code $ quote $ defn encode-optional-string (value)
+            match value
+              (:none) nil
+              (:some text) text
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Option 'String
+            :return $ :: 'JsNullish 'String
+        'encode-router $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn encode-router (router)
+            assoc (&struct:to-map router) :router $ match (:router router)
+              (:none) nil
+              (:some nested) (encode-router nested)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'cumulo-reel.schema/Router
+            :return $ :: 'Map 'Tag 'Dynamic
+        'encode-session $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn encode-session (session)
+            assoc
+              assoc
+                assoc
+                  assoc (&struct:to-map session) :router $ encode-router $ :router session
+                  , :user-id $ encode-optional-string $ :user-id session
+                , :id $ match (:id session)
+                  (:none) nil
+                  (:some value) value
+              , :nickname $ encode-optional-string $ :nickname session
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'cumulo-reel.schema/Session
+            :return $ :: 'Map 'Tag 'Dynamic
         'parse-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-client-action (raw)
             match (.parse-cirru-edn raw)
@@ -1048,7 +1182,7 @@
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ []
-              :: 'Ref $ :: 'JsNullish 'cumulo-reel.schema/ClientStore
+              :: 'Ref $ :: 'Option 'cumulo-reel.schema/ClientStore
               , 'Input
             :generics $ [] 'Input
             :return $ :: 'Result 'Unit 'String
@@ -1057,13 +1191,18 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                  before $ do (reset! target expected) (deref target)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  target $ ref $ Option :some expected
+                  before $ do
+                    reset! target $ Option :some expected
+                    deref target
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ [] $ patch-schema/change-op :assoc :count |wrong-count
@@ -1078,13 +1217,18 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                  before $ do (reset! target expected) (deref target)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  target $ ref $ Option :some expected
+                  before $ do
+                    reset! target $ Option :some expected
+                    deref target
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ [] (patch-schema/change-op :assoc :count 2)
@@ -1100,13 +1244,18 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                  before $ do (reset! target expected) (deref target)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  target $ ref $ Option :some expected
+                  before $ do
+                    reset! target $ Option :some expected
+                    deref target
                   raw-ops $ parse-cirru-edn "|[] $ %:: 'change-op 'vec-drop |bad" patch-class-mapper
                   wire $ {} (:kind :patch) (:data raw-ops)
                 match (receive-server-patch! target wire)
@@ -1119,24 +1268,31 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ schema/Router :name :child :title |Child :data nil :router nil
-                  session $ struct-with schema/session (:id 1) (:router router)
+                    , :router $ Option :some
+                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                  session $ struct-with schema/session
+                    :id $ Option :some 1
+                    :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar nil
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name nil :user fixture-user
-                  target $ ref $ assert-type nil (:: 'JsNullish 'cumulo-reel.schema/ClientStore)
-                  before $ do (reset! target expected) (deref target)
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  target $ ref $ Option :some expected
+                  before $ do
+                    reset! target $ Option :some expected
+                    deref target
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
-                      :data $ diff-twig nil expected $ {}
+                      :data $ diff-twig nil (encode-client-store expected) ({})
                     , patch-class-mapper
-                reset! target nil
+                reset! target $ Option :none
                 match (receive-server-patch! target wire)
                   (:err detail) (raise detail)
                   (:ok value) (assert= &unit value)
                 let
                     actual $ deref target
-                  if (js-present? actual) (assert= expected actual) (assert |Valid-store-was-not-published false)
+                  if (.some? actual)
+                    assert= expected $ .unwrap actual
+                    assert |Valid-store-was-not-published false
               :tags $ #{} :protocol :unit
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.protocol
@@ -1153,12 +1309,9 @@
         '*initial-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *initial-db
             if
-              file-exists? $ w-log storage-file
+              file-exists? $ dbg storage-file
               do (println "|Found local EDN data")
-                assert-type
-                  parse-cirru-edn (read-text! storage-file)
-                    {} (:Database database) (:Session session) (:User user) (:Router router)
-                  'cumulo-reel.schema/Database
+                cumulo-reel.app.storage/decode-database $ parse-cirru-edn $ read-text! storage-file
               do (println "|Found no data") database
           :examples $ []
           :schema $ :: 'Ref 'cumulo-reel.schema/Database
@@ -1362,10 +1515,11 @@
                       (:none) session
                     , 'cumulo-reel.schema/Session
                   old-store $ match (get @*client-caches sid)
-                    (:some cached) cached
+                    (:some cached) (cumulo-reel.app.protocol/encode-client-store cached)
                     (:none) nil
                   new-store $ twig-container db session records
-                  changes $ diff-twig old-store new-store $ {} (:key :id)
+                  changes $ diff-twig old-store (cumulo-reel.app.protocol/encode-client-store new-store)
+                    {} $ :key :id
                 if
                   not $ empty? changes
                   do
@@ -1621,6 +1775,134 @@
             |ws :refer $ WebSocketServer
             ws-edn.server :refer $ node-data-string
             js-ffi.contract :as contract
+    'cumulo-reel.app.storage $ %{} 'FileEntry
+      :defs $ {}
+        'decode-database $ %{} 'CodeEntry
+          :doc "|Validate persisted Database/User fields and map keys before constructing business Structs. Legacy user nil/String avatars and current Option avatars are accepted. Legacy sessions are decoded; the writer still persists an empty session map. Pages values remain opaque and unchanged."
+          :code $ quote $ defn decode-database (value)
+            let
+                source $ require-decoded $ protocol/decode-source value
+              schema/Database :users
+                decode-users $ &map:get source :users
+                , :sessions
+                  decode-sessions $ &map:get source :sessions
+                  , :pages $ decode-map-as (&map:get source :pages) (:: 'Map 'Tag 'Dynamic)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
+            :args $ [] 'Input
+            :generics $ [] 'Input
+          :tests $ []
+            %{} 'TestEntry (:name |restores-legacy-user-database)
+              :code $ quote $ let
+                  raw $ parse-cirru-edn "|%{} 'Database\n  :users $ {}\n    |u1 $ %{} 'User (:id |u1) (:name |Ada) (:nickname |A) (:password |old-hash) (:avatar nil)\n    |u2 $ %{} 'User (:id |u2) (:name |Bea) (:nickname |B) (:password |other-hash) (:avatar |portrait)\n  :sessions $ {}\n    1 $ %{} 'Session (:id 1) (:user-id |u1) (:nickname nil)\n      :router $ %{} 'Router (:name :home) (:title |Home) (:router nil) (:data nil)\n      :messages $ {}\n  :pages $ {}\n    :home $ [] 1 |two"
+                  actual $ cumulo-reel.app.storage/decode-database raw
+                  persisted $ struct-with actual $ :sessions ({})
+                assert=
+                  cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar $ Option :none
+                  &map:get (:users actual) |u1
+                assert= (Option :some |portrait)
+                  :avatar $ &map:get (:users actual) |u2
+                assert= (Option :some 1)
+                  :id $ &map:get (:sessions actual) 1
+                assert= (Option :some |u1)
+                  :user-id $ &map:get (:sessions actual) 1
+                assert=
+                  {} $ :home $ [] 1 |two
+                  :pages actual
+                assert= persisted $ cumulo-reel.app.storage/decode-database $ parse-cirru-edn (format-cirru-edn persisted)
+              :tags $ #{} :protocol :storage
+            %{} 'TestEntry (:name |rejects-invalid-stored-user-avatar)
+              :code $ quote $ let
+                  raw $ {}
+                    :users $ {} $ |u1
+                      {} (:id |u1) (:name |Ada) (:nickname |A) (:password |old-hash) (:avatar 42)
+                    :sessions $ {}
+                    :pages $ {}
+                  rejected $ try
+                    do (cumulo-reel.app.storage/decode-database raw) false
+                    fn (message)
+                      hint-fn $ {}
+                        :args $ [] 'String
+                        :return 'Bool
+                      not $ empty? message
+                assert= true rejected
+              :tags $ #{} :protocol :storage
+        'decode-sessions $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-sessions (value)
+            filter-map-kv
+              decode-map-as value $ :: 'Map 'Number 'Dynamic
+              fn (key value)
+                hint-fn $ {}
+                  :args $ [] 'Number 'Dynamic
+                  :return $ :: 'MapEntryDecision 'Number 'cumulo-reel.schema/Session
+                MapEntryDecision :keep key $ require-decoded $ protocol/decode-session value
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Input
+            :generics $ [] 'Input
+            :return $ :: 'Map 'Number 'cumulo-reel.schema/Session
+        'decode-stored-avatar $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-stored-avatar (value)
+            if (enum? value)
+              match value
+                (:none)
+                  Result :ok $ Option :none
+                (:some avatar)
+                  match (protocol/decode-string avatar)
+                    (:err detail) (Result :err detail)
+                    (:ok decoded)
+                      Result :ok $ Option :some decoded
+                _ $ Result :err |Expected-stored-avatar-Option
+              protocol/decode-optional-string value
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Input
+            :generics $ [] 'Input
+            :return $ :: 'Result (:: 'Option 'String) 'String
+        'decode-user $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-user (value)
+            let
+                source $ require-decoded $ protocol/decode-source value
+              schema/User :name
+                require-decoded $ protocol/decode-field source :name protocol/decode-string
+                , :id
+                  require-decoded $ protocol/decode-field source :id protocol/decode-string
+                  , :nickname
+                    require-decoded $ protocol/decode-field source :nickname protocol/decode-string
+                    , :avatar
+                      require-decoded $ protocol/decode-field source :avatar decode-stored-avatar
+                      , :password $ require-decoded $ protocol/decode-field source :password protocol/decode-string
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/User)
+            :args $ [] 'Input
+            :generics $ [] 'Input
+        'decode-users $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-users (value)
+            filter-map-kv
+              decode-map-as value $ :: 'Map 'String 'Dynamic
+              fn (key value)
+                hint-fn $ {}
+                  :args $ [] 'String 'Dynamic
+                  :return $ :: 'MapEntryDecision 'String 'cumulo-reel.schema/User
+                MapEntryDecision :keep key $ decode-user value
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Input
+            :generics $ [] 'Input
+            :return $ :: 'Map 'String 'cumulo-reel.schema/User
+        'require-decoded $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn require-decoded (result)
+            match result
+              (:err detail)
+                raise $ str |Invalid-storage: detail
+              (:ok value) value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'T)
+            :args $ [] $ :: 'Result 'T 'String
+            :generics $ [] 'T
+      :ns $ %{} 'NsEntry (:doc |)
+        :code $ quote $ ns cumulo-reel.app.storage
+          :require (cumulo-reel.schema :as schema) (cumulo-reel.app.protocol :as protocol)
     'cumulo-reel.app.twig.container $ %{} 'FileEntry
       :defs $ {}
         'rand-hex-color! $ %{} 'CodeEntry (:doc |)
@@ -1659,41 +1941,47 @@
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
             let
-                logged-in? $ js-present? session.:user-id
-                router session.:router
+                logged-in? $ .some? $ :user-id session
+                router $ :router session
                 router-name router.:name
                 pages db.:pages
                 sessions db.:sessions
                 users db.:users
-                user-id $ if logged-in? (assert-type session.:user-id 'String) |guest
+                user-id $ match (:user-id session)
+                  (:none) |guest
+                  (:some id) id
                 user $ assert-type
                   match (get users user-id)
                     (:some found) found
                     (:none) schema/user
                   , 'cumulo-reel.schema/User
-                absent nil
+                absent $ Option :none
               schema/ClientStore :logged-in? logged-in? :session session :reel-length (count records) :router
                 if logged-in?
                   struct-with router $ :data $ case router-name (:home pages)
                     :profile $ memo-twig-by2 :members twig-members sessions users
                     router-name $ {}
                   , router
-                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in? (memo-twig-by1 user-id twig-user user) absent
+                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in?
+                  Option :some $ memo-twig-by1 user-id twig-user user
+                  Option :none
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)
-        'twig-members $ %{} 'CodeEntry (:doc |)
+        'twig-members $ %{} 'CodeEntry
+          :doc "|Project session member names into the legacy router wire map. Internal session absence uses Option; output nil/String values preserve the existing client wire protocol."
           :code $ quote $ defn twig-members (sessions users)
-            -> sessions to-pairs
-              map $ fn (pair)
-                let[] (sid session) pair $ [] sid $ if (js-present? session.:user-id)
-                  match
-                    get users $ assert-type session.:user-id 'String
-                    (:some user) user.:name
-                    (:none) nil
-                  , nil
-              &set:to-list
-              pairs-map
+            filter-map-kv sessions $ fn (sid session)
+              hint-fn $ {}
+                :args $ [] 'Number 'cumulo-reel.schema/Session
+                :return $ :: 'MapEntryDecision 'Number $ :: 'JsNullish 'String
+              MapEntryDecision :keep sid $ cumulo-reel.app.protocol/encode-optional-string $ match (:user-id session)
+                (:none) (Option :none)
+                (:some id)
+                  match (get users id)
+                    (:none) (Option :none)
+                    (:some user)
+                      Option :some $ :name user
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
@@ -1719,7 +2007,8 @@
                 user $ struct-with schema/user (:name |Ada) (:id |u1) (:nickname |Ada) (:password |secret)
                 client-user $ twig-user user
               assert=
-                %{} schema/ClientUser (:name |Ada) (:id |u1) (:nickname |Ada) (:avatar nil)
+                %{} schema/ClientUser (:name |Ada) (:id |u1) (:nickname |Ada)
+                  :avatar $ Option :none
                 , client-user
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
@@ -1769,7 +2058,7 @@
         'connect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect (db sid op-id op-time)
             struct-with db $ :sessions $ assoc (:sessions db) sid
-              struct-with schema/session $ :id sid
+              struct-with schema/session $ :id $ Option :some sid
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
@@ -1816,7 +2105,7 @@
                   (:some user)
                     if
                       = (md5 password) user.:password
-                      struct-with session $ :user-id user.:id
+                      struct-with session $ :user-id $ Option :some user.:id
                       struct-with session $ :messages $ assoc session.:messages op-id
                         schema/Message :id op-id :text $ str "|Wrong password for " username
                   (:none)
@@ -1834,7 +2123,7 @@
                     (:some found) found
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
-                next-session $ struct-with session $ :user-id nil
+                next-session $ struct-with session $ :user-id (Option :none)
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
@@ -1861,16 +2150,16 @@
                     (:some found) found
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
-              if (option:some? maybe-user)
+              if (.some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
                       assoc session.:messages op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
                   struct-with db $ :sessions $ assoc db.:sessions sid next-session
                 let
-                    next-session $ struct-with session $ :user-id op-id
+                    next-session $ struct-with session $ :user-id (Option :some op-id)
                     next-user $ struct-with schema/user (:id op-id) (:name username) (:nickname username)
                       :password $ md5 password
-                      :avatar nil
+                      :avatar $ Option :none
                   struct-with db
                     :sessions $ assoc db.:sessions sid next-session
                     :users $ assoc db.:users op-id next-user
@@ -2508,7 +2797,7 @@
               (:none) (PartitionSendPlan :snapshot)
               (:some progress)
                 cond
-                    option:some? $ :in-flight progress
+                    .some? $ :in-flight progress
                     PartitionSendPlan :idle
                   (not= (:epoch progress) (:epoch state))
                     PartitionSendPlan :snapshot
@@ -2606,7 +2895,7 @@
                     hint-fn $ {}
                       :args $ [] 'Dynamic 'Number
                       :return 'Dynamic
-                    assoc acc idx $ struct-tree-input $ option:unwrap (nth value idx)
+                    assoc acc idx $ struct-tree-input $ .unwrap (nth value idx)
               true value
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
@@ -2663,13 +2952,13 @@
       :defs $ {}
         'ClientStore $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientStore (:session 'cumulo-reel.schema/Session) (:router 'cumulo-reel.schema/Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number)
-            :name $ :: 'JsNullish 'String
-            :user $ :: 'JsNullish 'cumulo-reel.schema/ClientUser
+            :name $ :: 'Option 'String
+            :user $ :: 'Option 'cumulo-reel.schema/ClientUser
           :examples $ []
           :schema $ :: 'StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientUser (:name 'String) (:id 'String) (:nickname 'String)
-            :avatar $ :: 'JsNullish 'String
+            :avatar $ :: 'Option 'String
           :examples $ []
           :schema $ :: 'StructDef
         'Database $ %{} 'CodeEntry (:doc |)
@@ -2689,14 +2978,14 @@
           :schema $ :: 'Enum
         'Router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Router (:name 'Tag) (:title 'String) (:data 'Dynamic)
-            :router $ :: 'JsNullish 'cumulo-reel.schema/Router
+            :router $ :: 'Option 'cumulo-reel.schema/Router
           :examples $ []
           :schema $ :: 'StructDef
         'Session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Session
-            :user-id $ :: 'JsNullish 'String
-            :id $ :: 'JsNullish 'Number
-            :nickname $ :: 'JsNullish 'String
+            :user-id $ :: 'Option 'String
+            :id $ :: 'Option 'Number
+            :nickname $ :: 'Option 'String
             :router 'cumulo-reel.schema/Router
             :messages $ :: 'Map 'String 'cumulo-reel.schema/Message
           :examples $ []
@@ -2707,7 +2996,7 @@
           :schema $ :: 'StructDef
         'User $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct User (:name 'String) (:id 'String) (:nickname 'String)
-            :avatar $ :: 'JsNullish 'String
+            :avatar $ :: 'Option 'String
             :password 'String
           :examples $ []
           :schema $ :: 'StructDef
@@ -2718,19 +3007,19 @@
           :schema $ :: 'cumulo-reel.schema/Database
         'router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def router
-            Router :name :home :title | :data ({}) :router nil
+            Router :name :home :title | :data ({}) :router $ Option :none
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
-            Session :user-id nil :id nil :nickname nil :router
-              Router :name :home :title | :data nil :router nil
+            Session :user-id (Option :none) :id (Option :none) :nickname (Option :none) :router
+              Router :name :home :title | :data nil :router $ Option :none
               , :messages $ {}
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/Session
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
-            User :name | :id | :nickname | :avatar nil :password |
+            User :name | :id | :nickname | :avatar (Option :none) :password |
           :examples $ []
           :schema $ :: 'cumulo-reel.schema/User
       :ns $ %{} 'NsEntry (:doc |)

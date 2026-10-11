@@ -21,8 +21,11 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
     await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
     run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
-    const tests = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field'].flatMap((name) => {
-      const response = JSON.parse(run('query', 'def', `cumulo-reel.app.protocol/${name}`, '--raw', '--format', 'json'));
+    const targets = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field']
+      .map((name) => `cumulo-reel.app.protocol/${name}`)
+      .concat('cumulo-reel.app.storage/decode-database');
+    const tests = targets.flatMap((target) => {
+      const response = JSON.parse(run('query', 'def', target, '--raw', '--format', 'json'));
       return response.data.tests.filter((definition) => definition.tags.includes('protocol'));
     });
     const names = new Set(tests.map((definition) => definition.name));
@@ -30,7 +33,8 @@ test('protocol definition tests replay on native and fresh generated JS', async 
       'publishes-valid-edn-snapshot', 'rejects-partially-applied-invalid-patch', 'rejects-invalid-operation-payload',
       'accepts-anonymous-sign-up', 'rejects-extra-and-missing-action-payload',
       'preserves-opaque-router-data', 'preserves-number-result-type', 'preserves-typed-map-value',
-      'preserves-nullable-map-value', 'rejects-missing-field', 'keeps-decoder-error-context']) {
+      'preserves-nullable-map-value', 'rejects-missing-field', 'keeps-decoder-error-context',
+      'restores-legacy-user-database', 'rejects-invalid-stored-user-avatar']) {
       assert.ok(names.has(name), `Missing shared protocol contract: ${name}`);
     }
     run('edit', 'def', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'json-ast', '--code',

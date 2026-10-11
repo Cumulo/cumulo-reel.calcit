@@ -74,6 +74,41 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 
 ## 发布工具链迁移当前状态
 
+本轮未发布的 `0.0.52` 候选使用正式 Calcit/procs `0.29.0` 和稳定递归模块依赖。
+客户端顶层状态已改为 `Ref<Option<ClientStore>>`，离线、重连和渲染通过 Option
+分支处理；接收原有 nil 传输时转换为 `Option :none`，非法 patch 仍不更新 Ref。
+Store watcher 使用两项 `Option<ClientStore>` 参数的具体合同，不再借用独立泛型。
+ClientStore.user 也已改为 Option；传输投影只在 wire 边界还原原 nil/具名用户，
+业务 Store 仍为 Struct。两个入口及 browser/node 全公开严格检查通过；原有
+50 项附带测试和 6 项 Node 运行测试全部通过，包括同 AST 的协议 JS 回放、
+增量 patch、原子拒绝、真实 WebSocket、持久化和 SIGINT。前后端生成及 Vite 构建通过。
+旧 nominal Struct wire 格式已恢复为独立用例，与 legacy Map 用例分别通过原生和
+生成 JS 回放。Router.router 已改为 Option；wire 专用的 Router/Session 投影只展开
+具名协议字段，Router.data 仍保持开放值。现有增量测试覆盖 home 到 profile 及嵌套
+子路由变化，失败先复现再修复。
+Session.user-id/id/nickname 也已改为 Option，同步迁移连接、登录、注册、退出及投影。
+成员 wire 投影使用带具体 sid/Session 合同的 Map 遍历，避免 List 配对丢失类型；
+字符串 Option 只在 wire 编码函数还原为旧 nil/String。最新严格检查为 browser
+101/101、node 118/118；原有 50 项测试、6 项 Node 运行回归、前后端生成和 Vite
+构建通过。上轮隔离存储可加载并登录旧测试用户，新注册用户的资料/成员和退出
+也通过且无 error 日志。ClientStore.name 和 ClientUser.avatar 随后也迁移为 Option，
+wire 编码仍保留 nil/String；现有增量用例覆盖显示名 none/some 和嵌套头像更新。
+原有 50 项测试、6 项 Node 回归、构建及隔离存储用户的浏览器登录/资料/退出通过。
+零调用的旧 decode-nullable-string 已退役，源码可从 Git 历史恢复。
+User.avatar 也已迁移为 Option；存储读取验证 Database/User 字段和 Map key 后才
+构造业务 Struct，不再通过 assert-type 接受未经验证的旧数据。旧 nil/String 头像
+及新持久化 Option 均支持，非法头像被拒绝；pages 内容保持开放，不改变业务数据。
+持久化仍写具名 Database 并清空 sessions。最新严格检查 browser 101/101、node
+124/124，52 项附带测试和既有 6 项 Node 回归全部通过；新增存储用例复用原有
+协议 native/JS 回放入口，没有独立检查脚本。前后端生成和 Vite 构建通过，前轮
+隔离旧数据库也通过生成 JS 解码及新格式往返。此次存储变更后的真实浏览器旧用户
+登录、资料/成员显示和退出已通过，error 日志为空。7 处旧 option:* 已改为当前
+Option 方法，废弃 w-log 改为 dbg；项目 deprecated-call 为零，server 入口动态
+方法报告为零。开放的 Router.data、pages 和协议输入保持原有边界，不以覆盖率
+数字为由强制收窄。候选尚未发布，不据此宣称全生态迁移已完成。
+
+以下为此前发布工具链的历史验收记录，不代表本轮正式版候选已完成：
+
 Calcit/procs 固定为已发布的 `0.29.0-alpha.16`，使用已发布的 cumulo-util `0.0.25`、
 ws-edn `0.0.35`、Message `0.0.30`、Respo UI `0.7.32-alpha.5`、Respo `0.16.114-alpha.8`、
 JS-FFI `0.2.1-alpha.13` 和 Recollect `0.0.56`。当前验证不使用本地开发模块覆盖。

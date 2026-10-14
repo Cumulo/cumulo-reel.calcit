@@ -131,9 +131,9 @@
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
-            .unwrap $ browser/query-selector |.app
+            .unwrap $ respo.ffi.browser/query-selector |.app
           :examples $ []
-          :schema $ :: 'js-ffi.browser/DomElementHost
+          :schema $ :: 'respo.dom/DomElement
         'on-store-change! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
           :examples $ []
@@ -163,7 +163,7 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] $ :: 'Fn
               {} (:return 'Unit)
-                :args $ [] 'Dynamic 'respo.schema/Component $ :: 'Fn
+                :args $ [] (:: 'JsNullish 'respo.dom/DomElement) 'respo.schema/Component $ :: 'Fn
                   {} (:return 'Unit)
                     :args $ [] 'Dynamic
             :features $ #{} :js-ffi
@@ -227,7 +227,7 @@
                     if store-typed.:logged-in?
                       match router.:name
                         :home $ <> |Home
-                        :profile $ comp-profile (.unwrap store-typed.:user) router.:data
+                        :profile $ comp-profile (.unwrap store-typed.:user) (cumulo-reel.app.comp.profile/decode-member-names router.:data)
                         _ $ <> $ to-string router.:name
                       comp-login $ decode-map-as
                         >>
@@ -241,7 +241,12 @@
                           MapEntryDecision :keep id $ &struct:to-map message
                       {}
                       fn (info d!)
-                        d! $ :: :session/remove-message $ assert-type (&map:get info :id) 'String
+                        hint-fn $ {}
+                          :args $ [] (:: 'Map 'Tag 'Dynamic)
+                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                              :args $ [] 'Dynamic
+                          :return 'Unit
+                        d! $ :: :session/remove-message $ decode-map-as (&map:get info :id) 'String
                     when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
                     when config/dev? $ comp-reel store-typed.:reel-length $ {}
           :examples $ []
@@ -316,9 +321,11 @@
           :code $ quote $ defcomp comp-login (states)
             let
                 cursor $ &map:get states :cursor
-                state $ assert-type
-                  either (&map:get states :data) initial-state
-                  , 'cumulo-reel.app.comp.login/LoginState
+                state $ let
+                    raw $ either (&map:get states :data) initial-state
+                  decode-map-as
+                    if (struct? raw) (&struct:to-map raw) raw
+                    , 'cumulo-reel.app.comp.login/LoginState
               div
                 {} $ :style $ style/merge-styles ui/flex ui/center
                 div ({})
@@ -329,14 +336,24 @@
                         :value $ :username state
                         :style ui/input
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :username $ assert-type (&map:get e :value) 'String
+                          hint-fn $ {}
+                            :args $ [] (:: 'Map 'Tag 'Dynamic)
+                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                :args $ [] 'Dynamic
+                            :return 'Unit
+                          d! cursor $ assoc state :username $ decode-map-as (&map:get e :value) 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password)
                         :value $ :password state
                         :style ui/input
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :password $ assert-type (&map:get e :value) 'String
+                          hint-fn $ {}
+                            :args $ [] (:: 'Map 'Tag 'Dynamic)
+                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                :args $ [] 'Dynamic
+                            :return 'Unit
+                          d! cursor $ assoc state :password $ decode-map-as (&map:get e :value) 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -357,6 +374,11 @@
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
+              hint-fn $ {}
+                :args $ [] (:: 'Map 'Tag 'Dynamic)
+                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                    :args $ [] 'Dynamic
+                :return 'Unit
               dispatch! $ if signup? (:: :user/sign-up username password) (:: :user/log-in username password)
               browser/storage-set! (:storage-key config/site)
                 format-cirru-edn $ [] username password
@@ -460,7 +482,7 @@
                   <> "|Log out"
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'cumulo-reel.schema/ClientUser $ :: 'Map 'Number (:: 'JsNullish 'String)
+            :args $ [] 'cumulo-reel.schema/ClientUser $ :: 'Map 'Number (:: 'Option 'String)
         'css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-member-label
             {} $ |$0 $ {} (:padding "|0 8px")
@@ -469,25 +491,76 @@
               :margin "|0 4px"
           :examples $ []
           :schema $ :: 'String
+        'decode-member-names $ %{} 'CodeEntry
+          :doc "|Validate legacy member wire keys and nil/String names before typed display; reject malformed names without dropping guest entries."
+          :code $ quote $ defn decode-member-names (value)
+            filter-map-kv
+              decode-map-as value $ :: 'Map 'Number 'Dynamic
+              fn (key name)
+                hint-fn $ {}
+                  :args $ [] 'Number 'Dynamic
+                  :return $ :: 'calcit.core/MapEntryDecision 'Number $ :: 'Option 'String
+                match (cumulo-reel.app.protocol/decode-optional-string name)
+                  (:err detail)
+                    raise $ str |Invalid-member-name-at- key |: detail
+                  (:ok decoded) (MapEntryDecision :keep key decoded)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Input
+            :generics $ [] 'Input
+            :return $ :: 'Map 'Number $ :: 'Option 'String
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-guest-and-named-keys)
+              :code $ quote $ assert=
+                {}
+                  7 $ Option :none
+                  9 $ Option :some |Ada
+                decode-member-names $ {} (7 nil) (9 |Ada)
+            %{} 'TestEntry (:name |rejects-number-name)
+              :code $ quote $ assert= true
+                try
+                  do
+                    decode-member-names $ {} $ 7 12
+                    , false
+                  fn (message)
+                    hint-fn $ {}
+                      :args $ [] 'String
+                      :return 'Bool
+                    .includes? message |Invalid-member-name-at-7
+            %{} 'TestEntry (:name |rejects-string-key)
+              :code $ quote $ assert= true
+                try
+                  do
+                    decode-member-names $ {} $ |7 nil
+                    , false
+                  fn (message)
+                    hint-fn $ {}
+                      :args $ [] 'String
+                      :return 'Bool
+                    .includes? message "|expected number"
         'member-display-name $ %{} 'CodeEntry
           :doc "|Display missing member names as guests while preserving present strings and session keys."
           :code $ quote $ defn member-display-name (username)
-            match (js-nullish->option username)
+            match username
               (:none) "|访客"
               (:some name) name
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] $ :: 'JsNullish 'String
+            :args $ [] $ :: 'Option 'String
           :tests $ []
             %{} 'TestEntry (:name |nil-is-guest)
-              :code $ quote $ assert= "|访客" (member-display-name nil)
+              :code $ quote $ assert= "|访客"
+                member-display-name $ Option :none
             %{} 'TestEntry (:name |present-name-preserved)
-              :code $ quote $ assert= |Ada (member-display-name |Ada)
+              :code $ quote $ assert= |Ada
+                member-display-name $ Option :some |Ada
             %{} 'TestEntry (:name |empty-name-preserved)
-              :code $ quote $ assert= | (member-display-name |)
+              :code $ quote $ assert= |
+                member-display-name $ Option :some |
             %{} 'TestEntry (:name |number-key-and-guest-preserved)
               :code $ quote $ match
-                first $ map-entries $ {} (7 nil)
+                first $ map-entries $ decode-member-names
+                  {} $ 7 nil
                 (:none) (raise |Expected-member-entry)
                 (:some entry)
                   do
@@ -1436,7 +1509,7 @@
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
-                reel $ assert-type @*reel 'cumulo-reel.core/ReelState
+                reel $ deref *reel
                 file-content $ format-cirru-edn $ assoc (assert-type reel.:db 'cumulo-reel.schema/Database) :sessions ({})
                 storage-path storage-file
                 backup-path $ get-backup-path!
@@ -1575,7 +1648,7 @@
                   session $ assert-type
                     match (get db.:sessions sid)
                       (:some found) found
-                      (:none) session
+                      (:none) cumulo-reel.schema/session
                     , 'cumulo-reel.schema/Session
                   old-store $ match (get @*client-caches sid)
                     (:some cached) (cumulo-reel.app.protocol/encode-client-store cached)
@@ -2699,17 +2772,18 @@
           :doc "|Plan one connection's transport work: drops for partitions it may no longer see, then snapshots or retained delta chains for authorized partitions."
           :code $ quote $ defn connection-actions (partitions progress desired)
             let
-                drops $ -> (.to-list progress)
-                  filter $ fn (pair)
+                drops $ foldl (map-entries progress)
+                  assert-type ([])
+                    :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                  fn (acc entry)
                     hint-fn $ {}
-                      :args $ [] 'Dynamic
-                      :return 'Bool
-                    let[] (key _progress) pair $ not $ includes? desired key
-                  map $ fn (pair)
-                    hint-fn $ {}
-                      :args $ [] 'Dynamic
-                      :return $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
-                    let[] (key _progress) pair $ PartitionAction :drop $ assert-type key 'K
+                      :args $ []
+                        :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                        :: 'calcit.core/MapEntry 'K 'cumulo-reel.partition/PartitionProgress
+                      :return $ :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                    if
+                      includes? desired $ :key entry
+                      , acc $ conj acc $ PartitionAction :drop (:key entry)
                 sends $ assert-type
                   foldl (.to-list desired)
                     assert-type ([])

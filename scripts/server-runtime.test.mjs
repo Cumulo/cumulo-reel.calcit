@@ -106,6 +106,25 @@ test('partition chains replay original atomicity contracts on fresh generated JS
     run('--entry', 'server', '--init-fn', 'cumulo-reel.partition/run-apply-tests',
       '--reload-fn', 'cumulo-reel.partition/run-apply-tests', '--emit-path', output, 'js');
     (await import(pathToFileURL(join(output, 'cumulo-reel.partition.mjs')).href)).run_apply_tests();
+
+    // Replay the attached display and wire-boundary contracts without changing their ASTs.
+    const memberTargets = ['member-display-name', 'decode-member-names']
+      .map(name => `cumulo-reel.app.comp.profile/${name}`);
+    const memberTests = memberTargets.flatMap(target =>
+      JSON.parse(run('query', 'def', target, '--format', 'json')).data.tests);
+    assert.equal(memberTests.length, 7, 'Expected every member display and wire-boundary case');
+    for (const target of memberTargets) run('test', target, '--require-match');
+    const operations = [
+      ['edit', 'def', 'cumulo-reel.app.comp.profile/run-member-tests', '--input-format', 'json-ast', '--code',
+        JSON.stringify(['defn', 'run-member-tests', [], ...memberTests.map(test => test.code), '&unit'])],
+      ['edit', 'schema', 'cumulo-reel.app.comp.profile/run-member-tests', '--input-format', 'cirru', '--code',
+        "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)"],
+    ];
+    const preview = JSON.parse(run('edit', 'transaction', '--code', JSON.stringify(operations), '--dry-run', '--format', 'json'));
+    run('edit', 'transaction', '--code', JSON.stringify(operations), '--expect-revision', preview.scoped_revision, '--format', 'json');
+    run('--entry', 'server', '--init-fn', 'cumulo-reel.app.comp.profile/run-member-tests',
+      '--reload-fn', 'cumulo-reel.app.comp.profile/run-member-tests', '--emit-path', output, 'js');
+    (await import(pathToFileURL(join(output, 'cumulo-reel.app.comp.profile.mjs')).href)).run_member_tests();
   } finally {
     await rm(fixture, { recursive: true, force: true });
     assert.deepEqual(await readFile(join(project, 'calcit.cirru')), original);
@@ -208,8 +227,11 @@ test('server persistence writes storage and a dated backup', async () => {
   const temporaryDir = await mkdtemp(join(tmpdir(), 'cumulo-reel-persist-'));
   try {
     process.chdir(temporaryDir);
-    const { persist_db_$x_: persist } = await import('../js-server-out/cumulo-reel.app.server.mjs');
-    persist();
+    const { persist_db_$x_: persist, dispatch_$x_: dispatch } = await import('../js-server-out/cumulo-reel.app.server.mjs');
+    const { parse_cirru_edn: parse } = await import('@calcit/procs');
+    assert.equal(dispatch(parse(':: :session/connect'), 71), undefined, 'state-changing dispatch must return Unit, not the new ReelState');
+    assert.equal(dispatch(parse(':: :effect/persist'), 71), undefined, 'the persistence branch must also return Unit');
+    assert.equal(persist(), undefined);
     const storage = await readFile('storage.cirru', 'utf8');
     assert.match(storage, /Database/);
     const months = await readdir('backups');

@@ -1457,9 +1457,7 @@
           :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
-            %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
-              :records $ []
-              :merged? false
+            cumulo-reel.core/ReelState :base @*initial-db :db @*initial-db :records ([]) :merged? false
           :examples $ []
           :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
         'dispatch! $ %{} 'CodeEntry (:doc |)
@@ -1470,7 +1468,9 @@
               if config/dev? $ println |Dispatch! (str op) sid
               match op
                 (:effect/persist) (persist-db!)
-                _ $ reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
+                _ $ do
+                  reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
+                  , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'cumulo-reel.schema/Op 'Number
@@ -2571,22 +2571,18 @@
               (:complete changes stats)
                 cond
                     empty? changes
-                    %{} PartitionStep (:state state)
-                      :advance $ PartitionAdvance :unchanged
+                    PartitionStep :state state :advance $ PartitionAdvance :unchanged
                   (> (count changes) operation-limit)
                     reset-step state view stats
                   true $ let
                       next-revision $ inc $ :revision state
-                      delta $ %{} PartitionDelta
-                        :base $ :revision state
-                        :revision next-revision
-                        :changes changes
-                    %{} PartitionStep
-                      :state $ struct-with state (:revision next-revision) (:view view)
+                      delta $ PartitionDelta :base (:revision state) :revision next-revision :changes changes
+                    PartitionStep :state
+                      struct-with state (:revision next-revision) (:view view)
                         :history $ trim-history
                           conj (:history state) delta
                           , history-limit
-                      :advance $ PartitionAdvance :delta delta stats
+                      , :advance $ PartitionAdvance :delta delta stats
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) 'V 'recollect.diff/DiffBudget 'Number 'Number
@@ -2682,7 +2678,7 @@
                   (:ready revision view)
                     match (decode-view view)
                       (:ok typed)
-                        Result :ok $ %{} PartitionSlot (:epoch epoch) (:revision revision) (:view typed)
+                        Result :ok $ PartitionSlot :epoch epoch :revision revision :view typed
                       (:err detail) (Result :err detail)
           :examples $ []
           :schema $ :: 'Fn $ {}
@@ -2911,18 +2907,14 @@
                       :acked progress
                       , 0
                   (:none) 0
-              %{} PartitionProgress
-                :epoch $ :epoch state
-                :acked acked
-                :in-flight $ Option :some $ :revision state
+              PartitionProgress :epoch (:epoch state) :acked acked :in-flight $ Option :some $ :revision state
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
             :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'Option 'cumulo-reel.partition/PartitionProgress)
             :generics $ [] 'K 'V
         'new-partition $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-partition (key epoch view)
-            %{} PartitionState (:key key) (:epoch epoch) (:revision 1) (:view view)
-              :history $ []
+            PartitionState :key key :epoch epoch :revision 1 :view view :history $ []
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'K 'Number 'V
@@ -2996,12 +2988,12 @@
             :args $ [] 'cumulo-reel.partition/PartitionProgress
         'reset-step $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reset-step (state view stats)
-            %{} PartitionStep
-              :state $ struct-with state
+            PartitionStep :state
+              struct-with state
                 :revision $ inc $ :revision state
                 :view view
                 :history $ []
-              :advance $ PartitionAdvance :reset stats
+              , :advance $ PartitionAdvance :reset stats
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) 'V 'recollect.diff/DiffStats

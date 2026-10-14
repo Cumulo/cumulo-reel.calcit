@@ -433,11 +433,12 @@
                 =< 8 nil
                 list->
                   {} $ :class-name css/row
-                  map (&map:to-list members)
-                    fn (pair)
-                      let[] (k username) pair $ [] k $ div
-                        {} $ :class-name css-member-label
-                        <> username
+                  map (map-entries members)
+                    fn (entry)
+                      [] (:key entry)
+                        div
+                          {} $ :class-name css-member-label
+                          <> $ member-display-name $ :value entry
               =< nil 48
               div ({})
                 button
@@ -468,6 +469,30 @@
               :margin "|0 4px"
           :examples $ []
           :schema $ :: 'String
+        'member-display-name $ %{} 'CodeEntry
+          :doc "|Display missing member names as guests while preserving present strings and session keys."
+          :code $ quote $ defn member-display-name (username)
+            match (js-nullish->option username)
+              (:none) "|访客"
+              (:some name) name
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] $ :: 'JsNullish 'String
+          :tests $ []
+            %{} 'TestEntry (:name |nil-is-guest)
+              :code $ quote $ assert= "|访客" (member-display-name nil)
+            %{} 'TestEntry (:name |present-name-preserved)
+              :code $ quote $ assert= |Ada (member-display-name |Ada)
+            %{} 'TestEntry (:name |empty-name-preserved)
+              :code $ quote $ assert= | (member-display-name |)
+            %{} 'TestEntry (:name |number-key-and-guest-preserved)
+              :code $ quote $ match
+                first $ map-entries $ {} (7 nil)
+                (:none) (raise |Expected-member-entry)
+                (:some entry)
+                  do
+                    assert= 7 $ :key entry
+                    assert= "|访客" $ member-display-name $ :value entry
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.profile
           :require

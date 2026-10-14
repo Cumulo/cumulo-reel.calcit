@@ -61,7 +61,8 @@
                             , s
                           :: 'Map 'Tag 'Dynamic
                         , &unit
-                    (:effect/connect) (connect!)
+                    (:effect/connect)
+                      do (connect!) &unit
                     _ $ ws-send! op
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)

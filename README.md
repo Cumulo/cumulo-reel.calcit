@@ -7,7 +7,7 @@ Cumulo 的 Reel 状态、操作记录与重放库。
 服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`：
 
 ```cirru
-defref *reel $ %{} cumulo-reel.core/ReelState
+defref *reel $ cumulo-reel.core/ReelState
   :base initial-db
   :db initial-db
   :records $ []
@@ -49,6 +49,7 @@ caps verify --toolchain
 calcit calcit.cirru --check-only --warn-dyn-method
 calcit calcit.cirru --entry server --check-only --warn-dyn-method
 yarn check-types
+calcit calcit.cirru fix --workflow strict --verify --format edn
 calcit calcit.cirru test --require-match
 
 yarn compile-page
@@ -72,68 +73,37 @@ Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 发布后修复；原有普通 `caps --ci` 会显示版本差异并选择兼容的最高 SemVer。
 非 strict 下载成功不能作为其他消费者严格依赖解析通过的证据。
 
-## 发布工具链迁移当前状态
+## 应用模板的类型边界
 
-本轮未发布的 `0.0.52` 候选使用正式 Calcit/procs `0.29.0` 和稳定递归模块依赖。
-客户端顶层状态已改为 `Ref<Option<ClientStore>>`，离线、重连和渲染通过 Option
-分支处理；接收原有 nil 传输时转换为 `Option :none`，非法 patch 仍不更新 Ref。
-Store watcher 使用两项 `Option<ClientStore>` 参数的具体合同，不再借用独立泛型。
-ClientStore.user 也已改为 Option；传输投影只在 wire 边界还原原 nil/具名用户，
-业务 Store 仍为 Struct。两个入口及 browser/node 全公开严格检查通过；原有
-50 项附带测试和 6 项 Node 运行测试全部通过，包括同 AST 的协议 JS 回放、
-增量 patch、原子拒绝、真实 WebSocket、持久化和 SIGINT。前后端生成及 Vite 构建通过。
-旧 nominal Struct wire 格式已恢复为独立用例，与 legacy Map 用例分别通过原生和
-生成 JS 回放。Router.router 已改为 Option；wire 专用的 Router/Session 投影只展开
-具名协议字段，Router.data 仍保持开放值。现有增量测试覆盖 home 到 profile 及嵌套
-子路由变化，失败先复现再修复。
-Session.user-id/id/nickname 也已改为 Option，同步迁移连接、登录、注册、退出及投影。
-成员 wire 投影使用带具体 sid/Session 合同的 Map 遍历，避免 List 配对丢失类型；
-字符串 Option 只在 wire 编码函数还原为旧 nil/String。最新严格检查为 browser
-101/101、node 118/118；原有 50 项测试、6 项 Node 运行回归、前后端生成和 Vite
-构建通过。上轮隔离存储可加载并登录旧测试用户，新注册用户的资料/成员和退出
-也通过且无 error 日志。ClientStore.name 和 ClientUser.avatar 随后也迁移为 Option，
-wire 编码仍保留 nil/String；现有增量用例覆盖显示名 none/some 和嵌套头像更新。
-原有 50 项测试、6 项 Node 回归、构建及隔离存储用户的浏览器登录/资料/退出通过。
-零调用的旧 decode-nullable-string 已退役，源码可从 Git 历史恢复。
-User.avatar 也已迁移为 Option；存储读取验证 Database/User 字段和 Map key 后才
-构造业务 Struct，不再通过 assert-type 接受未经验证的旧数据。旧 nil/String 头像
-及新持久化 Option 均支持，非法头像被拒绝；pages 内容保持开放，不改变业务数据。
-持久化仍写具名 Database 并清空 sessions。最新严格检查 browser 101/101、node
-124/124，52 项附带测试和既有 6 项 Node 回归全部通过；新增存储用例复用原有
-协议 native/JS 回放入口，没有独立检查脚本。前后端生成和 Vite 构建通过，前轮
-隔离旧数据库也通过生成 JS 解码及新格式往返。此次存储变更后的真实浏览器旧用户
-登录、资料/成员显示和退出已通过，error 日志为空。7 处旧 option:* 已改为当前
-Option 方法，废弃 w-log 改为 dbg；项目 deprecated-call 为零，server 入口动态
-方法报告为零。开放的 Router.data、pages 和协议输入保持原有边界，不以覆盖率
-数字为由强制收窄。候选尚未发布，不据此宣称全生态迁移已完成。
+客户端使用 `Ref<Option<ClientStore>>` 表达离线与已连接状态；Session、Router、
+用户和头像的缺失值使用 Option。网络投影仍兼容原 nil/String 与具名/Map wire，
+输入先解码为具名值，非法增量 patch 不更新 Ref。持久化读取检查 Database/User
+字段和 Map key，写入时清空 sessions；pages 和 Router.data 保持开放边界。
 
-以下为此前发布工具链的历史验收记录，不代表本轮正式版候选已完成：
+profile 读取路由数据时验证 Number session key 和 nil/String 用户名，再交给
+`Map<Number,Option<String>>` 的显示逻辑。访客条目保留，显示“访客”；已登录
+用户名（包括空字符串）原样保留，非法 key 或用户名拒绝，不改 wire 格式。
+通过 `map-entries` 保留 key/value 类型，而不是拆解异构 pair 后加断言。
 
-Calcit/procs 固定为已发布的 `0.29.0-alpha.16`，使用已发布的 cumulo-util `0.0.25`、
-ws-edn `0.0.35`、Message `0.0.30`、Respo UI `0.7.32-alpha.5`、Respo `0.16.114-alpha.8`、
-JS-FFI `0.2.1-alpha.13` 和 Recollect `0.0.56`。当前验证不使用本地开发模块覆盖。
-模块/package 版本为 `0.0.50`；发布状态以同名 Git tag 与 GitHub Release 为准。
+登录状态和事件文本在实际使用前解码。浏览器挂载使用 Respo 的类型化 DOM
+查询入口；应用层不把另一个库的 host 类型直接断言为 Respo DomElement。
+dispatch 成功返回 Unit，不把底层连接 handle 或 `reset!` 的新状态泄漏给 callback。
+状态树使用受检 cursor 和 `update-state-tree`，保留 Tag/String/Number 混合路径。
 
-- 客户端和服务端严格检查通过；原生附属测试 49/49（含分区引擎 10 项）。
-- 协议输入先验证 envelope、change-op 和操作 payload，再构造具名值。
-  nullable 字段保留 nil，Router.data 继续接受开放数据。非法 patch 不发布状态。
-- `decode-open` 原样返回输入，以泛型保留输入/输出的类型关系。它不验证
-  Router.data，也不会把开放的路由数据变成已验证业务值。
-- `decode-field` 以泛型保留 Map 值与 decoder 参数的关系。String 专用
-  decoder 接到 Number Map 时被静态拒绝；开放协议字段仍逐项验证。
-  class mapper 使用 `Map<Tag,EnumDef>`，只恢复定义身份，不证明 payload。
-- Number、String、Bool、Tag 标量 decoder 使用 `Fn<Input>(Input)`，返回对应
-  具体类型的 `Result`。任意输入仍经 `try-decode-map-as` 校验，不将输入泛型
-  当作已验证数据；外部协议、nullable 数据与历史记录的开放边界保持。
-- nullable、嵌套对象与 patch 接口也保留输入泛型；原 envelope、字段、参数数量、
-  payload 和 patch 结果校验不变。`play-records` 保留 List 元素与回调参数的
-  `RecordValue` 关系，数据库仍为 Db；应用 replay decoder 的四个输入泛型独立。
-- 已验证重新生成 JS 的协议回放、真实 WebSocket、端口占用失败、持久化、
-  服务端启动和 SIGINT 退出；实际浏览器连接、注册、资料/成员显示及退出通过。
-- 旧 Dynamic 数量 baseline 已退役，改用全项目按宿主划分的公开 API 检查：
-  browser 95 个定义、node 112 个定义，覆盖未被入口调用的公开函数。
-  严格入口检查、严格 Caps、原生测试、生成 JS 的运行回归与 COS 内置验证均保留。
-  开放协议与历史记录仍在实际使用前解码，不通过删类型或增加强转满足统计指标。
+`decode-open` 保留输入/输出的泛型关系，不证明开放 payload；`decode-field` 保留
+Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map。协议、
+历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
+
+工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
+当前预发布验证使用已发布的 `0.30.0-alpha.3`，安装不覆盖本地开发模块。
+依赖的正式版本以 `deps.cirru` 为准，模块发布状态以同名 tag/Release 为准。
+语义测试放在定义 `:tests`，原 Node harness 重放同一 AST，并验证真实 WebSocket、
+持久化与 SIGINT；浏览器回归使用隔离存储，不接触生产数据。
+
+### 限制
+
+- Router.data、pages、事件与传输输入不是已证明的闭合业务模型，具体消费前必须检查。
+- 完整升级验收还包括发布版 strict workflow 与实际业务，不以局部类型检查或源码零命中替代。
 
 迁移经过与验证范围见：
 

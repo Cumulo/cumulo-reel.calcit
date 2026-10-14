@@ -49,6 +49,7 @@ jobs:
         calcit calcit.cirru --check-only --warn-dyn-method
         calcit calcit.cirru --entry server --check-only --warn-dyn-method
         yarn check-types
+        calcit calcit.cirru fix --workflow strict --verify --format edn
 
     - name: Run Calcit tests
       run: calcit calcit.cirru test --require-match --summary-only --format json

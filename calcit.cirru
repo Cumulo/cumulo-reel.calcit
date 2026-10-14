@@ -54,19 +54,56 @@
                   recur (:: op data) (Option :none)
                   match op
                     (:states cursor s)
-                      reset! *states $ assert-type
-                        &map:get
-                          update-states
-                            {} $ :states @*states
-                            , cursor s
-                          , :states
-                        :: 'Map 'Tag 'Dynamic
+                      do
+                        reset! *states $ decode-map-as
+                          update-state-tree @*states
+                            decode-map-as cursor $ :: 'List 'Dynamic
+                            , s
+                          :: 'Map 'Tag 'Dynamic
+                        , &unit
                     (:effect/connect) (connect!)
                     _ $ ws-send! op
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'Dynamic $ :: 'Option 'Dynamic
             :features $ #{} :js-ffi
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-legacy-list-and-mixed-cursor-keys)
+              :code $ quote $ let
+                  original @*states
+                reset! *states $ {}
+                assert= &unit $ dispatch! ([] :panel |member 1) (Option :some :ready)
+                assert=
+                  {} $ :panel $ {}
+                    |member $ {} $ 1
+                      {} $ :data :ready
+                  , @*states
+                assert= &unit $ dispatch!
+                  :: :states ([] :panel |member 2) :next
+                  Option :none
+                assert=
+                  {} $ :panel $ {}
+                    |member $ {}
+                      1 $ {} $ :data :ready
+                      2 $ {} $ :data :next
+                  , @*states
+                reset! *states original
+              :tags $ #{} :state :unit
+            %{} 'TestEntry (:name |rejects-invalid-cursor-before-state-mutation)
+              :code $ quote $ let
+                  original @*states
+                  rejected $ try
+                    do
+                      dispatch! (:: :states 7 :invalid) (Option :none)
+                      , false
+                    fn (message)
+                      hint-fn $ {}
+                        :args $ [] 'String
+                        :return 'Bool
+                      , true
+                assert= true rejected
+                assert= original @*states
+              :tags $ #{} :state :unit
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -159,7 +196,7 @@
         :code $ quote $ ns cumulo-reel.app.client
           :require
             [] respo.core :refer $ [] render! clear-cache! realize-ssr!
-            [] respo.cursor :refer $ [] update-states
+            respo.cursor :refer $ update-state-tree
             [] cumulo-reel.app.comp.container :refer $ [] comp-container
             [] cljs.reader :refer $ [] read-string
             [] cumulo-reel.schema :as schema

@@ -49,6 +49,7 @@ caps verify --toolchain
 calcit calcit.cirru --check-only --warn-dyn-method
 calcit calcit.cirru --entry server --check-only --warn-dyn-method
 yarn check-types
+calcit calcit.cirru fix --workflow strict --verify --format edn
 calcit calcit.cirru test --require-match
 
 yarn compile-page
@@ -94,7 +95,7 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前预发布验证使用已发布的 `0.30.0-alpha.2`，安装不覆盖本地开发模块。
+当前预发布验证使用已发布的 `0.30.0-alpha.3`，安装不覆盖本地开发模块。
 依赖的正式版本以 `deps.cirru` 为准，模块发布状态以同名 tag/Release 为准。
 语义测试放在定义 `:tests`，原 Node harness 重放同一 AST，并验证真实 WebSocket、
 持久化与 SIGINT；浏览器回归使用隔离存储，不接触生产数据。
@@ -102,7 +103,6 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 ### 限制
 
 - Router.data、pages、事件与传输输入不是已证明的闭合业务模型，具体消费前必须检查。
-- Calcit alpha.2 的 strict proof 可能检查 JS-backed 定义未执行的 Cirru body；应核对真实 JS 来源与宿主测试，不给忽略的 body 加假校验。
 - 完整升级验收还包括发布版 strict workflow 与实际业务，不以局部类型检查或源码零命中替代。
 
 迁移经过与验证范围见：

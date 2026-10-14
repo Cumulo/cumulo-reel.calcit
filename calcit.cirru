@@ -1716,7 +1716,7 @@
                 :args $ [] 'Number
           :tests $ [] $ %{} 'TestEntry (:name |skips-disconnected-sessions)
             :code $ quote $ let
-                seen $ ref $ []
+                seen $ ref $ assert-type ([]) (:: 'List 'Number)
               reset! *clients $ {}
               each! $ fn (sid) (swap! seen conj sid) &unit
               assert= ([]) @seen

@@ -195,13 +195,13 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.client
           :require
-            [] respo.core :refer $ [] render! clear-cache! realize-ssr!
+            respo.core :refer $ render! clear-cache! realize-ssr!
             respo.cursor :refer $ update-state-tree
-            [] cumulo-reel.app.comp.container :refer $ [] comp-container
-            [] cljs.reader :refer $ [] read-string
-            [] cumulo-reel.schema :as schema
-            [] cumulo-reel.app.config :as config
-            [] ws-edn.client :refer $ [] ws-connect! ws-send!
+            cumulo-reel.app.comp.container :refer $ comp-container
+            cljs.reader :refer $ read-string
+            cumulo-reel.schema :as schema
+            cumulo-reel.app.config :as config
+            ws-edn.client :refer $ ws-connect! ws-send!
             cumulo-util.activity :refer $ page-visible?
             js-ffi.browser :as browser
             js-ffi.shared :as shared
@@ -366,13 +366,13 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.login
           :require
-            [] respo.core :refer $ [] defcomp <> div input button span
-            [] respo.comp.space :refer $ [] =<
-            [] respo.comp.inspect :refer $ [] comp-inspect
-            [] respo-ui.core :as ui
-            [] cumulo-reel.schema :as schema
-            [] cumulo-reel.style :as style
-            [] cumulo-reel.app.config :as config
+            respo.core :refer $ defcomp <> div input button span
+            respo.comp.space :refer $ =<
+            respo.comp.inspect :refer $ comp-inspect
+            respo-ui.core :as ui
+            cumulo-reel.schema :as schema
+            cumulo-reel.style :as style
+            cumulo-reel.app.config :as config
             js-ffi.browser :as browser
     'cumulo-reel.app.comp.navigation $ %{} 'FileEntry
       :defs $ {}
@@ -496,7 +496,7 @@
         :code $ quote $ ns cumulo-reel.app.config
           :require
             cumulo-reel.schema :refer $ SiteConfig
-            [] cumulo-util.core :refer $ [] get-env!
+            cumulo-util.core :refer $ get-env!
     'cumulo-reel.app.protocol $ %{} 'FileEntry
       :defs $ {}
         'apply-server-patch $ %{} 'CodeEntry (:doc "|验证消息与 change-op，应用 patch 后验证完整结果；失败不发布状态。")
@@ -2069,8 +2069,8 @@
             :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Op 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater
-          :require ([] cumulo-reel.app.updater.session :as session) ([] cumulo-reel.app.updater.user :as user) ([] cumulo-reel.app.updater.router :as router) ([] cumulo-reel.schema :as schema)
-            [] respo-message.updater :refer $ [] update-messages
+          :require (cumulo-reel.app.updater.session :as session) (cumulo-reel.app.updater.user :as user) (cumulo-reel.app.updater.router :as router) (cumulo-reel.schema :as schema)
+            respo-message.updater :refer $ update-messages
     'cumulo-reel.app.updater.router $ %{} 'FileEntry
       :defs $ {} $ 'change
         %{} 'CodeEntry (:doc |)
@@ -2120,7 +2120,7 @@
             :args $ [] 'cumulo-reel.schema/Database 'String 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.session
-          :require $ [] cumulo-reel.schema :as schema
+          :require $ cumulo-reel.schema :as schema
     'cumulo-reel.app.updater.user $ %{} 'FileEntry
       :defs $ {}
         'log-in $ %{} 'CodeEntry (:doc |)
@@ -3081,5 +3081,5 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.style
           :require
-            [] respo.util.format :refer $ [] hsl
-            [] respo-ui.core :as ui
+            respo.util.format :refer $ hsl
+            respo-ui.core :as ui

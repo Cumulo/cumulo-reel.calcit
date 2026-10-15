@@ -4,9 +4,10 @@ Cumulo 的 Reel 状态、操作记录与重放库。
 
 ## 使用
 
-服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`：
+服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`。
+下面是应用接线示意，需要由应用提供 initial-db、updater、操作和元数据，并非独立程序：
 
-```cirru
+```cirru.no-check
 defref *reel $ cumulo-reel.core/ReelState
   :base initial-db
   :db initial-db
@@ -20,10 +21,10 @@ cumulo-reel.core/reel-reducer @*reel updater op sid op-id op-time dev?
 reset! *reel (cumulo-reel.core/refresh-reel @*reel initial-db replay-updater)
 ```
 
-客户端：
+客户端在已解码的 ClientStore 上读取记录数量，交给 Respo 的 JS 渲染环境：
 
-```cirru
-cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
+```cirru.no-check
+cumulo-reel.comp.reel/comp-reel store.:reel-length ({})
 ```
 
 `ReelState<Db>` 的 base/db 使用同一类型，实时 updater 也必须返回 Db。
@@ -99,6 +100,14 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 依赖的正式版本以 `deps.cirru` 为准，模块发布状态以同名 tag/Release 为准。
 语义测试放在定义 `:tests`，原 Node harness 重放同一 AST，并验证真实 WebSocket、
 持久化与 SIGINT；浏览器回归使用隔离存储，不接触生产数据。
+
+为 0.30.1 迁移的 12 处程序读取及 4 处原测试读取使用公开 `get` 与 Option 匹配，
+保留缺失和存在 nil 的原结果、惰性 fallback、字段解码及原断言。登录与事件入口继续
+拒绝非 Map，由既有 typed get lowering 保留 Map 专用访问，不叠加重复解码；
+容器仍在原分支先执行 nil state fallback，不提前拒绝离线状态。
+原 61 项定义测试、完整 strict 及扩展后的 7 项 Node 回归在上述旧正式配对上通过；
+混合 cursor 引用身份、空字符串/Unicode 输入、非法事件不派发及错误传播均有宿主回放。
+新版正式工具链、已发布的上游依赖图及真实浏览器还须重新验收，不能用准备阶段结果代替。
 
 ### 限制
 

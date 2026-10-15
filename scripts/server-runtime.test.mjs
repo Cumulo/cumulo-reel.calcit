@@ -8,6 +8,78 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import WebSocket from 'ws';
 
+test('component Map reads preserve host rejection, cursor identity and nil-state fallback', async () => {
+  const c = await import('../js-out/calcit.core.mjs');
+  const login = await import('../js-out/cumulo-reel.app.comp.login.mjs');
+  const container = await import('../js-out/cumulo-reel.app.comp.container.mjs');
+  const protocol = await import('../js-out/cumulo-reel.app.protocol.mjs');
+  const invalidMaps = [null, undefined, false, 7, 'invalid', c.parse_cirru_edn('[]'), {},
+    c.parse_cirru_edn("%{} 'Foreign (:value |text)")];
+  for (const value of invalidMaps) assert.throws(() => login.comp_login(value), /map/i);
+
+  const cursor = c.parse_cirru_edn('[] :login |panel 7');
+  const states = c._$n__$M_(c.turn_tag('cursor'), cursor, c.turn_tag('extra'), 'preserved');
+  const inputs = [];
+  const visit = node => {
+    const value = node.get(1);
+    if (node.tag.value === 'component') {
+      const tree = value.get('tree');
+      if (tree.tag.value === 'some') visit(tree.get(1));
+      return;
+    }
+    assert.equal(node.tag.value, 'element');
+    if (value.get('name').value === 'input') inputs.push(value);
+    for (const pair of c.listToArray(value.get('children'))) {
+      const child = pair.get('node');
+      if (child.tag.value === 'some') visit(child.get(1));
+    }
+  };
+  visit(c.option_$o_unwrap(login.comp_login(states).get('tree')));
+  assert.equal(inputs.length, 2);
+  for (const [index, field] of ['username', 'password'].entries()) {
+    const handler = inputs[index].get('event').get(c.turn_tag('input'));
+    const calls = [];
+    const dispatch = (...args) => { calls.push(args); };
+    for (const value of invalidMaps) assert.throws(() => handler(value, dispatch), /map/i);
+    for (const value of [null, false, 0]) {
+      assert.throws(() => handler(c._$n__$M_(c.turn_tag('value'), value), dispatch));
+    }
+    assert.throws(() => handler(c._$n__$M_(), dispatch));
+    assert.equal(calls.length, 0, 'invalid events must not dispatch');
+    for (const text of ['', '中文']) {
+      assert.equal(handler(c._$n__$M_(c.turn_tag('value'), text), dispatch), undefined);
+      const [actualCursor, state] = calls.at(-1);
+      assert.equal(actualCursor, cursor, 'keep the original Tag/String/Number cursor object');
+      assert.equal(state.get(field), text);
+    }
+    const failure = new Error('dispatch failed');
+    assert.throws(() => handler(c.parse_cirru_edn('{} (:value |valid)'), () => { throw failure; }), error => error === failure);
+  }
+  assert.equal(states.get(c.turn_tag('extra')), 'preserved');
+
+  const raw = c.parse_cirru_edn(`{}
+  :session $ {}
+    :id 1
+    :user-id nil
+    :nickname nil
+    :router $ {} (:name :home) (:title |Home) (:router nil) (:data nil)
+    :messages $ {}
+  :router $ {} (:name :home) (:title |Home) (:router nil) (:data nil)
+  :logged-in? false
+  :color |red
+  :count 0
+  :reel-length 0
+  :name nil
+  :user nil`);
+  const decoded = protocol.decode_client_store(raw);
+  assert.equal(decoded.tag.value, 'ok');
+  const store = c._PCT_some(decoded.get(1));
+  for (const state of [null, c._$n__$M_()]) assert.doesNotThrow(() => container.comp_container(state, store));
+  // Unit/undefined is not Nil/null and must not activate the existing nil fallback.
+  for (const state of invalidMaps.slice(1)) assert.throws(() => container.comp_container(state, store), /map/i);
+  assert.doesNotThrow(() => container.comp_container(7, c._PCT_none()), 'the offline branch does not inspect states');
+});
+
 test('protocol definition tests replay on native and fresh generated JS', async () => {
   const project = fileURLToPath(new URL('../', import.meta.url));
   const fixture = await mkdtemp(join(tmpdir(), 'cumulo-reel-protocol-'));

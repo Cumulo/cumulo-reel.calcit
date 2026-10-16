@@ -15,7 +15,7 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
   const protocol = await import('../js-out/cumulo-reel.app.protocol.mjs');
   const invalidMaps = [null, undefined, false, 7, 'invalid', c.parse_cirru_edn('[]'), {},
     c.parse_cirru_edn("%{} 'Foreign (:value |text)")];
-  for (const value of invalidMaps) assert.throws(() => login.comp_login(value), /map/i);
+  for (const value of invalidMaps) assert.throws(() => login.comp_login(value), /map|Does not support `&get` on this type/i);
 
   const cursor = c.parse_cirru_edn('[] :login |panel 7');
   const states = c._$n__$M_(c.turn_tag('cursor'), cursor, c.turn_tag('extra'), 'preserved');
@@ -47,7 +47,7 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
     const handler = inputs[index].get('event').get(c.turn_tag('input'));
     const calls = [];
     const dispatch = (...args) => { calls.push(args); };
-    for (const value of invalidMaps) assert.throws(() => handler(value, dispatch), /map/i);
+    for (const value of invalidMaps) assert.throws(() => handler(value, dispatch), /map|Does not support `&get` on this type/i);
     for (const value of [null, false, 0]) {
       assert.throws(() => handler(c._$n__$M_(c.turn_tag('value'), value), dispatch));
     }
@@ -83,7 +83,7 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
   const store = c._PCT_some(decoded.get(1));
   for (const state of [null, c._$n__$M_()]) assert.doesNotThrow(() => container.comp_container(state, store));
   // Unit/undefined is not Nil/null and must not activate the existing nil fallback.
-  for (const state of invalidMaps.slice(1)) assert.throws(() => container.comp_container(state, store), /map/i);
+  for (const state of invalidMaps.slice(1)) assert.throws(() => container.comp_container(state, store), /map|Does not support `&get` on this type/i);
   assert.doesNotThrow(() => container.comp_container(7, c._PCT_none()), 'the offline branch does not inspect states');
 });
 

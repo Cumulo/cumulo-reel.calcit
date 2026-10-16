@@ -163,7 +163,7 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] $ :: 'Fn
               {} (:return 'Unit)
-                :args $ [] (:: 'JsNullish 'respo.dom/DomElement) 'respo.schema/Component $ :: 'Fn
+                :args $ [] 'respo.dom/DomElement 'respo.schema/Component $ :: 'Fn
                   {} (:return 'Unit)
                     :args $ [] 'Dynamic
             :features $ #{} :js-ffi

@@ -66,6 +66,44 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
   }
   assert.equal(states.get(c.turn_tag('extra')), 'preserved');
 
+  const legacyState = c.parse_cirru_edn("%{} 'LegacyLogin (:username |Ada) (:password |legacy)");
+  for (const [source, expected] of [
+    [c._$n__$M_(), ['', '']],
+    [c._$n__$M_(c.turn_tag('data'), null), ['', '']],
+    [c._$n__$M_(c.turn_tag('data'), data), ['seed-user', 'seed-password']],
+    [c._$n__$M_(c.turn_tag('data'), legacyState), ['Ada', 'legacy']],
+  ]) {
+    inputs.length = 0;
+    visit(c.option_$o_unwrap(login.comp_login(source).get('tree')));
+    assert.deepEqual(inputValues(), expected);
+  }
+  for (const [value, type] of [[undefined, 'unit'], [false, 'bool'], [0, 'number'], ['', 'string'], [c.parse_cirru_edn('[]'), 'list']]) {
+    assert.throws(() => login.comp_login(c._$n__$M_(c.turn_tag('data'), value)),
+      error => error.message === `decode-map-as failed at $: expected map for struct :LoginState, got ${type}`);
+  }
+  assert.throws(() => login.comp_login(c._$n__$M_(c.turn_tag('data'), c._$n__$M_())),
+    error => error.message === 'decode-map-as failed at $: struct :LoginState is missing required field :password');
+
+  const absentCursor = Symbol('absent-cursor');
+  for (const value of [absentCursor, null, false, 0, '', cursor, c._$n__$M_()]) {
+    const source = value === absentCursor ? c._$n__$M_() : c._$n__$M_(c.turn_tag('cursor'), value);
+    inputs.length = 0;
+    visit(c.option_$o_unwrap(login.comp_login(source).get('tree')));
+    for (const [index, field] of ['username', 'password'].entries()) {
+      const calls = [];
+      const handler = inputs[index].get('event').get(c.turn_tag('input'));
+      assert.throws(() => handler(c._$n__$M_(), (...args) => { calls.push(args); }),
+        error => error.message === 'decode-map-as failed at $: expected string, got nil');
+      assert.equal(calls.length, 0, 'missing text must not dispatch on either cursor branch');
+      assert.equal(handler(c.parse_cirru_edn('{} (:value |typed)'), (...args) => { calls.push(args); }), undefined);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0][0], value === absentCursor ? null : value, 'preserve the legacy dispatch boundary, including absent cursor');
+      assert.equal(calls[0][1].get(field), 'typed');
+      const failure = new Error('cursor dispatch failed');
+      assert.throws(() => handler(c.parse_cirru_edn('{} (:value |typed)'), () => { throw failure; }), error => error === failure);
+    }
+  }
+
   const raw = c.parse_cirru_edn(`{}
   :session $ {}
     :id 1
@@ -101,6 +139,10 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     await copyFile(join(project, 'calcit.cirru'), snapshot);
     await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
     await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
+    const defaultOutput = join(fixture, 'default-entry-out');
+    run('--emit-path', defaultOutput);
+    assert.ok((await readFile(join(defaultOutput, 'cumulo-reel.app.client.mjs'))).length > 0,
+      'the default command must compile the browser entry without requiring a js subcommand');
     run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
     const targets = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field', 'decode-messages']
       .map((name) => `cumulo-reel.app.protocol/${name}`)

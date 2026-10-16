@@ -114,6 +114,15 @@ WS-EDN 0.0.41、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 保留缺失和存在 nil 的原结果、惰性 fallback、字段解码及原断言。登录与事件入口继续
 拒绝非 Map，由既有 typed get lowering 保留 Map 专用访问，不叠加重复解码；
 容器仍在原分支先执行 nil state fallback，不提前拒绝离线状态。
+登录文本、删除消息的 ID 和消息协议读取在 Option 分支内直接调用原解码器，
+分支结果分别为 String 与 Result<Message,String>，不先恢复开放 nil 中间值。
+数据库 users/sessions/pages 也在分支内直接解码；备份路径在分支内转为 String，
+保留原 nil 文本与日期目录行为，不选择新的默认路径。
+缺失字段仍在原位置交给同一个 nil 解码分支，保留完整错误文本、字段检查顺序与
+失败时不派发的行为；不将缺失值当作空字符串。附带协议回归由原 Node harness
+重放同一 AST，登录宿主回归还核对缺失/nil/false/数字的精确错误。
+旧 cursor 派发、state fallback 和 wire 可空字段仍按既有边界处理，
+这些改动不表示所有开放数据已成为闭合模型。
 原 61 项定义测试、完整 strict 及现有 7 项 Node 回归在旧 alpha.3 配对上通过；
 混合 cursor 引用身份、空字符串/Unicode 输入、非法事件不派发及错误传播均有宿主回放。
 正式 0.30.0 配对和上述正式图已复跑完整 strict、原 61 项定义测试、原 7 项

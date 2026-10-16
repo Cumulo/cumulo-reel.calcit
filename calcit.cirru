@@ -249,11 +249,9 @@
                             :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                               :args $ [] 'Dynamic
                           :return 'Unit
-                        d! $ :: :session/remove-message $ decode-map-as
-                          match (calcit.core/get info :id)
-                            (:some value) value
-                            (:none) nil
-                          , 'String
+                        d! $ :: :session/remove-message $ match (calcit.core/get info :id)
+                          (:some value) (decode-map-as value 'String)
+                          (:none) (decode-map-as nil 'String)
                     when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
                     when config/dev? $ comp-reel store-typed.:reel-length $ {}
           :examples $ []
@@ -354,11 +352,9 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! cursor $ assoc state :username $ decode-map-as
-                            match (calcit.core/get e :value)
-                              (:some value) value
-                              (:none) nil
-                            , 'String
+                          d! cursor $ assoc state :username $ match (calcit.core/get e :value)
+                            (:some value) (decode-map-as value 'String)
+                            (:none) (decode-map-as nil 'String)
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password)
@@ -370,11 +366,9 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! cursor $ assoc state :password $ decode-map-as
-                            match (calcit.core/get e :value)
-                              (:some value) value
-                              (:none) nil
-                            , 'String
+                          d! cursor $ assoc state :password $ match (calcit.core/get e :value)
+                            (:some value) (decode-map-as value 'String)
+                            (:none) (decode-map-as nil 'String)
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -1040,9 +1034,9 @@
                       (:err detail) (Result :err detail)
                       (:ok decoded)
                         match
-                          decode-message $ match (calcit.core/get entries key)
-                            (:some value) value
-                            (:none) nil
+                          match (calcit.core/get entries key)
+                            (:some value) (decode-message value)
+                            (:none) (decode-message nil)
                           (:err detail)
                             Result :err $ str key |: detail
                           (:ok message)
@@ -1052,6 +1046,30 @@
             :args $ [] 'Input
             :generics $ [] 'Input
             :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-message-option-consumer-contract)
+            :code $ quote $ let ()
+              assert=
+                Result :ok $ {}
+                decode-messages $ {}
+              assert=
+                Result :ok $ {} $ |m (schema/Message :id |m :text "|中文")
+                decode-messages $ {} $ |m
+                  {} (:id |m) (:text "|中文") (:extra false)
+              assert=
+                Result :err "|m:decode-map-as failed at $: expected map, got nil"
+                decode-messages $ {} $ |m nil
+              assert=
+                Result :err "|m:decode-map-as failed at $: expected map, got bool"
+                decode-messages $ {} $ |m false
+              assert=
+                Result :err "|m::id:decode-map-as failed at $: expected string, got number"
+                decode-messages $ {} $ |m
+                  {} (:id 7) (:text false)
+              assert=
+                Result :err "|m::text:decode-map-as failed at $: expected string, got nil"
+                decode-messages $ {} $ |m
+                  {} (:id |m) (:text nil)
+            :tags $ #{} :protocol :unit
         'decode-nullable-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-number (value)
             if (nil? value)
@@ -1502,15 +1520,12 @@
             let
                 now $ local-month-day!
                 backup-dir $ path-join calcit-dirname |backups
-                month-dir $ path-join backup-dir $ str
-                  match (calcit.core/get now :month)
-                    (:some value) value
-                    (:none) nil
-              path-join month-dir $ str
-                match (calcit.core/get now :day)
-                  (:some value) value
-                  (:none) nil
-                , |-snapshot.cirru
+                month-dir $ path-join backup-dir $ match (calcit.core/get now :month)
+                  (:some value) (str value)
+                  (:none) (str nil)
+              path-join month-dir $ match (calcit.core/get now :day)
+                (:some value) (str value |-snapshot.cirru)
+                (:none) (str nil |-snapshot.cirru)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
@@ -1949,18 +1964,18 @@
             let
                 source $ require-decoded $ protocol/decode-source value
               schema/Database :users
-                decode-users $ match (calcit.core/get source :users)
-                  (:some value) value
-                  (:none) nil
+                match (calcit.core/get source :users)
+                  (:some value) (decode-users value)
+                  (:none) (decode-users nil)
                 , :sessions
-                  decode-sessions $ match (calcit.core/get source :sessions)
-                    (:some value) value
-                    (:none) nil
-                  , :pages $ decode-map-as
-                    match (calcit.core/get source :pages)
-                      (:some value) value
-                      (:none) nil
-                    :: 'Map 'Tag 'Dynamic
+                  match (calcit.core/get source :sessions)
+                    (:some value) (decode-sessions value)
+                    (:none) (decode-sessions nil)
+                  , :pages $ match (calcit.core/get source :pages)
+                    (:some value)
+                      decode-map-as value $ :: 'Map 'Tag 'Dynamic
+                    (:none)
+                      decode-map-as nil $ :: 'Map 'Tag 'Dynamic
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'Input
@@ -2012,6 +2027,37 @@
                         :return 'Bool
                       not $ empty? message
                 assert= true rejected
+              :tags $ #{} :protocol :storage
+            %{} 'TestEntry (:name |preserves-database-option-consumer-errors)
+              :code $ quote $ let
+                  error-of $ fn (raw)
+                    hint-fn $ {}
+                      :generics $ [] 'Input
+                      :args $ [] 'Input
+                      :return 'String
+                    try
+                      let () (cumulo-reel.app.storage/decode-database raw) |unexpected-success
+                      fn (message)
+                        hint-fn $ {}
+                          :args $ [] 'String
+                          :return 'String
+                        , message
+                  nil-error "|decode-map-as failed at $: expected map, got nil"
+                assert= nil-error $ error-of $ {}
+                assert= nil-error $ error-of $ {} (:users nil) (:sessions false) (:pages false)
+                assert= nil-error $ error-of $ {}
+                  :users $ {}
+                  :sessions nil
+                  :pages false
+                assert= nil-error $ error-of $ {}
+                  :users $ {}
+                  :sessions $ {}
+                  :pages nil
+                assert= "|decode-map-as failed at $: expected map, got bool" $ error-of $ {}
+                  :users $ {}
+                  :sessions $ {}
+                  :pages false
+                assert= "|decode-map-as failed at $: expected map, got number" $ error-of $ {} (:users 0) (:sessions false) (:pages false)
               :tags $ #{} :protocol :storage
         'decode-sessions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-sessions (value)

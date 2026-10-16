@@ -96,9 +96,14 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前源码配对正式 `0.30.0`，0.0.54 候选将 Recollect 0.0.61、WS-EDN 0.0.40、
-Message 0.0.35 一起升级为一致的正式图，不混用工作分支或 hash。
-本轮只更新版本、CI 版本来源和说明，既有迁移源码、协议及原测试不变；
+当前 0.0.55 候选配对已发布的预发布版 `0.30.1-alpha.4`，将 Recollect 0.0.62、
+WS-EDN 0.0.41、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
+统一到同一依赖图，不混用 hash。稳定 0.30.0 消费者继续使用 0.0.54，不能只更新
+模块而保留旧 CLI/runtime。0.30.1 尚未正式发布。
+本轮更新版本与说明，并收紧 `render-app!` 接受的 renderer 首参为 DomElement，
+与已有先解包的 `mount-target` 及 Respo SSR 入口一致。实际渲染、协议及附带测试不变；
+原 Node 回归的三处容器拒绝断言兼容 alpha.4 的通用 `&get` 错误文本，
+保留原输入、拒绝、cursor 身份与不派发断言，不增加检查或测试组；
 安装不覆盖本地开发模块或共享缓存。候选版本号不表示已发布，正式 tag 必须等
 最新 CI/review、真实消费者和精确合并 main 验收后创建。
 依赖的正式版本以 `deps.cirru` 为准，模块发布状态以同名 tag/Release 为准。
@@ -118,9 +123,10 @@ Tabletwo 的独立消费者副本完成完整 strict、51+2 项测试、构建�
 这些是候选验收，不替代最新远端 CI/review、精确 main 或正式 tag 安装证据。
 额外通用 JS replay 不能在 Node 中加载浏览器 DOM 入口，不作为通过记录；
 原 target-specific Node harness 和真实浏览器分别覆盖对应宿主。
-后续 review 在既有 Node 用例补齐空白默认值与调用方预填登录字段断言，
+此前 review 在既有 Node 用例补齐空白默认值与调用方预填登录字段断言，
 保留 cursor 身份、非法输入拒绝和事件断言；不增加测试组、脚本或框架。
-0.30.1 尚未正式发布，其完整图仍单独跟进。
+上述 0.30.0 验收是历史基线，不代替本次 0.30.1 配对的真实消费者与远端验收。
+开发 watch 直接使用入口的 `-w` 持续模式，保留 browser / Node 各自输出目录。
 
 ### 限制
 

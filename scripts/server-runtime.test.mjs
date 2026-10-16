@@ -48,10 +48,12 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
     const calls = [];
     const dispatch = (...args) => { calls.push(args); };
     for (const value of invalidMaps) assert.throws(() => handler(value, dispatch), /map|Does not support `&get` on this type/i);
-    for (const value of [null, false, 0]) {
-      assert.throws(() => handler(c._$n__$M_(c.turn_tag('value'), value), dispatch));
+    for (const [value, type] of [[null, 'nil'], [false, 'bool'], [0, 'number']]) {
+      assert.throws(() => handler(c._$n__$M_(c.turn_tag('value'), value), dispatch),
+        error => error.message === `decode-map-as failed at $: expected string, got ${type}`);
     }
-    assert.throws(() => handler(c._$n__$M_(), dispatch));
+    assert.throws(() => handler(c._$n__$M_(), dispatch),
+      error => error.message === 'decode-map-as failed at $: expected string, got nil');
     assert.equal(calls.length, 0, 'invalid events must not dispatch');
     for (const text of ['', '中文']) {
       assert.equal(handler(c._$n__$M_(c.turn_tag('value'), text), dispatch), undefined);
@@ -100,7 +102,7 @@ test('protocol definition tests replay on native and fresh generated JS', async 
     await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
     await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
     run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
-    const targets = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field']
+    const targets = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field', 'decode-messages']
       .map((name) => `cumulo-reel.app.protocol/${name}`)
       .concat('cumulo-reel.app.storage/decode-database');
     const tests = targets.flatMap((target) => {
@@ -113,6 +115,8 @@ test('protocol definition tests replay on native and fresh generated JS', async 
       'accepts-anonymous-sign-up', 'rejects-extra-and-missing-action-payload',
       'preserves-opaque-router-data', 'preserves-number-result-type', 'preserves-typed-map-value',
       'preserves-nullable-map-value', 'rejects-missing-field', 'keeps-decoder-error-context',
+      'preserves-message-option-consumer-contract',
+      'preserves-database-option-consumer-errors',
       'restores-legacy-user-database', 'rejects-invalid-stored-user-avatar']) {
       assert.ok(names.has(name), `Missing shared protocol contract: ${name}`);
     }

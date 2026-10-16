@@ -3,7 +3,7 @@
   :about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `calcit query` to inspect and `calcit edit`/`calcit tree` to modify. Run `calcit docs agents --contract` before mutations; use `--full` for first orientation or changed contract digest. Manual edits must follow format and schema conventions, then run `calcit edit format`."
   :package |cumulo-reel
   :entries $ {}
-    :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :native) (:reload-fn 'cumulo-reel.app.client/reload!) (:target :browser)
+    :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :js) (:reload-fn 'cumulo-reel.app.client/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |js-ffi/
       :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
@@ -215,12 +215,9 @@
               (:none) (comp-offline)
               (:some store-typed)
                 let
-                    state $ match
-                      calcit.core/get
-                        either states $ {}
-                        , :data
-                      (:some value) value
-                      (:none) nil
+                    state $ calcit.core/get
+                      either states $ {}
+                      , :data
                     session store-typed.:session
                     router store-typed.:router
                     router-data router.:data
@@ -325,18 +322,20 @@
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
-                cursor $ match (calcit.core/get states :cursor)
-                  (:some value) value
-                  (:none) nil
-                state $ let
-                    raw $ either
-                      match (calcit.core/get states :data)
-                        (:some value) value
-                        (:none) nil
-                      , initial-state
-                  decode-map-as
-                    if (struct? raw) (&struct:to-map raw) raw
-                    , 'cumulo-reel.app.comp.login/LoginState
+                cursor $ calcit.core/get states :cursor
+                state $ match (calcit.core/get states :data)
+                  (:some value)
+                    let
+                        raw $ either value initial-state
+                      decode-map-as
+                        if (struct? raw) (&struct:to-map raw) raw
+                        , 'cumulo-reel.app.comp.login/LoginState
+                  (:none)
+                    let
+                        raw initial-state
+                      decode-map-as
+                        if (struct? raw) (&struct:to-map raw) raw
+                        , 'cumulo-reel.app.comp.login/LoginState
               div
                 {} $ :style $ style/merge-styles ui/flex ui/center
                 div ({})
@@ -352,9 +351,10 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! cursor $ assoc state :username $ match (calcit.core/get e :value)
-                            (:some value) (decode-map-as value 'String)
-                            (:none) (decode-map-as nil 'String)
+                          d! (.unwrap-or cursor nil)
+                            assoc state :username $ match (calcit.core/get e :value)
+                              (:some value) (decode-map-as value 'String)
+                              (:none) (decode-map-as nil 'String)
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password)
@@ -366,9 +366,10 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! cursor $ assoc state :password $ match (calcit.core/get e :value)
-                            (:some value) (decode-map-as value 'String)
-                            (:none) (decode-map-as nil 'String)
+                          d! (.unwrap-or cursor nil)
+                            assoc state :password $ match (calcit.core/get e :value)
+                              (:some value) (decode-map-as value 'String)
+                              (:none) (decode-map-as nil 'String)
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)

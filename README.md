@@ -60,6 +60,8 @@ node --test scripts/server-runtime.test.mjs
 ```
 
 Vite 8 构建使用 Node 24，与 Actions 保持一致。客户端生成到 `js-out/`，
+默认入口为 JS 模式：直接运行 `calcit` 会生成浏览器页面，`calcit -w` 持续编译；
+不会尝试在 native 中执行 `document` 或 DOM 渲染。
 服务端生成到 `js-server-out/`，避免不同入口裁剪共享模块时覆盖另一入口的
 导出。两个生成目录均不入库。开发模式启动服务端：
 
@@ -96,7 +98,7 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前 0.0.55 候选配对已发布的预发布版 `0.30.1-alpha.4`，将 Recollect 0.0.62、
+当前 0.0.56 候选配对已发布的预发布版 `0.30.1-alpha.4`，将 Recollect 0.0.62、
 WS-EDN 0.0.41、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 统一到同一依赖图，不混用 hash。稳定 0.30.0 消费者继续使用 0.0.54，不能只更新
 模块而保留旧 CLI/runtime。0.30.1 尚未正式发布。
@@ -123,6 +125,9 @@ WS-EDN 0.0.41、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 重放同一 AST，登录宿主回归还核对缺失/nil/false/数字的精确错误。
 旧 cursor 派发、state fallback 和 wire 可空字段仍按既有边界处理，
 这些改动不表示所有开放数据已成为闭合模型。
+登录初值在 Option 分支内解码为 LoginState，保留缺失/nil 的原初值、旧具名
+Struct 输入与精确错误；cursor 内部保留 Option，只在原开放 dispatch 调用边界
+恢复旧 nullable 参数。父容器仍执行原 Map 读取检查，不生成未使用的 nil payload。
 原 61 项定义测试、完整 strict 及现有 7 项 Node 回归在旧 alpha.3 配对上通过；
 混合 cursor 引用身份、空字符串/Unicode 输入、非法事件不派发及错误传播均有宿主回放。
 正式 0.30.0 配对和上述正式图已复跑完整 strict、原 61 项定义测试、原 7 项

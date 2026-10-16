@@ -118,6 +118,8 @@ Tabletwo 的独立消费者副本完成完整 strict、51+2 项测试、构建�
 这些是候选验收，不替代最新远端 CI/review、精确 main 或正式 tag 安装证据。
 额外通用 JS replay 不能在 Node 中加载浏览器 DOM 入口，不作为通过记录；
 原 target-specific Node harness 和真实浏览器分别覆盖对应宿主。
+后续 review 在既有 Node 用例补齐空白默认值与调用方预填登录字段断言，
+保留 cursor 身份、非法输入拒绝和事件断言；不增加测试组、脚本或框架。
 0.30.1 尚未正式发布，其完整图仍单独跟进。
 
 ### 限制

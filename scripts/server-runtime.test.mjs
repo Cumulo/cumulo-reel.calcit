@@ -36,6 +36,13 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
   };
   visit(c.option_$o_unwrap(login.comp_login(states).get('tree')));
   assert.equal(inputs.length, 2);
+  const inputValues = () => inputs.map(input => c.pairs_map(input.get('attrs')).get(c.turn_tag('value')));
+  assert.deepEqual(inputValues(), ['', '']);
+  const data = c._$n__$M_(c.turn_tag('username'), 'seed-user', c.turn_tag('password'), 'seed-password');
+  inputs.length = 0;
+  visit(c.option_$o_unwrap(login.comp_login(states.assoc(c.turn_tag('data'), data)).get('tree')));
+  assert.equal(inputs.length, 2);
+  assert.deepEqual(inputValues(), ['seed-user', 'seed-password']);
   for (const [index, field] of ['username', 'password'].entries()) {
     const handler = inputs[index].get('event').get(c.turn_tag('input'));
     const calls = [];

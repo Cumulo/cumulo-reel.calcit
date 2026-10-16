@@ -215,9 +215,12 @@
               (:none) (comp-offline)
               (:some store-typed)
                 let
-                    state $ &map:get
-                      either states $ {}
-                      , :data
+                    state $ match
+                      calcit.core/get
+                        either states $ {}
+                        , :data
+                      (:some value) value
+                      (:none) nil
                     session store-typed.:session
                     router store-typed.:router
                     router-data router.:data
@@ -246,7 +249,11 @@
                             :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                               :args $ [] 'Dynamic
                           :return 'Unit
-                        d! $ :: :session/remove-message $ decode-map-as (&map:get info :id) 'String
+                        d! $ :: :session/remove-message $ decode-map-as
+                          match (calcit.core/get info :id)
+                            (:some value) value
+                            (:none) nil
+                          , 'String
                     when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
                     when config/dev? $ comp-reel store-typed.:reel-length $ {}
           :examples $ []
@@ -320,9 +327,15 @@
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
-                cursor $ &map:get states :cursor
+                cursor $ match (calcit.core/get states :cursor)
+                  (:some value) value
+                  (:none) nil
                 state $ let
-                    raw $ either (&map:get states :data) initial-state
+                    raw $ either
+                      match (calcit.core/get states :data)
+                        (:some value) value
+                        (:none) nil
+                      , initial-state
                   decode-map-as
                     if (struct? raw) (&struct:to-map raw) raw
                     , 'cumulo-reel.app.comp.login/LoginState
@@ -341,7 +354,11 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! cursor $ assoc state :username $ decode-map-as (&map:get e :value) 'String
+                          d! cursor $ assoc state :username $ decode-map-as
+                            match (calcit.core/get e :value)
+                              (:some value) value
+                              (:none) nil
+                            , 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password)
@@ -353,7 +370,11 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! cursor $ assoc state :password $ decode-map-as (&map:get e :value) 'String
+                          d! cursor $ assoc state :password $ decode-map-as
+                            match (calcit.core/get e :value)
+                              (:some value) value
+                              (:none) nil
+                            , 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -1019,7 +1040,9 @@
                       (:err detail) (Result :err detail)
                       (:ok decoded)
                         match
-                          decode-message $ &map:get entries key
+                          decode-message $ match (calcit.core/get entries key)
+                            (:some value) value
+                            (:none) nil
                           (:err detail)
                             Result :err $ str key |: detail
                           (:ok message)
@@ -1479,8 +1502,15 @@
             let
                 now $ local-month-day!
                 backup-dir $ path-join calcit-dirname |backups
-                month-dir $ path-join backup-dir $ str (&map:get now :month)
-              path-join month-dir $ str (&map:get now :day) |-snapshot.cirru
+                month-dir $ path-join backup-dir $ str
+                  match (calcit.core/get now :month)
+                    (:some value) value
+                    (:none) nil
+              path-join month-dir $ str
+                match (calcit.core/get now :day)
+                  (:some value) value
+                  (:none) nil
+                , |-snapshot.cirru
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
@@ -1919,10 +1949,18 @@
             let
                 source $ require-decoded $ protocol/decode-source value
               schema/Database :users
-                decode-users $ &map:get source :users
+                decode-users $ match (calcit.core/get source :users)
+                  (:some value) value
+                  (:none) nil
                 , :sessions
-                  decode-sessions $ &map:get source :sessions
-                  , :pages $ decode-map-as (&map:get source :pages) (:: 'Map 'Tag 'Dynamic)
+                  decode-sessions $ match (calcit.core/get source :sessions)
+                    (:some value) value
+                    (:none) nil
+                  , :pages $ decode-map-as
+                    match (calcit.core/get source :pages)
+                      (:some value) value
+                      (:none) nil
+                    :: 'Map 'Tag 'Dynamic
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'Input
@@ -1935,13 +1973,25 @@
                   persisted $ struct-with actual $ :sessions ({})
                 assert=
                   cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar $ Option :none
-                  &map:get (:users actual) |u1
+                  match
+                    calcit.core/get (:users actual) |u1
+                    (:some value) value
+                    (:none) nil
                 assert= (Option :some |portrait)
-                  :avatar $ &map:get (:users actual) |u2
+                  :avatar $ match
+                    calcit.core/get (:users actual) |u2
+                    (:some value) value
+                    (:none) nil
                 assert= (Option :some 1)
-                  :id $ &map:get (:sessions actual) 1
+                  :id $ match
+                    calcit.core/get (:sessions actual) 1
+                    (:some value) value
+                    (:none) nil
                 assert= (Option :some |u1)
-                  :user-id $ &map:get (:sessions actual) 1
+                  :user-id $ match
+                    calcit.core/get (:sessions actual) 1
+                    (:some value) value
+                    (:none) nil
                 assert=
                   {} $ :home $ [] 1 |two
                   :pages actual

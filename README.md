@@ -4,9 +4,10 @@ Cumulo 的 Reel 状态、操作记录与重放库。
 
 ## 使用
 
-服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`：
+服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`。
+下面是应用接线示意，需要由应用提供 initial-db、updater、操作和元数据，并非独立程序：
 
-```cirru
+```cirru.no-check
 defref *reel $ cumulo-reel.core/ReelState
   :base initial-db
   :db initial-db
@@ -20,10 +21,10 @@ cumulo-reel.core/reel-reducer @*reel updater op sid op-id op-time dev?
 reset! *reel (cumulo-reel.core/refresh-reel @*reel initial-db replay-updater)
 ```
 
-客户端：
+客户端在已解码的 ClientStore 上读取记录数量，交给 Respo 的 JS 渲染环境：
 
-```cirru
-cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
+```cirru.no-check
+cumulo-reel.comp.reel/comp-reel store.:reel-length ({})
 ```
 
 `ReelState<Db>` 的 base/db 使用同一类型，实时 updater 也必须返回 Db。
@@ -42,7 +43,7 @@ cumulo-reel.comp.reel/comp-reel (:reel-length store) ({})
 先安装发布版本模块，再检查两个入口：
 
 ```bash
-caps --ci
+caps --strict --ci
 corepack enable
 yarn install --immutable
 caps verify --toolchain
@@ -95,10 +96,31 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前预发布验证使用已发布的 `0.30.0-alpha.3`，安装不覆盖本地开发模块。
+当前源码配对正式 `0.30.0`，0.0.54 候选将 Recollect 0.0.61、WS-EDN 0.0.40、
+Message 0.0.35 一起升级为一致的正式图，不混用工作分支或 hash。
+本轮只更新版本、CI 版本来源和说明，既有迁移源码、协议及原测试不变；
+安装不覆盖本地开发模块或共享缓存。候选版本号不表示已发布，正式 tag 必须等
+最新 CI/review、真实消费者和精确合并 main 验收后创建。
 依赖的正式版本以 `deps.cirru` 为准，模块发布状态以同名 tag/Release 为准。
 语义测试放在定义 `:tests`，原 Node harness 重放同一 AST，并验证真实 WebSocket、
 持久化与 SIGINT；浏览器回归使用隔离存储，不接触生产数据。
+
+为 0.30.1 迁移的 12 处程序读取及 4 处原测试读取使用公开 `get` 与 Option 匹配，
+保留缺失和存在 nil 的原结果、惰性 fallback、字段解码及原断言。登录与事件入口继续
+拒绝非 Map，由既有 typed get lowering 保留 Map 专用访问，不叠加重复解码；
+容器仍在原分支先执行 nil state fallback，不提前拒绝离线状态。
+原 61 项定义测试、完整 strict 及现有 7 项 Node 回归在旧 alpha.3 配对上通过；
+混合 cursor 引用身份、空字符串/Unicode 输入、非法事件不派发及错误传播均有宿主回放。
+正式 0.30.0 配对和上述正式图已复跑完整 strict、原 61 项定义测试、原 7 项
+Node 回归、103/124 项 browser/node 公开定义及两入口构建。真实隔离浏览器验证
+双访客人数增量、断开/重连和 Unicode 输入，未创建账号或接触原存储。
+Tabletwo 的独立消费者副本完成完整 strict、51+2 项测试、构建和实际 WSS/持久化回放。
+这些是候选验收，不替代最新远端 CI/review、精确 main 或正式 tag 安装证据。
+额外通用 JS replay 不能在 Node 中加载浏览器 DOM 入口，不作为通过记录；
+原 target-specific Node harness 和真实浏览器分别覆盖对应宿主。
+后续 review 在既有 Node 用例补齐空白默认值与调用方预填登录字段断言，
+保留 cursor 身份、非法输入拒绝和事件断言；不增加测试组、脚本或框架。
+0.30.1 尚未正式发布，其完整图仍单独跟进。
 
 ### 限制
 

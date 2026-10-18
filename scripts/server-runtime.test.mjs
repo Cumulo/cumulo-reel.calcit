@@ -283,6 +283,22 @@ test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconne
     if (previousBind === undefined) delete process.env.WSS_BIND_ADDRESS;
     else process.env.WSS_BIND_ADDRESS = previousBind;
   });
+  if (process.env.CI === 'true') {
+    // Exercise the default listener only on the isolated CI runner, never on a developer machine.
+    delete process.env.WSS_BIND_ADDRESS;
+    const defaultServer = serve(0, () => {});
+    try {
+      await once(defaultServer, 'listening');
+      assert.equal(defaultServer.options.host, null, 'serve must retain ws port-only default options');
+      assert.ok(['::', '0.0.0.0'].includes(defaultServer.address().address),
+        'an absent environment variable must keep the original host-default listener');
+      console.info('CI-only absent WSS_BIND_ADDRESS integration passed');
+    } finally {
+      await new Promise(resolve => defaultServer.close(resolve));
+    }
+  } else {
+    console.info('Default wildcard listener integration is CI-only; local configuration assertions ran above');
+  }
   process.env.WSS_BIND_ADDRESS = '127.0.0.1';
   const events = [];
   const server = serve(0, (event) => events.push(String(event)));

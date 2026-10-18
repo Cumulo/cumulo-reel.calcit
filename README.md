@@ -80,6 +80,7 @@ WSS_BIND_ADDRESS=127.0.0.1 mode=dev node --input-type=module -e 'const app = awa
 其他地址是否合法由 Node 判断，不静默回退到全网卡。`serve!(port, on-event)`、
 session ID、事件与协议均不变，不增加平行启动入口或修改生产配置。
 原网络回归显式绑定回环并断言实际 socket 地址；缺失地址的默认配置另作精确断言，
+默认 `serve!` 的真实监听路径只在隔离 CI runner 验证，并明确记录执行结果，
 不为验证默认值而在本机开放所有网卡。
 
 `0.0.58` 候选在正式 alpha.5 配对下通过双入口完整 strict、原63项附着测试、

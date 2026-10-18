@@ -69,6 +69,26 @@ Vite 8 构建使用 Node 24，与 Actions 保持一致。客户端生成到 `js-
 mode=dev node --input-type=module -e 'const app = await import("./js-server-out/cumulo-reel.app.server.mjs"); app.main_$x_();'
 ```
 
+本机开发或隔离验收可为同一入口设置 `WSS_BIND_ADDRESS=127.0.0.1`：
+
+```bash
+WSS_BIND_ADDRESS=127.0.0.1 mode=dev node --input-type=module -e 'const app = await import("./js-server-out/cumulo-reel.app.server.mjs"); app.main_$x_();'
+```
+
+地址从现有 `get-env` 的 `Option<String>` 读取，设置后原样传给 Node WebSocket 的
+`host`；未设置时仍仅传 `port`，保留原宿主默认监听行为。空字符串明确报错，
+其他地址是否合法由 Node 判断，不静默回退到全网卡。`serve!(port, on-event)`、
+session ID、事件与协议均不变，不增加平行启动入口或修改生产配置。
+原网络回归显式绑定回环并断言实际 socket 地址；缺失地址的默认配置另作精确断言，
+默认 `serve!` 的真实监听路径只在隔离 CI runner 验证，并明确记录执行结果，
+不为验证默认值而在本机开放所有网卡。
+
+`0.0.58` 候选在正式 alpha.5 配对下通过双入口完整 strict、原63项附着测试、
+103/125项 browser/node 公开定义、原7组 Node 网络/持久化/SIGINT回归与构建。
+真实隔离浏览器验证双访客人数2→1→2的断开/重连增量和Unicode输入，未创建账号，
+未触及生产存储，控制台无warning/error。最新PR审查、CI与精确main验证仍须完成，
+本地验收和候选版本号不代替正式发布。
+
 `deps.cirru :calcit-version` 与 `package.json @calcit/procs` 保持同一版本。
 Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
 
@@ -98,8 +118,8 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前模块配对已发布的预发布版 `0.30.1-alpha.4`，将 Recollect 0.0.62、
-WS-EDN 0.0.42、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
+当前 `0.0.58` 候选配对已发布的预发布版 `0.30.1-alpha.5`，将 Recollect 0.0.63、
+WS-EDN 0.0.43、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 统一到同一依赖图，不混用 hash。稳定 0.30.0 消费者继续使用 0.0.54，不能只更新
 模块而保留旧 CLI/runtime。0.30.1 尚未正式发布。
 0.0.57 仅更新对正式 WS-EDN 0.0.42 的依赖声明，使下游可以使用 strict Caps

@@ -260,7 +260,9 @@ import {
   each_$x_ as eachClient,
   send_$x_ as send,
   serve_$x_ as serve,
+  server_options as serverOptions,
 } from '../js-server-out/cumulo-reel.app.server-ws.mjs';
+import * as serverCore from '../js-server-out/calcit.core.mjs';
 
 async function waitFor(predicate, label) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -270,12 +272,40 @@ async function waitFor(predicate, label) {
   assert.fail(`Timed out waiting for ${label}`);
 }
 
-test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconnect', async () => {
+test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconnect', async (context) => {
+  assert.deepEqual(serverOptions(0, serverCore._PCT_none()), { port: 0 },
+    'an omitted bind address must preserve the original host-default options');
+  assert.deepEqual(serverOptions(0, serverCore._PCT_some('127.0.0.1')), { port: 0, host: '127.0.0.1' });
+  assert.throws(() => serverOptions(0, serverCore._PCT_some('')),
+    error => error.message === 'WSS_BIND_ADDRESS must not be empty');
+  const previousBind = process.env.WSS_BIND_ADDRESS;
+  context.after(() => {
+    if (previousBind === undefined) delete process.env.WSS_BIND_ADDRESS;
+    else process.env.WSS_BIND_ADDRESS = previousBind;
+  });
+  if (process.env.CI === 'true') {
+    // Exercise the default listener only on the isolated CI runner, never on a developer machine.
+    delete process.env.WSS_BIND_ADDRESS;
+    const defaultServer = serve(0, () => {});
+    try {
+      await once(defaultServer, 'listening');
+      assert.equal(defaultServer.options.host, null, 'serve must retain ws port-only default options');
+      assert.ok(['::', '0.0.0.0'].includes(defaultServer.address().address),
+        'an absent environment variable must keep the original host-default listener');
+      console.info('CI-only absent WSS_BIND_ADDRESS integration passed');
+    } finally {
+      await new Promise(resolve => defaultServer.close(resolve));
+    }
+  } else {
+    console.info('Default wildcard listener integration is CI-only; local configuration assertions ran above');
+  }
+  process.env.WSS_BIND_ADDRESS = '127.0.0.1';
   const events = [];
   const server = serve(0, (event) => events.push(String(event)));
   const sockets = [];
   try {
     await once(server, 'listening');
+    assert.equal(server.address().address, '127.0.0.1', 'the actual socket must bind only to loopback');
     const url = `ws://127.0.0.1:${server.address().port}`;
     const first = new WebSocket(url);
     sockets.push(first);
@@ -331,6 +361,7 @@ test('WebSocket bind failure exits with a nonzero status', async () => {
   const result = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['--input-type=module', '-e', source], {
       stdio: ['ignore', 'ignore', 'pipe'],
+      env: { ...process.env, WSS_BIND_ADDRESS: '127.0.0.1' },
     });
     let stderr = '';
     child.stderr.setEncoding('utf8');
@@ -376,7 +407,7 @@ test('server entry unwraps the configured port and persists on SIGINT', async ()
   const child = spawn(process.execPath, ['--input-type=module', '-e',
     `const app = await import(${JSON.stringify(entryUrl)}); app.main_$x_();`], {
     cwd: temporaryDir,
-    env: { ...process.env, mode: 'release', port: '0' },
+    env: { ...process.env, mode: 'release', port: '0', WSS_BIND_ADDRESS: '127.0.0.1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stdout = '';

@@ -1919,11 +1919,11 @@
             :args $ [] 'Number 'String
             :features $ #{} :js-ffi
         'serve! $ %{} 'CodeEntry
-          :doc "|启动 Node WebSocket server，并把宿主事件转为保持原有 SID 语义的 SocketEvent。"
+          :doc "|启动 Node WebSocket server，保留 Number SID 与原事件语义。可选 WSS_BIND_ADDRESS 指定监听地址；未设置保持原宿主默认，空字符串明确拒绝。"
           :code $ quote $ defn serve! (port on-event)
             let
                 server $ unsafe-coerce
-                  new WebSocketServer $ &js-object :port port
+                  new WebSocketServer $ server-options port $ get-env |WSS_BIND_ADDRESS
                   , 'ws-edn.server/NodeWebSocketServerHost
               server .on |connection $ fn (raw-socket _request)
                 let
@@ -1950,6 +1950,17 @@
             :args $ [] 'Number $ :: 'Fn
               {} (:return 'Unit)
                 :args $ [] 'cumulo-reel.app.server-ws/SocketEvent
+            :features $ #{} :js-ffi
+        'server-options $ %{} 'CodeEntry
+          :doc "|生成 Node WebSocket 配置；缺失地址保留宿主默认监听，显式空地址拒绝，不替换为全网卡。"
+          :code $ quote $ defn server-options (port bind-address)
+            match bind-address
+              (:none) (&js-object :port port)
+              (:some address)
+                if (= address |) (raise "|WSS_BIND_ADDRESS must not be empty") (&js-object :port port :host address)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'JsObject)
+            :args $ [] 'Number $ :: 'Option 'String
             :features $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server-ws

@@ -98,11 +98,14 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前 0.0.56 候选配对已发布的预发布版 `0.30.1-alpha.4`，将 Recollect 0.0.62、
-WS-EDN 0.0.41、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
+当前模块配对已发布的预发布版 `0.30.1-alpha.4`，将 Recollect 0.0.62、
+WS-EDN 0.0.42、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 统一到同一依赖图，不混用 hash。稳定 0.30.0 消费者继续使用 0.0.54，不能只更新
 模块而保留旧 CLI/runtime。0.30.1 尚未正式发布。
-本轮更新版本与说明，并收紧 `render-app!` 接受的 renderer 首参为 DomElement，
+0.0.57 仅更新对正式 WS-EDN 0.0.42 的依赖声明，使下游可以使用 strict Caps
+安装该 Option 配置读取补丁；库源码、公开 schema、协议和原测试不变。
+以下为先前迁移记录，不代表本次重新改写了这些实现。
+先前迁移收紧 `render-app!` 接受的 renderer 首参为 DomElement，
 与已有先解包的 `mount-target` 及 Respo SSR 入口一致。实际渲染、协议及附带测试不变；
 原 Node 回归的三处容器拒绝断言兼容 alpha.4 的通用 `&get` 错误文本，
 保留原输入、拒绝、cursor 身份与不派发断言，不增加检查或测试组；

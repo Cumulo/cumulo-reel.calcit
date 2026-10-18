@@ -351,7 +351,8 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! (.unwrap-or cursor nil)
+                          d!
+                            .unwrap-or cursor $ []
                             assoc state :username $ match (calcit.core/get e :value)
                               (:some value) (decode-map-as value 'String)
                               (:none) (decode-map-as nil 'String)
@@ -366,7 +367,8 @@
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
                             :return 'Unit
-                          d! (.unwrap-or cursor nil)
+                          d!
+                            .unwrap-or cursor $ []
                             assoc state :password $ match (calcit.core/get e :value)
                               (:some value) (decode-map-as value 'String)
                               (:none) (decode-map-as nil 'String)

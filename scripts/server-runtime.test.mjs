@@ -97,7 +97,11 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
       assert.equal(calls.length, 0, 'missing text must not dispatch on either cursor branch');
       assert.equal(handler(c.parse_cirru_edn('{} (:value |typed)'), (...args) => { calls.push(args); }), undefined);
       assert.equal(calls.length, 1);
-      assert.equal(calls[0][0], value === absentCursor ? null : value, 'preserve the legacy dispatch boundary, including absent cursor');
+      if (value === absentCursor) {
+        assert.deepEqual(c.to_js_data(calls[0][0]), [], 'an absent cursor dispatches at the root cursor');
+      } else {
+        assert.equal(calls[0][0], value, 'keep a present cursor value as given');
+      }
       assert.equal(calls[0][1].get(field), 'typed');
       const failure = new Error('cursor dispatch failed');
       assert.throws(() => handler(c.parse_cirru_edn('{} (:value |typed)'), () => { throw failure; }), error => error === failure);

@@ -83,11 +83,11 @@ session ID、事件与协议均不变，不增加平行启动入口或修改生�
 默认 `serve!` 的真实监听路径只在隔离 CI runner 验证，并明确记录执行结果，
 不为验证默认值而在本机开放所有网卡。
 
-`0.0.58` 候选在正式 alpha.5 配对下通过双入口完整 strict、原63项附着测试、
+`0.0.58` 的验收基线在正式 alpha.5 配对下通过双入口完整 strict、原63项附着测试、
 103/125项 browser/node 公开定义、原7组 Node 网络/持久化/SIGINT回归与构建。
 真实隔离浏览器验证双访客人数2→1→2的断开/重连增量和Unicode输入，未创建账号，
-未触及生产存储，控制台无warning/error。最新PR审查、CI与精确main验证仍须完成，
-本地验收和候选版本号不代替正式发布。
+未触及生产存储，控制台无warning/error。后续源码修改仍须通过最新提交审查、CI
+与精确 main 验证；历史版本的验收不自动覆盖新提交。
 
 `deps.cirru :calcit-version` 与 `package.json @calcit/procs` 保持同一版本。
 Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
@@ -118,10 +118,15 @@ Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map�
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
-当前 `0.0.58` 候选配对已发布的预发布版 `0.30.1-alpha.5`，将 Recollect 0.0.63、
+已发布的 `0.0.58` 配对预发布版 `0.30.1-alpha.5`，将 Recollect 0.0.63、
 WS-EDN 0.0.43、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 统一到同一依赖图，不混用 hash。稳定 0.30.0 消费者继续使用 0.0.54，不能只更新
 模块而保留旧 CLI/runtime。0.30.1 尚未正式发布。
+
+当前源码继续使用正式 alpha.5 CLI/runtime，依赖升级到已发布的 Recollect **0.0.65**，
+消费其 diff/patch 的 Option 边界修复与类型收敛；其他模块和 npm runtime 不变。
+已发布 0.0.58 的依赖图不会随源码改变，当前声明须在下一模块版本正式发布后才能作为
+下游升级目标。剩余 wire、兼容派发与缓存编码的 nil 合同见 [Option 与 wire 边界](docs/option-wire-boundaries.md)。
 0.0.57 仅更新对正式 WS-EDN 0.0.42 的依赖声明，使下游可以使用 strict Caps
 安装该 Option 配置读取补丁；库源码、公开 schema、协议和原测试不变。
 以下为先前迁移记录，不代表本次重新改写了这些实现。
@@ -149,8 +154,9 @@ WS-EDN 0.0.43、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 旧 cursor 派发、state fallback 和 wire 可空字段仍按既有边界处理，
 这些改动不表示所有开放数据已成为闭合模型。
 登录初值在 Option 分支内解码为 LoginState，保留缺失/nil 的原初值、旧具名
-Struct 输入与精确错误；cursor 内部保留 Option，只在原开放 dispatch 调用边界
-恢复旧 nullable 参数。父容器仍执行原 Map 读取检查，不生成未使用的 nil payload。
+Struct 输入与精确错误；cursor 内部保留 Option，缺失 cursor 时使用根 cursor `[]`，
+已存在的 cursor 原值仍交给原 dispatch 边界，不把混合 key 路径转成字符串。
+父容器仍执行原 Map 读取检查，不生成未使用的 nil payload。
 原 61 项定义测试、完整 strict 及现有 7 项 Node 回归在旧 alpha.3 配对上通过；
 混合 cursor 引用身份、空字符串/Unicode 输入、非法事件不派发及错误传播均有宿主回放。
 正式 0.30.0 配对和上述正式图已复跑完整 strict、原 61 项定义测试、原 7 项

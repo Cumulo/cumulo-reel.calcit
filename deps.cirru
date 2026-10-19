@@ -6,5 +6,5 @@
     |Respo/respo-ui.calcit |0.7.41
     |Respo/respo.calcit |0.16.122
     |calcit-lang/js-ffi |0.2.3
-    |calcit-lang/recollect |0.0.63
+    |calcit-lang/recollect |0.0.65
     |mvc-works/ws-edn.calcit |0.0.43

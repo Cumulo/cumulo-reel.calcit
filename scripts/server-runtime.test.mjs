@@ -409,7 +409,7 @@ test('server entry unwraps the configured port and persists on SIGINT', async ()
   const temporaryDir = await mkdtemp(join(tmpdir(), 'cumulo-reel-entry-'));
   const entryUrl = new URL('../js-server-out/cumulo-reel.app.server.mjs', import.meta.url).href;
   const child = spawn(process.execPath, ['--input-type=module', '-e',
-    `const app = await import(${JSON.stringify(entryUrl)}); app.main_$x_();`], {
+    `const app = await import(${JSON.stringify(entryUrl)}); app.main_$x_(); process.stdout.write('server-entry-ready\\n');`], {
     cwd: temporaryDir,
     env: { ...process.env, mode: 'release', port: '0', WSS_BIND_ADDRESS: '127.0.0.1' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -424,6 +424,8 @@ test('server entry unwraps the configured port and persists on SIGINT', async ()
   const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);
   try {
     await waitFor(() => stdout.includes('Server started on port:0'), 'server entry startup');
+    // The startup log precedes SIGINT handler registration; wait for main! to return.
+    await waitFor(() => stdout.includes('server-entry-ready\n'), 'server entry signal handler readiness');
     child.kill('SIGINT');
     const [code, signal] = await closed;
     assert.equal(signal, null, stderr);

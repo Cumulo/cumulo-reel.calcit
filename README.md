@@ -2,6 +2,11 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+当前候选 **0.0.60** 仅将正式 WS-EDN 依赖对齐到 **0.0.44**，让 Termina 等消费者能在
+strict Caps 下使用其显式 `:host` 监听地址能力；不改本库源码、schema、协议或测试。
+CLI/procs 仍配对 0.30.1-alpha.5，其余依赖不变。版本须在最新 PR/main CI 通过后正式发布。
+既有 Demo 的前端 COS 工作流保持原样，不部署业务应用或服务端。
+
 ## 使用
 
 服务端新建 `ReelState`，在定义 schema 中声明 `Ref<ReelState<Db>>`。

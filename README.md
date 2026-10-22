@@ -2,10 +2,20 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-当前候选 **0.0.60** 仅将正式 WS-EDN 依赖对齐到 **0.0.44**，让 Termina 等消费者能在
-strict Caps 下使用其显式 `:host` 监听地址能力；不改本库源码、schema、协议或测试。
-CLI/procs 仍配对 0.30.1-alpha.5，其余依赖不变。版本须在最新 PR/main CI 通过后正式发布。
-既有 Demo 的前端 COS 工作流保持原样，不部署业务应用或服务端。
+## 0.0.61 候选：使用者影响
+
+CLI / `@calcit/procs` 成对使用精确正式 **0.30.1**。依赖更新为 Util 0.0.31、
+Message 0.0.38、UI 0.8.0、Respo 0.16.124、js-ffi 0.2.5、Recollect 0.0.67、
+WS-EDN 0.0.47，传递 Router 0.8.37；全部为已发布正式 tag，不用 alpha/hash。
+消费者应同时升级 CLI/runtime 和依赖图，重启开发服务并刷新；公开 Reel/partition、
+协议、存档和监听默认值不变，本库 Snapshot 不改。UI 0.8 基础样式可能影响外观。
+Message 的已知长文本裁切仍见其 #53，不宣称本候选修复。
+
+原附着测试、负向类型探针及七组 Node 回归保留，native/JS 附着测试改用 Calcit
+已发布共享 runner，不再手工提取并拼接新的测试函数。没有新验证脚本、框架或预算。
+0.0.61 发布前不要引用 main/hash；已使用 0.0.60 的消费者先保留原配对，不单独切换 CLI。
+本候选须通过最新 CI、评审和消费者验收后才能发版。
+既有 Demo 仅上传前端 COS，不部署业务应用或服务端，本轮不自动合并或发版。
 
 ## 使用
 
@@ -56,15 +66,19 @@ calcit calcit.cirru --check-only --warn-dyn-method
 calcit calcit.cirru --entry server --check-only --warn-dyn-method
 yarn check-types
 calcit calcit.cirru fix --workflow strict --verify --format edn
+calcit calcit.cirru --entry server fix --workflow strict --verify --format edn
 calcit calcit.cirru test --require-match
 
 yarn compile-page
 yarn vite build
 yarn compile-server
-node --test scripts/server-runtime.test.mjs
+CALCIT_BIN="$(command -v calcit)" node --test scripts/server-runtime.test.mjs
 ```
 
-Vite 8 构建使用 Node 24，与 Actions 保持一致。客户端生成到 `js-out/`，
+Vite 8 构建使用 Node 24，与 Actions 保持一致。客户端生成到 `js-out/`。
+Node 回归前按 [CI 的共享 runner 准备步骤](.github/workflows/compile.yaml) 下载当前
+Calcit 发布 tag 的四个 runner/协议/元数据文件到忽略的 `.calcit/calcit-tests/`，
+不复制为项目源码、不安装或构建另一份编译器。零匹配或后端失败仍阻断；不承诺 WASM。
 默认入口为 JS 模式：直接运行 `calcit` 会生成浏览器页面，`calcit -w` 持续编译；
 不会尝试在 native 中执行 `document` 或 DOM 渲染。
 服务端生成到 `js-server-out/`，避免不同入口裁剪共享模块时覆盖另一入口的
@@ -122,13 +136,15 @@ dispatch 成功返回 Unit，不把底层连接 handle 或 `reset!` 的新状态
 Map 值与 decoder 参数关系，String 专用 decoder 不能接收 Number Map。协议、
 历史记录和开放路由字段在具体使用时检查，不依赖 Dynamic 数量预算。
 
+### 历史迁移记录（不代替当前候选验收）
+
 工具链按 `deps.cirru :calcit-version` 和 `package.json @calcit/procs` 配对固定；
 已发布的 `0.0.58` 配对预发布版 `0.30.1-alpha.5`，将 Recollect 0.0.63、
 WS-EDN 0.0.43、Message 0.0.37、Util 0.0.29、UI 0.7.41 和 Respo 0.16.122
 统一到同一依赖图，不混用 hash。稳定 0.30.0 消费者继续使用 0.0.54，不能只更新
-模块而保留旧 CLI/runtime。0.30.1 尚未正式发布。
+模块而保留旧 CLI/runtime。当时 0.30.1 尚未正式发布，当前正式组合见文首。
 
-当前源码继续使用正式 alpha.5 CLI/runtime，依赖升级到已发布的 Recollect **0.0.65**，
+此前源码继续使用 alpha.5 CLI/runtime，依赖升级到已发布的 Recollect **0.0.65**，
 消费其 diff/patch 的 Option 边界修复与类型收敛；其他模块和 npm runtime 不变。
 已发布 0.0.58 的依赖图不会随源码改变，当前声明须在下一模块版本正式发布后才能作为
 下游升级目标。剩余 wire、兼容派发与缓存编码的 nil 合同见 [Option 与 wire 边界](docs/option-wire-boundaries.md)。

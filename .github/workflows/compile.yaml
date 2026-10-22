@@ -45,12 +45,12 @@ jobs:
 
     - name: Validate Calcit snapshot and types
       run: |
+        set -euo pipefail
         calcit calcit.cirru edit format
         git diff --exit-code -- calcit.cirru
-        calcit calcit.cirru --check-only --warn-dyn-method
-        calcit calcit.cirru --entry server --check-only --warn-dyn-method
         yarn check-types
         calcit calcit.cirru fix --workflow strict --verify --format edn
+        calcit calcit.cirru --entry server fix --workflow strict --verify --format edn
 
     - name: Run Calcit tests
       run: calcit calcit.cirru test --require-match --summary-only --format json
@@ -75,12 +75,36 @@ jobs:
 
     - name: Compile Node server
       run: |
+        set -euo pipefail
         calcit calcit.cirru --entry server --emit-path js-server-out js
         node --check js-server-out/cumulo-reel.app.server.mjs
         node --input-type=module -e 'await import("./js-server-out/cumulo-reel.app.server.mjs")'
 
+    - name: Load published shared definition-test runner
+      run: |
+        set -euo pipefail
+        version="$(calcit --version)"
+        for file in scripts/run-core-tests.mjs scripts/core-test-protocol.mjs scripts/core-tests-exclusions.cirru docs/installation/wasm-support.md; do
+          target=".calcit/calcit-tests/$file"
+          mkdir -p "$(dirname "$target")"
+          curl --fail --silent --show-error --location --retry 2 \
+            "https://raw.githubusercontent.com/calcit-lang/calcit/${version}/${file}" -o "$target"
+        done
+
     - name: Exercise Node server runtime
-      run: node --test scripts/server-runtime.test.mjs
+      run: CALCIT_BIN="$(command -v calcit)" node --test scripts/server-runtime.test.mjs
+
+    - name: Preserve PR bundles for isolated acceptance
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: runtime-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          js-out/
+          js-server-out/
+          dist/
+        retention-days: 3
+        if-no-files-found: error
 
     - name: Upload static assets to COS
       if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft)

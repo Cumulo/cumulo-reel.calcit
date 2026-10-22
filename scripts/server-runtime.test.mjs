@@ -4,9 +4,18 @@ import { once } from 'node:events';
 import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import WebSocket from 'ws';
+
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+const sharedTests = join(projectRoot, '.calcit/calcit-tests');
+const replayDefinitions = (snapshot, ...filters) => execFileSync(process.execPath, [
+  join(sharedTests, 'scripts/run-core-tests.mjs'), '--snapshot', snapshot,
+  '--entry', 'server', '--backend', 'native,js',
+  '--exclusions', join(sharedTests, 'scripts/core-tests-exclusions.cirru'),
+  '--support-matrix', join(sharedTests, 'docs/installation/wasm-support.md'), ...filters,
+], { cwd: projectRoot, stdio: 'inherit', timeout: 120000 });
 
 test('component Map reads preserve host rejection, cursor identity and nil-state fallback', async () => {
   const c = await import('../js-out/calcit.core.mjs');
@@ -141,18 +150,18 @@ test('protocol definition tests replay on native and fresh generated JS', async 
   });
   try {
     await copyFile(join(project, 'calcit.cirru'), snapshot);
+    await copyFile(join(project, 'deps.cirru'), join(fixture, 'deps.cirru'));
     await symlink(join(project, '.calcit'), join(fixture, '.calcit'), 'dir');
     await symlink(join(project, 'node_modules'), join(fixture, 'node_modules'), 'dir');
     const defaultOutput = join(fixture, 'default-entry-out');
     run('--emit-path', defaultOutput);
     assert.ok((await readFile(join(defaultOutput, 'cumulo-reel.app.client.mjs'))).length > 0,
       'the default command must compile the browser entry without requiring a js subcommand');
-    run('--entry', 'server', 'test', '--tag', 'protocol', '--require-match', '--summary-only');
     const targets = ['apply-server-patch', 'receive-server-patch!', 'parse-client-action', 'decode-open', 'decode-field', 'decode-messages']
       .map((name) => `cumulo-reel.app.protocol/${name}`)
       .concat('cumulo-reel.app.storage/decode-database');
     const tests = targets.flatMap((target) => {
-      const response = JSON.parse(run('query', 'def', target, '--raw', '--format', 'json'));
+      const response = JSON.parse(run('query', 'def', target, '--format', 'json'));
       return response.data.tests.filter((definition) => definition.tags.includes('protocol'));
     });
     const names = new Set(tests.map((definition) => definition.name));
@@ -166,32 +175,30 @@ test('protocol definition tests replay on native and fresh generated JS', async 
       'restores-legacy-user-database', 'rejects-invalid-stored-user-avatar']) {
       assert.ok(names.has(name), `Missing shared protocol contract: ${name}`);
     }
-    run('edit', 'def', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'json-ast', '--code',
-      JSON.stringify(['defn', 'run-protocol-tests', [], ...tests.map((definition) => definition.code), '&unit']));
-    run('edit', 'schema', 'cumulo-reel.app.protocol/run-protocol-tests', '--input-format', 'cirru', '--code',
-      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
-    const output = join(fixture, 'js-out');
-    run('--entry', 'server', '--init-fn', 'cumulo-reel.app.protocol/run-protocol-tests',
-      '--reload-fn', 'cumulo-reel.app.protocol/run-protocol-tests', '--emit-path', output, 'js');
-    const generated = await import(pathToFileURL(join(output, 'cumulo-reel.app.protocol.mjs')).href);
-    generated.run_protocol_tests();
+    replayDefinitions(snapshot, '--tag', 'protocol');
 
     // The same helper must reject a decoder whose input contradicts the Map value type.
-    run('edit', 'def', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'json-ast', '--code',
-      JSON.stringify(['defn', 'string-only-field-decoder', ['value'], ['Result', ':ok', 'value']]));
-    run('edit', 'schema', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'cirru', '--code',
-      "quote $ :: 'Fn $ {} (:args $ [] 'String) (:return $ :: 'Result 'String 'String)");
     const probe = (value) => ['defn', 'field-decoder-type-probe', [],
       ['decode-field', ['{}', [':name', value]], ':name', 'string-only-field-decoder'], '&unit'];
-    const setProbe = (value) => run('edit', 'def', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--overwrite',
-      '--input-format', 'json-ast', '--code', JSON.stringify(probe(value)));
-    setProbe('|Ada');
-    run('edit', 'schema', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--input-format', 'cirru', '--code',
-      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
+    const apply = operations => {
+      const args = ['edit', 'transaction', '--code', JSON.stringify(operations), '--format', 'json'];
+      const preview = JSON.parse(run(...args, '--dry-run'));
+      run(...args, '--expect-revision', preview.scoped_revision);
+    };
+    apply([
+      ['edit', 'def', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'json-ast', '--code',
+        JSON.stringify(['defn', 'string-only-field-decoder', ['value'], ['Result', ':ok', 'value']])],
+      ['edit', 'schema', 'cumulo-reel.app.protocol/string-only-field-decoder', '--input-format', 'cirru', '--code',
+        "quote $ :: 'Fn $ {} (:args $ [] 'String) (:return $ :: 'Result 'String 'String)"],
+      ['edit', 'def', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--input-format', 'json-ast', '--code', JSON.stringify(probe('|Ada'))],
+      ['edit', 'schema', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--input-format', 'cirru', '--code',
+        "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)"],
+    ]);
     const checkProbe = () => run('--entry', 'server', '--init-fn', 'cumulo-reel.app.protocol/field-decoder-type-probe',
       '--reload-fn', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--check-only');
     checkProbe();
-    setProbe('41');
+    apply([['edit', 'def', 'cumulo-reel.app.protocol/field-decoder-type-probe', '--overwrite',
+      '--input-format', 'json-ast', '--code', JSON.stringify(probe('41'))]]);
     assert.throws(checkProbe, (error) => {
       const diagnostic = `${error.stdout ?? ''}\n${error.stderr ?? ''}`;
       assert.match(diagnostic, /decode-field/);
@@ -227,14 +234,7 @@ test('partition chains replay original atomicity contracts on fresh generated JS
     for (const name of ['atomic-chain-application', 'late-failure-and-final-only-decode']) {
       assert.ok(tests.some(definition => definition.name === name), `Missing partition contract: ${name}`);
     }
-    run('edit', 'def', 'cumulo-reel.partition/run-apply-tests', '--input-format', 'json-ast', '--code',
-      JSON.stringify(['defn', 'run-apply-tests', [], ...tests.map(definition => definition.code), '&unit']));
-    run('edit', 'schema', 'cumulo-reel.partition/run-apply-tests', '--input-format', 'cirru', '--code',
-      "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)");
-    const output = join(fixture, 'js-out');
-    run('--entry', 'server', '--init-fn', 'cumulo-reel.partition/run-apply-tests',
-      '--reload-fn', 'cumulo-reel.partition/run-apply-tests', '--emit-path', output, 'js');
-    (await import(pathToFileURL(join(output, 'cumulo-reel.partition.mjs')).href)).run_apply_tests();
+    replayDefinitions(snapshot, '--target', 'cumulo-reel.partition/apply-partition-deltas', '--tag', 'partition');
 
     // Replay the attached display and wire-boundary contracts without changing their ASTs.
     const memberTargets = ['member-display-name', 'decode-member-names']
@@ -242,18 +242,7 @@ test('partition chains replay original atomicity contracts on fresh generated JS
     const memberTests = memberTargets.flatMap(target =>
       JSON.parse(run('query', 'def', target, '--format', 'json')).data.tests);
     assert.equal(memberTests.length, 7, 'Expected every member display and wire-boundary case');
-    for (const target of memberTargets) run('test', target, '--require-match');
-    const operations = [
-      ['edit', 'def', 'cumulo-reel.app.comp.profile/run-member-tests', '--input-format', 'json-ast', '--code',
-        JSON.stringify(['defn', 'run-member-tests', [], ...memberTests.map(test => test.code), '&unit'])],
-      ['edit', 'schema', 'cumulo-reel.app.comp.profile/run-member-tests', '--input-format', 'cirru', '--code',
-        "quote $ :: 'Fn $ {} (:args $ []) (:return 'Unit)"],
-    ];
-    const preview = JSON.parse(run('edit', 'transaction', '--code', JSON.stringify(operations), '--dry-run', '--format', 'json'));
-    run('edit', 'transaction', '--code', JSON.stringify(operations), '--expect-revision', preview.scoped_revision, '--format', 'json');
-    run('--entry', 'server', '--init-fn', 'cumulo-reel.app.comp.profile/run-member-tests',
-      '--reload-fn', 'cumulo-reel.app.comp.profile/run-member-tests', '--emit-path', output, 'js');
-    (await import(pathToFileURL(join(output, 'cumulo-reel.app.comp.profile.mjs')).href)).run_member_tests();
+    replayDefinitions(snapshot, ...memberTargets.flatMap(target => ['--target', target]));
   } finally {
     await rm(fixture, { recursive: true, force: true });
     assert.deepEqual(await readFile(join(project, 'calcit.cirru')), original);

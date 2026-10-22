@@ -5,7 +5,7 @@ Cumulo 的 Reel 状态、操作记录与重放库。
 ## 0.0.61 候选：使用者影响
 
 CLI / `@calcit/procs` 成对使用精确正式 **0.30.1**。依赖更新为 Util 0.0.31、
-Message 0.0.38、UI 0.8.0、Respo 0.16.124、js-ffi 0.2.5、Recollect 0.0.66、
+Message 0.0.38、UI 0.8.0、Respo 0.16.124、js-ffi 0.2.5、Recollect 0.0.67、
 WS-EDN 0.0.47，传递 Router 0.8.37；全部为已发布正式 tag，不用 alpha/hash。
 消费者应同时升级 CLI/runtime 和依赖图，重启开发服务并刷新；公开 Reel/partition、
 协议、存档和监听默认值不变，本库 Snapshot 不改。UI 0.8 基础样式可能影响外观。

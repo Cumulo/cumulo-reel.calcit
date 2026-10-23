@@ -24,7 +24,11 @@ ClientStore/String 或明确的 null，保留全部原断言；生成 ABI `optio
 其 fold reducer 明确 `Result<Map<String,Message>,String>` 累积器与 String key 合同，
 不靠断言把 Dynamic key 冒充 String，也不改变错误顺序、错误文本或解码次数。
 
-本候选仍需原完整 CI、实际应用及评审验收；不自动合并、部署 Demo 或创建正式 tag。
+正式 CLI 的临时完整验收与首轮 PR 原门禁已通过，原 63 项 native、协议/分区/成员
+同 AST 双后端回放（无排除）及原七组 Node 回归保留。隔离合成账户已验证注册、
+Unicode 资料、刷新自动登录、退出重登、SIGINT 正常持久化及服务重启恢复。
+实际验收加载原 CI JS/CSS，仅用本地忽略 HTML 重定向资产 URL，不代表生产 CDN
+已部署。本候选仍需最终精确 CI 与评审；不自动合并、部署 Demo 或创建正式 tag。
 
 ## 已合并的后续清理（尚未配对新 tag）
 

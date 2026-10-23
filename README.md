@@ -20,6 +20,9 @@ Caps strict，不能只改根版本、混用旧图或 main/hash/alpha。
 ClientStore/String 或明确的 null，保留全部原断言；生成 ABI `option_$o_unwrap`
 仍是实际 .unwrap 实现，不机械改名。没有新测试组、检查脚本、迁移框架或预算放宽。
 双入口 strict 继续要求 passed，并明确要求空 diagnostics。
+消息 Map 已由原 decoder 检查 String key，按公开 `.keys` / `.to-list` 投影；
+其 fold reducer 明确 `Result<Map<String,Message>,String>` 累积器与 String key 合同，
+不靠断言把 Dynamic key 冒充 String，也不改变错误顺序、错误文本或解码次数。
 
 本候选仍需原完整 CI、实际应用及评审验收；不自动合并、部署 Demo 或创建正式 tag。
 

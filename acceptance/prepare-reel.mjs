@@ -48,6 +48,16 @@ function normalize(n){
 }
 for(const d of expected){d.code=normalize(d.code);d.tests=d.tests.map(t=>({...t,code:normalize(t.code)}));}
 assert.deepEqual(counts,{result:7,constructors:12,foldl:7,concat:1,host:4});
+// The existing checked Map<String,Dynamic> supplies String keys; spell out
+// the actual reducer relation rather than assert/coerce a Dynamic key.
+const messages=expected.find(d=>d.id==='cumulo-reel.app.protocol/decode-messages');
+const fold=messages.code[3][3][1];
+assert.equal(fold[0],'.foldl');
+assert.deepEqual(fold[1],['&set:to-list',['&map:keys','entries']]);
+fold[1]=['.to-list',['.keys','entries']];
+const reducer=fold[3];assert.deepEqual(reducer.slice(0,2),['fn',['acc','key']]);
+const decoded=['::',"'Result",['::',"'Map","'String","'cumulo-reel.schema/Message"],"'String"];
+reducer.splice(2,0,['hint-fn',['{}',[':args',['[]',decoded,"'String"]],[':return',decoded]]]);
 const ops=[];
 for(let i=0;i<before.length;i++){
   const a=before[i],b=expected[i];
@@ -64,5 +74,5 @@ writeFileSync('acceptance/applied.json',run(...args,'--expect-revision',preview.
 assert.deepEqual(inventory(),expected,'All156views retain schemas/docs/FFI/config and all original63test assertions/tags except reviewed call forms');
 assert.deepEqual(q('config'),config);
 writeFileSync('acceptance/after.json',JSON.stringify(expected,null,2));
-writeFileSync('acceptance/preserved.json',JSON.stringify({definitions:156,namespaces:23,tests:63,examples:0,...counts,constructorTypes:[...constructorTypes],unsafeBefore:4,unsafeAfter:0},null,2));
+writeFileSync('acceptance/preserved.json',JSON.stringify({definitions:156,namespaces:23,tests:63,examples:0,...counts,constructorTypes:[...constructorTypes],publicMapKeyProjection:1,publicSetToList:1,explicitReducerContract:1,unsafeBefore:4,unsafeAfter:0},null,2));
 writeFileSync('acceptance/snapshot-blob.txt',execFileSync('git',['hash-object','calcit.cirru'],{encoding:'utf8'}));

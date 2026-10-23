@@ -294,7 +294,7 @@
           :code $ quote $ def style-body
             {} $ :padding "|8px 16px"
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Map 'Tag 'String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.container
           :require
@@ -2853,9 +2853,9 @@
                     reset! *decodes $ inc @*decodes
                     decode-test-view value
                   bad-chain $ []
-                    option:unwrap $ nth (:history s3) 0
+                    .unwrap $ nth (:history s3) 0
                     struct-with
-                      option:unwrap $ nth (:history s3) 1
+                      .unwrap $ nth (:history s3) 1
                       :base 99
                 assert= true $ match (apply-partition-deltas slot 7 bad-chain decode)
                   (:err detail) (includes? detail |base)

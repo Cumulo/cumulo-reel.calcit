@@ -2845,7 +2845,7 @@
                     test-view $ [] |d |c |e
                     , test-budget 8 64
                   slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
-                  *decodes $ atom 0
+                  *decodes $ ref 0
                   decode $ fn (value)
                     hint-fn $ {}
                       :args $ [] 'Dynamic

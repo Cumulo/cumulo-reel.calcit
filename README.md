@@ -2,7 +2,31 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 开发中的后续清理（尚未发版）
+## 0.0.62 候选：对使用者的影响
+
+保持正式 Calcit CLI / `@calcit/procs` **0.30.1**，同步完整正式依赖图：Util 0.0.32、
+Message 0.0.39、UI 0.8.1、Respo 0.16.126、JS-FFI 0.2.6、Recollect 0.0.68、
+WS-EDN 0.0.48，传递 Router 0.8.38、Value 0.5.22。下游也须整体更新并保留
+Caps strict，不能只改根版本、混用旧图或 main/hash/alpha。
+
+迁移 7 处旧 Result 判定、12 处旧 Struct 构造、7 处 foldl 和 1 处 concat，
+保留原 63 项测试的名字、标签、断言与执行顺序。Date、process、WebSocket server/socket
+的 4 处 unsafe 转换改用已有 js-cast 成员检查；真实宿主语义不变，无效宿主替身
+可能更早失败，成员形状不证明参数、返回值或 payload。Node Buffer 不属于 js-cast
+宿主，仍由 WS-EDN 原窄适配负责，不能机械替换。协议、存档、监听、SID 和
+原有回调/派发行为不改；开放 Router.data/pages/记录合同不伪装成已证明闭合模型。
+
+原 Node runner 的 5 处 JS Option 构造改为公开 nil->option，输入已知为非 nil 的
+ClientStore/String 或明确的 null，保留全部原断言；生成 ABI `option_$o_unwrap`
+仍是实际 .unwrap 实现，不机械改名。没有新测试组、检查脚本、迁移框架或预算放宽。
+双入口 strict 继续要求 passed，并明确要求空 diagnostics。
+消息 Map 已由原 decoder 检查 String key，按公开 `.keys` / `.to-list` 投影；
+其 fold reducer 明确 `Result<Map<String,Message>,String>` 累积器与 String key 合同，
+不靠断言把 Dynamic key 冒充 String，也不改变错误顺序、错误文本或解码次数。
+
+本候选仍需原完整 CI、实际应用及评审验收；不自动合并、部署 Demo 或创建正式 tag。
+
+## 已合并的后续清理（尚未配对新 tag）
 
 CLI/runtime 和已发布依赖图保持正式 0.30.1，不改变协议、存档、监听、公开函数行为
 或原测试断言。仅把分区链原附带测试里的两处 `option:unwrap` 改为 `.unwrap`，并将

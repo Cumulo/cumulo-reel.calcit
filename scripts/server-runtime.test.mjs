@@ -133,11 +133,11 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
   :user nil`);
   const decoded = protocol.decode_client_store(raw);
   assert.equal(decoded.tag.value, 'ok');
-  const store = c._PCT_some(decoded.get(1));
+  const store = c.nil__GT_option(decoded.get(1));
   for (const state of [null, c._$n__$M_()]) assert.doesNotThrow(() => container.comp_container(state, store));
   // Unit/undefined is not Nil/null and must not activate the existing nil fallback.
   for (const state of invalidMaps.slice(1)) assert.throws(() => container.comp_container(state, store), /map|Does not support `&get` on this type/i);
-  assert.doesNotThrow(() => container.comp_container(7, c._PCT_none()), 'the offline branch does not inspect states');
+  assert.doesNotThrow(() => container.comp_container(7, c.nil__GT_option(null)), 'the offline branch does not inspect states');
 });
 
 test('protocol definition tests replay on native and fresh generated JS', async () => {
@@ -266,10 +266,10 @@ async function waitFor(predicate, label) {
 }
 
 test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconnect', async (context) => {
-  assert.deepEqual(serverOptions(0, serverCore._PCT_none()), { port: 0 },
+  assert.deepEqual(serverOptions(0, serverCore.nil__GT_option(null)), { port: 0 },
     'an omitted bind address must preserve the original host-default options');
-  assert.deepEqual(serverOptions(0, serverCore._PCT_some('127.0.0.1')), { port: 0, host: '127.0.0.1' });
-  assert.throws(() => serverOptions(0, serverCore._PCT_some('')),
+  assert.deepEqual(serverOptions(0, serverCore.nil__GT_option('127.0.0.1')), { port: 0, host: '127.0.0.1' });
+  assert.throws(() => serverOptions(0, serverCore.nil__GT_option('')),
     error => error.message === 'WSS_BIND_ADDRESS must not be empty');
   const previousBind = process.env.WSS_BIND_ADDRESS;
   context.after(() => {

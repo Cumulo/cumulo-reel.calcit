@@ -394,10 +394,10 @@
             fn (e dispatch!)
               hint-fn $ {}
                 :args $ [] (:: 'Map 'Tag 'Dynamic)
-                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                    :args $ [] 'Dynamic
+                  :: 'Fn $ {} (:return 'Unit)
+                    :args $ [] 'cumulo-reel.schema/Op
                 :return 'Unit
-              dispatch! $ if signup? (:: :user/sign-up username password) (:: :user/log-in username password)
+              dispatch! $ if signup? (schema/Op :user/sign-up username password) (schema/Op :user/log-in username password)
               browser/storage-set! (:storage-key config/site)
                 format-cirru-edn $ [] username password
           :examples $ []
@@ -2821,7 +2821,7 @@
                   _ false
                 assert= true $ match
                   apply-partition-deltas slot 7
-                    slice (:history s3) 1 2
+                    slice (:history s3) 1 $ Option :some 2
                     , decode-test-view
                   (:err detail) (includes? detail |base)
                   _ false
@@ -2870,7 +2870,7 @@
                 assert= 1 @*decodes
                 assert= (Result :ok slot)
                   apply-partition-deltas slot 7
-                    slice (:history s3) 0 0
+                    slice (:history s3) 0 $ Option :some 0
                     , decode
                 assert= 2 @*decodes
               :tags $ #{} :partition
@@ -3129,8 +3129,8 @@
                   range 1 $ count value
                   , value $ fn (acc idx)
                     hint-fn $ {}
-                      :args $ [] 'Dynamic 'Number
-                      :return 'Dynamic
+                      :args $ [] 'Enum 'Number
+                      :return 'Enum
                     assoc acc idx $ struct-tree-input $ .unwrap (nth value idx)
               true value
           :examples $ []
@@ -3169,7 +3169,7 @@
             let
                 size $ count history
               if (> size limit)
-                slice history (- size limit) size
+                slice history $ - size limit
                 , history
           :examples $ []
           :schema $ :: 'Fn $ {}

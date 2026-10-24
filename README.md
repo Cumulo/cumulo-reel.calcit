@@ -2,6 +2,18 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+## 0.1.0-alpha.1 候选：对使用者的影响
+
+升级到 Calcit CLI / `@calcit/procs` **0.31.0-alpha.2**，依赖图改为 Respo 0.17.0-alpha.2、
+UI 0.9.0-alpha.1、Message 0.1.0-alpha.1、Recollect 0.1.0-alpha.1，传递 Router 0.9.0-alpha.1、
+Value 0.6.0-alpha.1。Respo 栈整体固定 JS-FFI 0.2.5，因此 Util 回到 0.0.31、WS-EDN 回到
+0.0.47，以便 Caps strict 不出现版本冲突；0.0.32 / 0.0.48 只多了构造器写法和回调类型
+标注的收紧，运行时行为相同。等 Respo 栈改用 JS-FFI 0.2.6 后再一起升回。
+
+登录事件回调的 `dispatch!` 现在按入口 `:dispatch-op` 声明为 `cumulo-reel.schema/Op`，
+派发值用 `schema/Op` 构造；enum payload 转换的 fold 回调声明为 Enum 累积器；两处测试里的
+`slice` 结束位置改为 `Option`。协议、存档与原有派发行为不变，原 63 项测试保留。
+
 ## 0.0.62 候选：对使用者的影响
 
 保持正式 Calcit CLI / `@calcit/procs` **0.30.1**，同步完整正式依赖图：Util 0.0.32、

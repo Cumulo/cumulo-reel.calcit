@@ -1027,12 +1027,17 @@
               try-decode-map-as value $ :: 'Map 'String 'Dynamic
               (:err detail) (Result :err detail)
               (:ok entries)
-                foldl
-                  &set:to-list $ &map:keys entries
+                .foldl
+                  .to-list $ .keys entries
                   assert-type
                     Result :ok $ {}
                     :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
                   fn (acc key)
+                    hint-fn $ {}
+                      :args $ []
+                        :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+                        , 'String
+                      :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
                     match acc
                       (:err detail) (Result :err detail)
                       (:ok decoded)
@@ -1328,23 +1333,23 @@
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |rejects-invalid-action-payload)
               :code $ quote $ assert= true
-                result:err? $ parse-client-action $ format-cirru-edn (:: :user/sign-up |Ada 3)
+                .err? $ parse-client-action $ format-cirru-edn (:: :user/sign-up |Ada 3)
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |rejects-extra-and-missing-action-payload)
               :code $ quote $ do
-                assert= true $ result:err? $ parse-client-action
+                assert= true $ .err? $ parse-client-action
                   format-cirru-edn $ :: :user/sign-up |Ada
-                assert= true $ result:err? $ parse-client-action
+                assert= true $ .err? $ parse-client-action
                   format-cirru-edn $ :: :user/log-out |extra
-                assert= true $ result:err? $ parse-client-action
+                assert= true $ .err? $ parse-client-action
                   format-cirru-edn $ :: :router/change |profile
               :tags $ #{} :protocol :unit
             %{} 'TestEntry (:name |rejects-unknown-and-malformed-action)
               :code $ quote $ do
-                assert= true $ result:err? $ parse-client-action
+                assert= true $ .err? $ parse-client-action
                   format-cirru-edn $ :: :unknown
-                assert= true $ result:err? $ parse-client-action |{}
-                assert= true $ result:err? $ parse-client-action |not-cirru-edn
+                assert= true $ .err? $ parse-client-action |{}
+                assert= true $ .err? $ parse-client-action |not-cirru-edn
               :tags $ #{} :protocol :unit
         'patch-class-mapper $ %{} 'CodeEntry
           :doc "|恢复传输 change-op 的名义定义；payload 仍由 apply-server-patch 验证，不把 class mapper 当作 decoder。"
@@ -1827,7 +1832,7 @@
         'local-month-day! $ %{} 'CodeEntry (:doc "|读取 Node 宿主本地时区的月份与日期。")
           :code $ quote $ defn local-month-day! ()
             let
-                date $ unsafe-coerce (new js/Date) LocalDateHost
+                date $ js-cast (new js/Date) 'LocalDateHost
               {}
                 :month $ inc $ date .get-month
                 :day $ date .get-date
@@ -1839,7 +1844,7 @@
         'on-interrupt! $ %{} 'CodeEntry (:doc "|将 SIGINT 交给业务退出回调，而不依赖 native CLI 注入。")
           :code $ quote $ defn on-interrupt! (callback)
             let
-                process $ unsafe-coerce js/process NodeProcessHost
+                process $ js-cast js/process 'NodeProcessHost
               process .on |SIGINT $ fn (signal-name signal-number)
                 hint-fn $ {}
                   :args $ [] 'String 'Number
@@ -1924,12 +1929,12 @@
           :doc "|启动 Node WebSocket server，保留 Number SID 与原事件语义。可选 WSS_BIND_ADDRESS 指定监听地址；未设置保持原宿主默认，空字符串明确拒绝。"
           :code $ quote $ defn serve! (port on-event)
             let
-                server $ unsafe-coerce
+                server $ js-cast
                   new WebSocketServer $ server-options port $ get-env |WSS_BIND_ADDRESS
                   , 'ws-edn.server/NodeWebSocketServerHost
               server .on |connection $ fn (raw-socket _request)
                 let
-                    socket $ unsafe-coerce raw-socket 'ws-edn.server/NodeWebSocketHost
+                    socket $ js-cast raw-socket 'ws-edn.server/NodeWebSocketHost
                     sid $ inc @*next-sid
                   reset! *next-sid sid
                   swap! *clients assoc sid socket
@@ -2253,8 +2258,7 @@
                 user $ struct-with schema/user (:name |Ada) (:id |u1) (:nickname |Ada) (:password |secret)
                 client-user $ twig-user user
               assert=
-                %{} schema/ClientUser (:name |Ada) (:id |u1) (:nickname |Ada)
-                  :avatar $ Option :none
+                schema/ClientUser :name |Ada :id |u1 :nickname |Ada :avatar $ Option :none
                 , client-user
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
@@ -2716,8 +2720,7 @@
                     test-view $ [] |a |c
                     , test-budget 8 64
                   next-state $ :state step
-                  progress $ %{} PartitionProgress (:epoch 7) (:acked 1)
-                    :in-flight $ Option :none
+                  progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
                   plans $ map (range 5)
                     fn (_idx)
                       hint-fn $ {}
@@ -2752,8 +2755,7 @@
                       assert= 3 $ :revision s3
                       assert= 0 $ count $ :history s3
                       assert= (PartitionSendPlan :snapshot)
-                        plan-partition-send s3 $ Option :some $ %{} PartitionProgress (:epoch 7) (:acked 2)
-                          :in-flight $ Option :none
+                        plan-partition-send s3 $ Option :some $ PartitionProgress :epoch 7 :acked 2 :in-flight (Option :none)
                   _ $ raise |Expected-reset
               :tags $ #{} :partition
         'apply-partition-deltas $ %{} 'CodeEntry
@@ -2763,7 +2765,7 @@
               not= epoch $ :epoch slot
               Result :err $ str "|Partition epoch mismatch: " epoch "| vs " $ :epoch slot
               let
-                  applied $ foldl deltas
+                  applied $ .foldl deltas
                     PartitionApplyCursor :ready (:revision slot) (:view slot)
                     fn (acc delta)
                       hint-fn $ {}
@@ -2809,10 +2811,9 @@
                   s3 $ :state $ advance-partition s2
                     test-view $ [] |d |c |e
                     , test-budget 8 64
-                  slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
+                  slot $ PartitionSlot :epoch 7 :revision 1 :view v1
                 assert=
-                  Result :ok $ %{} PartitionSlot (:epoch 7) (:revision 3)
-                    :view $ :view s3
+                  Result :ok $ PartitionSlot :epoch 7 :revision 3 :view $ :view s3
                   apply-partition-deltas slot 7 (:history s3) decode-test-view
                 assert= true $ match
                   apply-partition-deltas slot 8 (:history s3) decode-test-view
@@ -2844,7 +2845,7 @@
                   s3 $ :state $ advance-partition s2
                     test-view $ [] |d |c |e
                     , test-budget 8 64
-                  slot $ %{} PartitionSlot (:epoch 7) (:revision 1) (:view v1)
+                  slot $ PartitionSlot :epoch 7 :revision 1 :view v1
                   *decodes $ ref 0
                   decode $ fn (value)
                     hint-fn $ {}
@@ -2864,8 +2865,7 @@
                 assert= 1 $ :revision slot
                 assert= v1 $ :view slot
                 assert=
-                  Result :ok $ %{} PartitionSlot (:epoch 7) (:revision 3)
-                    :view $ :view s3
+                  Result :ok $ PartitionSlot :epoch 7 :revision 3 :view $ :view s3
                   apply-partition-deltas slot 7 (:history s3) decode
                 assert= 1 @*decodes
                 assert= (Result :ok slot)
@@ -2878,7 +2878,7 @@
           :doc "|Plan one connection's transport work: drops for partitions it may no longer see, then snapshots or retained delta chains for authorized partitions."
           :code $ quote $ defn connection-actions (partitions progress desired)
             let
-                drops $ foldl (map-entries progress)
+                drops $ .foldl (map-entries progress)
                   assert-type ([])
                     :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
                   fn (acc entry)
@@ -2891,7 +2891,7 @@
                       includes? desired $ :key entry
                       , acc $ conj acc $ PartitionAction :drop (:key entry)
                 sends $ assert-type
-                  foldl (.to-list desired)
+                  .foldl (.to-list desired)
                     assert-type ([])
                       :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
                     fn (acc key)
@@ -2912,7 +2912,7 @@
                               (:deltas deltas)
                                 conj acc $ PartitionAction :deltas state deltas
                   :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
-              concat drops sends
+              .concat drops sends
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ []
@@ -2930,8 +2930,7 @@
                 partitions $ assert-type
                   {} $ |lobby lobby2
                   :: 'Map 'String $ :: 'cumulo-reel.partition/PartitionState 'String $ :: 'Map 'String 'String
-                acked $ %{} PartitionProgress (:epoch 7) (:acked 1)
-                  :in-flight $ Option :none
+                acked $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
                 progress $ assert-type
                   {} (|lobby acked) (|board/gone acked)
                   :: 'Map 'String 'cumulo-reel.partition/PartitionProgress
@@ -2990,7 +2989,7 @@
                 delta-chain (:history s3) 1 3
                 (:some chain)
                   let
-                      replayed $ foldl chain v1 $ fn (acc delta)
+                      replayed $ .foldl chain v1 $ fn (acc delta)
                         hint-fn $ {}
                           :args $ [] 'Dynamic 'cumulo-reel.partition/PartitionDelta
                           :return 'Dynamic
@@ -3067,8 +3066,7 @@
                     hint-fn $ {}
                       :args $ [] 'Number
                       :return 'cumulo-reel.partition/PartitionSendPlan
-                    plan-partition-send s4 $ Option :some $ %{} PartitionProgress (:epoch 7) (:acked acked)
-                      :in-flight $ Option :none
+                    plan-partition-send s4 $ Option :some $ PartitionProgress :epoch 7 :acked acked :in-flight (Option :none)
                 assert= 4 $ :revision s4
                 assert= 2 $ count $ :history s4
                 assert= (PartitionSendPlan :snapshot) (at 1)
@@ -3083,8 +3081,7 @@
             %{} 'TestEntry (:name |epoch-change-forces-snapshot)
               :code $ quote $ let
                   state $ new-partition |lobby 8 $ test-view ([] |a)
-                  stale $ %{} PartitionProgress (:epoch 7) (:acked 1)
-                    :in-flight $ Option :none
+                  stale $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
                 assert= (PartitionSendPlan :snapshot)
                   plan-partition-send state $ Option :some stale
                 assert= 0 $ :acked $ mark-partition-sent state (Option :some stale)
@@ -3128,7 +3125,7 @@
                   decode-map-as value $ :: 'List 'Dynamic
                   , struct-tree-input
               (enum? value)
-                foldl
+                .foldl
                   range 1 $ count value
                   , value $ fn (acc idx)
                     hint-fn $ {}
@@ -3141,8 +3138,7 @@
             :args $ [] 'Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |structs-become-maps)
             :code $ quote $ let
-                progress $ %{} PartitionProgress (:epoch 7) (:acked 1)
-                  :in-flight $ Option :some 2
+                progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :some 2
                 input $ struct-tree-input progress
               assert= true $ map? input
               assert= (Result :ok progress) (try-decode-map-as input 'cumulo-reel.partition/PartitionProgress)
@@ -3150,15 +3146,13 @@
         'test-budget $ %{} 'CodeEntry
           :doc "|Generous deterministic budget used by partition engine tests."
           :code $ quote $ def test-budget
-            %{} DiffBudget
-              :max-visited $ Option :some 10000
-              :max-emitted $ Option :some 10000
+            DiffBudget :max-visited (Option :some 10000) :max-emitted $ Option :some 10000
           :examples $ []
           :schema $ :: 'recollect.diff/DiffBudget
         'test-view $ %{} 'CodeEntry
           :doc "|Deterministic keyed view used by partition engine tests: different labels give different views."
           :code $ quote $ defn test-view (labels)
-            foldl labels
+            .foldl labels
               assert-type ({}) (:: 'Map 'String 'String)
               fn (acc label)
                 hint-fn $ {}

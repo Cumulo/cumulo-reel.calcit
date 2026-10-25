@@ -1879,7 +1879,8 @@
           :code $ quote $ defn close-session! (sid on-event)
             match (get @*clients sid)
               (:some _)
-                do (swap! *clients dissoc sid)
+                do
+                  reset! *clients $ .dissoc @*clients sid
                   on-event $ SocketEvent :disconnect sid
               (:none) &unit
             , &unit
@@ -2314,7 +2315,7 @@
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
-            struct-with db $ :sessions $ dissoc db.:sessions sid
+            struct-with db $ :sessions $ .dissoc db.:sessions sid
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
@@ -2326,7 +2327,7 @@
                     (:some found) found
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
-                next-session $ struct-with session $ :messages (dissoc session.:messages message-id)
+                next-session $ struct-with session $ :messages (.dissoc session.:messages message-id)
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
@@ -2991,13 +2992,18 @@
                   let
                       replayed $ .foldl chain v1 $ fn (acc delta)
                         hint-fn $ {}
-                          :args $ [] 'Dynamic 'cumulo-reel.partition/PartitionDelta
-                          :return 'Dynamic
+                          :args $ [] (:: 'Map 'String 'String) 'cumulo-reel.partition/PartitionDelta
+                          :return $ :: 'Map 'String 'String
                         match
                           .apply-to
                             patch-batch $ :changes delta
                             , acc
-                          (:ok next) next
+                          (:ok next)
+                            match
+                              try-decode-map-as next $ :: 'Map 'String 'String
+                              (:ok view) view
+                              (:err error)
+                                raise $ str |Invalid-view: error
                           (:err error)
                             raise $ str |Patch-failed: error
                     assert= (:view s3) replayed

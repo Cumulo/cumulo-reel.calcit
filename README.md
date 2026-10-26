@@ -2,6 +2,12 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+## 当前 alpha.7 工具链
+
+CLI / `@calcit/procs` 成对固定为已发布的 `0.31.0-alpha.7`，保留一小时 npm 隔离、严格 Caps 和原双入口门禁。
+本次只更新工具链与 lock，不改 Snapshot、公开合同或部署路径，不创建模块 tag。
+下文各版本段落是历史迁移记录；0.30 稳定消费者继续使用原发布维护线。
+
 ## 0.1.0-alpha.1 候选：对使用者的影响
 
 升级到 Calcit CLI / `@calcit/procs` **0.31.0-alpha.2**，依赖图改为 Respo 0.17.0-alpha.2、

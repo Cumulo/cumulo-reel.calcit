@@ -176,10 +176,12 @@
                   try-parse-cirru-edn-as raw $ :: 'List 'String
                   (:ok pair)
                     if
-                      = 2 $ count pair
+                      = 2 $ .len pair
                       do (println "|Found storage.")
                         dispatch!
-                          :: :user/log-in (&list:nth pair 0) (&list:nth pair 1)
+                          :: :user/log-in
+                            .unwrap $ .get pair 0
+                            .unwrap $ .get pair 1
                           Option :none
                       eprintln "|Invalid stored login pair"
                   (:err error) (eprintln "|Invalid stored login:" error)
@@ -353,7 +355,7 @@
                             :return 'Unit
                           d!
                             .unwrap-or cursor $ []
-                            assoc state :username $ match (calcit.core/get e :value)
+                            struct-with state $ :username $ match (calcit.core/get e :value)
                               (:some value) (decode-map-as value 'String)
                               (:none) (decode-map-as nil 'String)
                     =< nil 8
@@ -369,7 +371,7 @@
                             :return 'Unit
                           d!
                             .unwrap-or cursor $ []
-                            assoc state :password $ match (calcit.core/get e :value)
+                            struct-with state $ :password $ match (calcit.core/get e :value)
                               (:some value) (decode-map-as value 'String)
                               (:none) (decode-map-as nil 'String)
                   =< nil 8
@@ -837,7 +839,7 @@
                   match
                     try-decode-map-as (&enum:params value) (:: 'List 'String)
                     (:ok params)
-                      Result :ok $ schema/Op :session/remove-message $ &list:nth params 0
+                      Result :ok $ schema/Op :session/remove-message $ .unwrap (.get params 0)
                     (:err detail) (Result :err detail)
                   Result :err "|Operation payload arity mismatch"
                 :user/log-in $ if
@@ -845,7 +847,9 @@
                   match
                     try-decode-map-as (&enum:params value) (:: 'List 'String)
                     (:ok params)
-                      Result :ok $ schema/Op :user/log-in (&list:nth params 0) (&list:nth params 1)
+                      Result :ok $ schema/Op :user/log-in
+                        .unwrap $ .get params 0
+                        .unwrap $ .get params 1
                     (:err detail) (Result :err detail)
                   Result :err "|Operation payload arity mismatch"
                 :user/sign-up $ if
@@ -853,7 +857,9 @@
                   match
                     try-decode-map-as (&enum:params value) (:: 'List 'String)
                     (:ok params)
-                      Result :ok $ schema/Op :user/sign-up (&list:nth params 0) (&list:nth params 1)
+                      Result :ok $ schema/Op :user/sign-up
+                        .unwrap $ .get params 0
+                        .unwrap $ .get params 1
                     (:err detail) (Result :err detail)
                   Result :err "|Operation payload arity mismatch"
                 :user/log-out $ if
@@ -865,7 +871,7 @@
                   match
                     try-decode-map-as (&enum:params value) (:: 'List 'Tag)
                     (:ok params)
-                      Result :ok $ schema/Op :router/change $ &list:nth params 0
+                      Result :ok $ schema/Op :router/change $ .unwrap (.get params 0)
                     (:err detail) (Result :err detail)
                   Result :err "|Operation payload arity mismatch"
                 :effect/persist $ if
@@ -1048,7 +1054,7 @@
                           (:err detail)
                             Result :err $ str key |: detail
                           (:ok message)
-                            Result :ok $ assoc decoded key message
+                            Result :ok $ .assoc decoded key message
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Input
@@ -1248,10 +1254,10 @@
             :return $ :: 'Result 'Tag 'String
         'encode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-client-store (store)
-            assoc
-              assoc
-                assoc
-                  assoc (&struct:to-map store) :user $ match (:user store)
+            .assoc
+              .assoc
+                .assoc
+                  .assoc (&struct:to-map store) :user $ match (:user store)
                     (:none) nil
                     (:some user) (encode-client-user user)
                   , :router $ encode-router $ :router store
@@ -1263,7 +1269,7 @@
             :return $ :: 'Map 'Tag 'Dynamic
         'encode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-client-user (user)
-            assoc (&struct:to-map user) :avatar $ encode-optional-string $ :avatar user
+            .assoc (&struct:to-map user) :avatar $ encode-optional-string $ :avatar user
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'cumulo-reel.schema/ClientUser
@@ -1280,7 +1286,7 @@
             :return $ :: 'JsNullish 'String
         'encode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-router (router)
-            assoc (&struct:to-map router) :router $ match (:router router)
+            .assoc (&struct:to-map router) :router $ match (:router router)
               (:none) nil
               (:some nested) (encode-router nested)
           :examples $ []
@@ -1289,10 +1295,10 @@
             :return $ :: 'Map 'Tag 'Dynamic
         'encode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-session (session)
-            assoc
-              assoc
-                assoc
-                  assoc (&struct:to-map session) :router $ encode-router $ :router session
+            .assoc
+              .assoc
+                .assoc
+                  .assoc (&struct:to-map session) :router $ encode-router $ :router session
                   , :user-id $ encode-optional-string $ :user-id session
                 , :id $ match (:id session)
                   (:none) nil
@@ -1563,7 +1569,8 @@
           :code $ quote $ defn persist-db! ()
             let
                 reel $ deref *reel
-                file-content $ format-cirru-edn $ assoc (assert-type reel.:db 'cumulo-reel.schema/Database) :sessions ({})
+                file-content $ format-cirru-edn $ struct-with (assert-type reel.:db 'cumulo-reel.schema/Database)
+                  :sessions $ {}
                 storage-path storage-file
                 backup-path $ get-backup-path!
               check-write-text! storage-path file-content
@@ -1713,7 +1720,9 @@
                   not $ empty? changes
                   do
                     send! sid $ format-cirru-edn $ {} (:kind :patch) (:data changes)
-                    swap! *client-caches assoc sid new-store
+                    swap! *client-caches
+                      fn (current key value) (.assoc current key value)
+                      , sid new-store
                     , &unit
                   , &unit
             finish-twig-frame!
@@ -1938,7 +1947,9 @@
                     socket $ js-cast raw-socket 'ws-edn.server/NodeWebSocketHost
                     sid $ inc @*next-sid
                   reset! *next-sid sid
-                  swap! *clients assoc sid socket
+                  swap! *clients
+                    fn (current key value) (.assoc current key value)
+                    , sid socket
                   on-event $ SocketEvent :connect sid
                   socket .on |message $ fn (raw-data binary?)
                     let
@@ -2208,13 +2219,13 @@
                     (:none) schema/user
                   , 'cumulo-reel.schema/User
                 absent $ Option :none
-              schema/ClientStore :logged-in? logged-in? :session session :reel-length (count records) :router
+              schema/ClientStore :logged-in? logged-in? :session session :reel-length (.len records) :router
                 if logged-in?
                   struct-with router $ :data $ case router-name (:home pages)
                     :profile $ memo-twig-by2 :members twig-members sessions users
                     router-name $ {}
                   , router
-                , :count (count sessions) :color (rand-hex-color!) :name absent :user $ if logged-in?
+                , :count (.len sessions) :color (rand-hex-color!) :name absent :user $ if logged-in?
                   Option :some $ memo-twig-by1 user-id twig-user user
                   Option :none
           :examples $ []
@@ -2297,7 +2308,7 @@
                   , 'cumulo-reel.schema/Session
                 next-session $ struct-with session $ :router
                   struct-with schema/router $ :name route-name
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Tag 'Number 'String 'Number
@@ -2308,7 +2319,7 @@
       :defs $ {}
         'connect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect (db sid op-id op-time)
-            struct-with db $ :sessions $ assoc (:sessions db) sid
+            struct-with db $ :sessions $ .assoc (:sessions db) sid
               struct-with schema/session $ :id $ Option :some sid
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
@@ -2328,7 +2339,7 @@
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
                 next-session $ struct-with session $ :messages (.dissoc session.:messages message-id)
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'String 'Number 'String 'Number
@@ -2341,7 +2352,7 @@
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ distinct-values db.:users
+                  .to-list $ .distinct-values db.:users
                   fn (user)
                     hint-fn $ {}
                       :args $ [] 'cumulo-reel.schema/User
@@ -2357,12 +2368,12 @@
                     if
                       = (md5 password) user.:password
                       struct-with session $ :user-id $ Option :some user.:id
-                      struct-with session $ :messages $ assoc session.:messages op-id
+                      struct-with session $ :messages $ .assoc session.:messages op-id
                         schema/Message :id op-id :text $ str "|Wrong password for " username
                   (:none)
-                    struct-with session $ :messages $ assoc session.:messages op-id
+                    struct-with session $ :messages $ .assoc session.:messages op-id
                       schema/Message :id op-id :text $ str "|No user named: " username
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
@@ -2375,7 +2386,7 @@
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
                 next-session $ struct-with session $ :user-id (Option :none)
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
@@ -2390,7 +2401,7 @@
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ distinct-values db.:users
+                  .to-list $ .distinct-values db.:users
                   fn (user)
                     hint-fn $ {}
                       :args $ [] 'cumulo-reel.schema/User
@@ -2404,16 +2415,16 @@
               if (.some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
-                      assoc session.:messages op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
-                  struct-with db $ :sessions $ assoc db.:sessions sid next-session
+                      .assoc session.:messages op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
+                  struct-with db $ :sessions $ .assoc db.:sessions sid next-session
                 let
                     next-session $ struct-with session $ :user-id (Option :some op-id)
                     next-user $ struct-with schema/user (:id op-id) (:name username) (:nickname username)
                       :password $ md5 password
                       :avatar $ Option :none
                   struct-with db
-                    :sessions $ assoc db.:sessions sid next-session
-                    :users $ assoc db.:users op-id next-user
+                    :sessions $ .assoc db.:sessions sid next-session
+                    :users $ .assoc db.:users op-id next-user
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
             :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
@@ -2475,8 +2486,9 @@
           :schema $ :: 'StructDef
         'play-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn play-records (db records updater)
-            if (&list:empty? records) db $ let[] (op sid op-id op-time) (&list:nth records 0)
-              recur (updater db op sid op-id op-time) (&list:rest records) updater
+            if (.empty? records) db $ let[] (op sid op-id op-time)
+              .unwrap $ .get records 0
+              recur (updater db op sid op-id op-time) (.rest records) updater
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Db)
             :args $ [] 'Db
@@ -2687,7 +2699,7 @@
                 cond
                     empty? changes
                     PartitionStep :state state :advance $ PartitionAdvance :unchanged
-                  (> (count changes) operation-limit)
+                  (> (.len changes) operation-limit)
                     reset-step state view stats
                   true $ let
                       next-revision $ inc $ :revision state
@@ -2964,7 +2976,7 @@
               (:none) (Option :none)
               (:some index)
                 let
-                    chain $ &list:slice history index
+                    chain $ .slice history index $ Option :none
                   match (last chain)
                     (:some tail)
                       if
@@ -3132,7 +3144,7 @@
                   , struct-tree-input
               (enum? value)
                 .foldl
-                  range 1 $ count value
+                  range 1 $ .count value
                   , value $ fn (acc idx)
                     hint-fn $ {}
                       :args $ [] 'Enum 'Number
@@ -3164,7 +3176,7 @@
                 hint-fn $ {}
                   :args $ [] (:: 'Map 'String 'String) 'String
                   :return $ :: 'Map 'String 'String
-                assoc acc label $ str |item- label
+                .assoc acc label $ str |item- label
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] $ :: 'List 'String
@@ -3173,9 +3185,9 @@
           :doc "|Keep only the newest deltas; subscribers older than the retained chain receive a snapshot."
           :code $ quote $ defn trim-history (history limit)
             let
-                size $ count history
+                size $ .len history
               if (> size limit)
-                slice history $ - size limit
+                .slice history (- size limit) (Option :none)
                 , history
           :examples $ []
           :schema $ :: 'Fn $ {}

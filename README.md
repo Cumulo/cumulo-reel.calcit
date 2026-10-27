@@ -2,23 +2,28 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 当前 alpha.7 工具链
+## 0.1.0-alpha.2 候选：对使用者的影响
 
-CLI / `@calcit/procs` 成对固定为已发布的 `0.31.0`，保留一小时 npm 隔离、严格 Caps 和原双入口门禁。
-本次只更新工具链与 lock，不改 Snapshot、公开合同或部署路径，不创建模块 tag。
-下文各版本段落是历史迁移记录；0.30 稳定消费者继续使用原发布维护线。
+配对正式 Calcit CLI / `@calcit/procs` **0.31.0**，下游须同步升级整张依赖图。
+依赖为 Util 0.0.33、Message 0.1.0-alpha.3、UI 0.9.0-alpha.4、Respo 0.17.0-alpha.4、
+JS-FFI 0.2.7、Recollect 0.1.0-alpha.4、WS-EDN 0.0.49；传递 Router 0.9.0-alpha.3、
+Value 0.6.0-alpha.2。全部使用已发布精确 tag，不以 main/hash 或缓存覆盖代替发布。
+0.30 消费者继续使用原维护线，不能只切换模块版本。
 
-## 0.1.0-alpha.1 候选：对使用者的影响
+迁移 24 个定义中的 51 处旧集合调用：List/Map/Set 使用对应方法，Struct 字段使用
+`struct-with`，省略结束位置的 List 切片显式传 `Option :none`。已检查长度的 List
+下标读取使用 `.get` / `.unwrap`，有效输入的值和顺序不变，越界仍失败，错误文本可能变化。
+Enum 的 `.count` 走公开 Countable 合同；两处 Enum 更新保留公开 `assoc`，因为正式
+0.31.0 的 strict 仍拒绝 Enum `.assoc` 的旧式无来源实现，不伪造 trait 或放宽门禁。
 
-升级到 Calcit CLI / `@calcit/procs` **0.31.0-alpha.2**，依赖图改为 Respo 0.17.0-alpha.2、
-UI 0.9.0-alpha.1、Message 0.1.0-alpha.1、Recollect 0.1.0-alpha.1，传递 Router 0.9.0-alpha.1、
-Value 0.6.0-alpha.1。Respo 栈整体固定 JS-FFI 0.2.5，因此 Util 回到 0.0.31、WS-EDN 回到
-0.0.47，以便 Caps strict 不出现版本冲突；0.0.32 / 0.0.48 只多了构造器写法和回调类型
-标注的收紧，运行时行为相同。等 Respo 栈改用 JS-FFI 0.2.6 后再一起升回。
+公开 schema、原 63 项测试、协议、存档、监听、派发与 reload 行为保持不变。
+原双入口完整 strict（空 diagnostics）、类型检查、63/63 原生测试、两端构建和七组
+Node 回归已通过；原共享协议/分区/成员测试在 native/JS 各 35 项通过，零排除。
+本机网络验收只绑定回环，默认全网卡监听的真实验证仍只在原隔离 CI runner 执行。
+这些证据不代表已完成生产或下游业务应用验收；最终发布仍需精确 CI、评审与 main 验证。
+保留原一小时 npm 隔离、Caps strict、全部门禁及 COS 内置校验，不新增验证脚本。
 
-登录事件回调的 `dispatch!` 现在按入口 `:dispatch-op` 声明为 `cumulo-reel.schema/Op`，
-派发值用 `schema/Op` 构造；enum payload 转换的 fold 回调声明为 Enum 累积器；两处测试里的
-`slice` 结束位置改为 `Option`。协议、存档与原有派发行为不变，原 63 项测试保留。
+以下为历史迁移记录，不代替当前候选的验收。
 
 ## 0.0.62 候选：对使用者的影响
 

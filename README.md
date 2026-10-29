@@ -2,12 +2,12 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.1.0-alpha.2 候选：对使用者的影响
+## 0.1.0-alpha.3 候选：对使用者的影响
 
-配对正式 Calcit CLI / `@calcit/procs` **0.31.0**，下游须同步升级整张依赖图。
-依赖为 Util 0.0.33、Message 0.1.0-alpha.3、UI 0.9.0-alpha.4、Respo 0.17.0-alpha.4、
-JS-FFI 0.2.7、Recollect 0.1.0-alpha.4、WS-EDN 0.0.49；传递 Router 0.9.0-alpha.3、
-Value 0.6.0-alpha.2。全部使用已发布精确 tag，不以 main/hash 或缓存覆盖代替发布。
+配对正式 Calcit CLI / `@calcit/procs` **0.32.1**，下游须同步升级整张依赖图。Snapshot 类型写法已用 `edit format` 迁移到 0.32 语法，源码行为不变。
+依赖为 Util 0.0.35、Message 0.1.0-alpha.4、UI 0.9.0、Respo 0.17.1、
+JS-FFI 0.2.9、Recollect 0.1.0-alpha.5、WS-EDN 0.0.51；传递 Router 0.9.0-alpha.4、
+Value 0.6.0。全部使用已发布精确 tag，不以 main/hash 或缓存覆盖代替发布。
 0.30 消费者继续使用原维护线，不能只切换模块版本。
 
 迁移 24 个定义中的 51 处旧集合调用：List/Map/Set 使用对应方法，Struct 字段使用

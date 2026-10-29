@@ -17,11 +17,11 @@
         '*states $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *states ({})
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Ref (Map Tag Dynamic)
         '*store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *store (Option :none)
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Option 'cumulo-reel.schema/ClientStore
+          :schema $ quote $ Ref (Option cumulo-reel.schema/ClientStore)
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! ()
             ws-connect!
@@ -40,9 +40,7 @@
                       shared/console-error! $ str |Rejected-server-patch: detail
                 :class-mapper protocol/patch-class-mapper
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'ws-edn.client/WsClient)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> ws-edn.client/WsClient) (:features :js-ffi)
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op op-data)
             let
@@ -65,9 +63,7 @@
                       do (connect!) &unit
                     _ $ ws-send! op
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Dynamic $ :: 'Option 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Dynamic (Option Dynamic) (-> Unit) (:features :js-ffi)
           :tests $ []
             %{} 'TestEntry (:name |preserves-legacy-list-and-mixed-cursor-keys)
               :code $ quote $ let
@@ -98,9 +94,7 @@
                       dispatch! (:: :states 7 :invalid) (Option :none)
                       , false
                     fn (message)
-                      hint-fn $ {}
-                        :args $ [] 'String
-                        :return 'Bool
+                      hint-fn $ Fn String $ -> Bool
                       , true
                 assert= true rejected
                 assert= original @*states
@@ -114,9 +108,7 @@
             connect!
             add-watch! *store :changes on-store-change!
             add-watch! *states :changes $ fn (states prev)
-              hint-fn $ {}
-                :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
-                :return 'Unit
+              hint-fn $ Fn (Map Tag Dynamic) (Map Tag Dynamic) (-> Unit)
               render-app! render!
               , &unit
             browser/add-event-listener! |visibilitychange $ fn (event)
@@ -126,47 +118,38 @@
               , &unit
             println "|App started!"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
             .unwrap $ respo.ffi.browser/query-selector |.app
           :examples $ []
-          :schema $ :: 'respo.dom/DomElement
+          :schema $ quote respo.dom/DomElement
         'on-store-change! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] (:: 'Option 'cumulo-reel.schema/ClientStore) (:: 'Option 'cumulo-reel.schema/ClientStore)
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (Option cumulo-reel.schema/ClientStore) (Option cumulo-reel.schema/ClientStore) (-> Unit) (:features :js-ffi)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (add-watch! *store :changes on-store-change!)
             add-watch! *states :changes $ fn (states prev)
-              hint-fn $ {}
-                :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
-                :return 'Unit
+              hint-fn $ Fn (Map Tag Dynamic) (Map Tag Dynamic) (-> Unit)
               render-app! render!
               , &unit
             render-app! render!
             println "|Code updated."
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! (renderer)
             renderer mount-target (comp-container @*states @*store)
               fn (op)
                 dispatch! op $ Option :none
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ [] 'respo.dom/DomElement 'respo.schema/Component $ :: 'Fn
-                  {} (:return 'Unit)
-                    :args $ [] 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn
+            Fn respo.dom/DomElement respo.schema/Component
+              Fn Dynamic $ -> Unit
+              -> Unit
+            -> Unit
+            :features :js-ffi
         'simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn simulate-login! ()
             match
@@ -187,14 +170,12 @@
                   (:err error) (eprintln "|Invalid stored login:" error)
               (:none) (println "|Found no storage.")
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'ssr? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def ssr?
             .some? $ browser/query-selector |meta.respo-ssr
           :examples $ []
-          :schema $ :: 'Bool
+          :schema $ quote Bool
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.client
           :require
@@ -243,19 +224,16 @@
                           MapEntryDecision :keep id $ &struct:to-map message
                       {}
                       fn (info d!)
-                        hint-fn $ {}
-                          :args $ [] (:: 'Map 'Tag 'Dynamic)
-                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                              :args $ [] 'Dynamic
-                          :return 'Unit
+                        hint-fn $ Fn (Map Tag Dynamic)
+                          Fn Dynamic & Dynamic $ -> Unit
+                          -> Unit
                         d! $ :: :session/remove-message $ match (calcit.core/get info :id)
                           (:some value) (decode-map-as value 'String)
                           (:none) (decode-map-as nil 'String)
                     when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
                     when config/dev? $ comp-reel store-typed.:reel-length $ {}
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Option 'cumulo-reel.schema/ClientStore)
+          :schema $ quote $ Fn (Map Tag Dynamic) (Option cumulo-reel.schema/ClientStore) (-> respo.schema/Component)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline ()
             div
@@ -276,8 +254,7 @@
                     d! $ :: :effect/connect
                 <> "|No connection..." $ {} (:font-family ui/font-fancy) (:font-size 24)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ []
+          :schema $ quote $ Fn (-> respo.schema/Component)
         'comp-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-status-color (color)
             div $ {} (:class-name css-status-color)
@@ -285,18 +262,17 @@
                   size 24
                 {} (:width size) (:height size) (:background-color color)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> respo.schema/Component)
         'css-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-status-color
             {} $ |$0 $ {} (:position :absolute) (:bottom 60) (:left 8) (:border-radius |50%) (:opacity 0.6) (:pointer-events :none)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-body $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-body
             {} $ :padding "|8px 16px"
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.container
           :require
@@ -320,7 +296,7 @@
         'LoginState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct LoginState (:username 'String) (:password 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
@@ -348,11 +324,9 @@
                         :value $ :username state
                         :style ui/input
                         :on-input $ fn (e d!)
-                          hint-fn $ {}
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                :args $ [] 'Dynamic
-                            :return 'Unit
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Unit
                           d!
                             .unwrap-or cursor $ []
                             struct-with state $ :username $ match (calcit.core/get e :value)
@@ -364,11 +338,9 @@
                         :value $ :password state
                         :style ui/input
                         :on-input $ fn (e d!)
-                          hint-fn $ {}
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                :args $ [] 'Dynamic
-                            :return 'Unit
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Unit
                           d!
                             .unwrap-or cursor $ []
                             struct-with state $ :password $ match (calcit.core/get e :value)
@@ -385,27 +357,22 @@
                       :style $ style/merge-styles style/link
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
-          :schema $ :: 'cumulo-reel.app.comp.login/LoginState
+          :schema $ quote cumulo-reel.app.comp.login/LoginState
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
-              hint-fn $ {}
-                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                  :: 'Fn $ {} (:return 'Unit)
-                    :args $ [] 'cumulo-reel.schema/Op
-                :return 'Unit
+              hint-fn $ Fn (Map Tag Dynamic)
+                Fn cumulo-reel.schema/Op $ -> Unit
+                -> Unit
               dispatch! $ if signup? (schema/Op :user/sign-up username password) (schema/Op :user/log-in username password)
               browser/storage-set! (:storage-key config/site)
                 format-cirru-edn $ [] username password
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/EventHandler)
-            :args $ [] 'String 'String 'Bool
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn String String Bool (-> respo.schema/EventHandler) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.login
           :require
@@ -438,15 +405,14 @@
                 =< 8 nil
                 <> $ str count-members
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'Bool 'Number
+          :schema $ quote $ Fn Bool Number (-> respo.schema/Component)
         'css-nav $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-nav
             {} $ |$0 $ {} (:height 48) (:justify-content :space-between) (:padding "|0 16px") (:font-size 16)
               :border-bottom $ str "|1px solid " $ hsl 0 0 0 0.1
               :font-family ui/font-fancy
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.navigation
           :require
@@ -501,8 +467,9 @@
                       , &unit
                   <> "|Log out"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'cumulo-reel.schema/ClientUser $ :: 'Map 'Number (:: 'Option 'String)
+          :schema $ quote $ Fn cumulo-reel.schema/ClientUser
+            Map Number $ Option String
+            -> respo.schema/Component
         'css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-member-label
             {} $ |$0 $ {} (:padding "|0 8px")
@@ -510,25 +477,23 @@
               :border-radius |16px
               :margin "|0 4px"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'decode-member-names $ %{} 'CodeEntry
           :doc "|Validate legacy member wire keys and nil/String names before typed display; reject malformed names without dropping guest entries."
           :code $ quote $ defn decode-member-names (value)
             filter-map-kv
               decode-map-as value $ :: 'Map 'Number 'Dynamic
               fn (key name)
-                hint-fn $ {}
-                  :args $ [] 'Number 'Dynamic
-                  :return $ :: 'calcit.core/MapEntryDecision 'Number $ :: 'Option 'String
+                hint-fn $ Fn Number Dynamic $ ->
+                  calcit.core/MapEntryDecision Number $ Option String
                 match (cumulo-reel.app.protocol/decode-optional-string name)
                   (:err detail)
                     raise $ str |Invalid-member-name-at- key |: detail
                   (:ok decoded) (MapEntryDecision :keep key decoded)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Map 'Number $ :: 'Option 'String
+          :schema $ quote $ Fn Input
+            -> $ Map Number $ Option String
+            :generics Input
           :tests $ []
             %{} 'TestEntry (:name |preserves-guest-and-named-keys)
               :code $ quote $ assert=
@@ -543,9 +508,7 @@
                     decode-member-names $ {} $ 7 12
                     , false
                   fn (message)
-                    hint-fn $ {}
-                      :args $ [] 'String
-                      :return 'Bool
+                    hint-fn $ Fn String $ -> Bool
                     .includes? message |Invalid-member-name-at-7
             %{} 'TestEntry (:name |rejects-string-key)
               :code $ quote $ assert= true
@@ -554,9 +517,7 @@
                     decode-member-names $ {} $ |7 nil
                     , false
                   fn (message)
-                    hint-fn $ {}
-                      :args $ [] 'String
-                      :return 'Bool
+                    hint-fn $ Fn String $ -> Bool
                     .includes? message "|expected number"
         'member-display-name $ %{} 'CodeEntry
           :doc "|Display missing member names as guests while preserving present strings and session keys."
@@ -565,8 +526,7 @@
               (:none) "|访客"
               (:some name) name
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] $ :: 'Option 'String
+          :schema $ quote $ Fn (Option String) (-> String)
           :tests $ []
             %{} 'TestEntry (:name |nil-is-guest)
               :code $ quote $ assert= "|访客"
@@ -605,12 +565,12 @@
           :code $ quote $ def dev?
             = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
-          :schema $ :: 'Bool
+          :schema $ quote Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             cumulo-reel.schema/SiteConfig :port 5021 :title |Cumulo :icon |http://cdn.tiye.me/logo/cumulo.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/cumulo-reel/ :theme |#eeeeff :storage-key |reel-storage :storage-file |storage.cirru
           :examples $ []
-          :schema $ :: 'cumulo-reel.schema/SiteConfig
+          :schema $ quote cumulo-reel.schema/SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.config
           :require
@@ -645,10 +605,9 @@
                                 (:ok next-store) (decode-nullable-store next-store)
                       Result :err $ str |Unknown-message-kind: kind
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Option 'cumulo-reel.schema/ClientStore) 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/ClientStore) 'String
+          :schema $ quote $ Fn (Option cumulo-reel.schema/ClientStore) Input
+            -> $ Result (Option cumulo-reel.schema/ClientStore) String
+            :generics Input
           :tests $ []
             %{} 'TestEntry (:name |restores-initial-edn-snapshot)
               :code $ quote $ let
@@ -818,10 +777,9 @@
         'decode-bool $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-bool (value) (try-decode-map-as value 'Bool)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'Bool 'String
+          :schema $ quote $ Fn Input
+            -> $ Result Bool String
+            :generics Input
         'decode-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-action (value)
             if (enum? value)
@@ -901,10 +859,9 @@
                 _ $ Result :err "|Unknown client operation"
               Result :err "|Expected an operation enum"
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'cumulo-reel.schema/Op 'String
+          :schema $ quote $ Fn Input
+            -> $ Result cumulo-reel.schema/Op String
+            :generics Input
         'decode-client-store $ %{} 'CodeEntry (:doc "|在传输边界验证全部具名字段并重建 ClientStore；Router.data 保留开放值。")
           :code $ quote $ defn decode-client-store (value)
             match (decode-source value)
@@ -936,10 +893,9 @@
                                               (:ok user)
                                                 Result :ok $ schema/ClientStore :session session :router router :logged-in? logged-in? :color color :count count :reel-length reel-length :name name :user user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'cumulo-reel.schema/ClientStore 'String
+          :schema $ quote $ Fn Input
+            -> $ Result cumulo-reel.schema/ClientStore String
+            :generics Input
         'decode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-user (value)
             match (decode-source value)
@@ -959,10 +915,9 @@
                               (:ok avatar)
                                 Result :ok $ schema/ClientUser :name name :id id :nickname nickname :avatar avatar
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'cumulo-reel.schema/ClientUser 'String
+          :schema $ quote $ Fn Input
+            -> $ Result cumulo-reel.schema/ClientUser String
+            :generics Input
         'decode-field $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-field (source key decoder)
             match (get source key)
@@ -974,13 +929,10 @@
                     Result :err $ str key |: detail
                   (:ok decoded) (Result :ok decoded)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Value) 'Tag $ :: 'Fn
-              {}
-                :args $ [] 'Value
-                :return $ :: 'Result 'T 'String
-            :generics $ [] 'Value 'T
-            :return $ :: 'Result 'T 'String
+          :schema $ quote $ Fn (Map Tag Value) Tag
+            Fn Value $ -> $ Result T String
+            -> $ Result T String
+            :generics Value T
           :tests $ []
             %{} 'TestEntry (:name |preserves-typed-map-value)
               :code $ quote $ match
@@ -1023,10 +975,9 @@
                       (:ok text)
                         Result :ok $ schema/Message :id id :text text
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'cumulo-reel.schema/Message 'String
+          :schema $ quote $ Fn Input
+            -> $ Result cumulo-reel.schema/Message String
+            :generics Input
         'decode-messages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-messages (value)
             match
@@ -1037,13 +988,12 @@
                   .to-list $ .keys entries
                   assert-type
                     Result :ok $ {}
-                    :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+                    quote $ Result (Map String cumulo-reel.schema/Message) String
                   fn (acc key)
-                    hint-fn $ {}
-                      :args $ []
-                        :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
-                        , 'String
-                      :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+                    hint-fn $ Fn
+                      Result (Map String cumulo-reel.schema/Message) String
+                      , String $ ->
+                        Result (Map String cumulo-reel.schema/Message) String
                     match acc
                       (:err detail) (Result :err detail)
                       (:ok decoded)
@@ -1056,10 +1006,9 @@
                           (:ok message)
                             Result :ok $ .assoc decoded key message
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Map 'String 'cumulo-reel.schema/Message) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Map String cumulo-reel.schema/Message) String
+            :generics Input
           :tests $ [] $ %{} 'TestEntry (:name |preserves-message-option-consumer-contract)
             :code $ quote $ let ()
               assert=
@@ -1093,10 +1042,9 @@
                 (:ok decoded)
                   Result :ok $ Option :some decoded
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'Number) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Option Number) String
+            :generics Input
         'decode-nullable-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-router (value)
             if (nil? value)
@@ -1106,10 +1054,9 @@
                 (:ok router)
                   Result :ok $ Option :some router
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/Router) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Option cumulo-reel.schema/Router) String
+            :generics Input
         'decode-nullable-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-store (value)
             if (nil? value)
@@ -1119,10 +1066,9 @@
                 (:ok store)
                   Result :ok $ Option :some store
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/ClientStore) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Option cumulo-reel.schema/ClientStore) String
+            :generics Input
         'decode-nullable-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-user (value)
             if (nil? value)
@@ -1132,24 +1078,21 @@
                 (:ok user)
                   Result :ok $ Option :some user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'cumulo-reel.schema/ClientUser) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Option cumulo-reel.schema/ClientUser) String
+            :generics Input
         'decode-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-number (value) (try-decode-map-as value 'Number)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'Number 'String
+          :schema $ quote $ Fn Input
+            -> $ Result Number String
+            :generics Input
         'decode-open $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-open (value) (Result :ok value)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Value
-            :generics $ [] 'Value
-            :return $ :: 'Result 'Value 'String
+          :schema $ quote $ Fn Value
+            -> $ Result Value String
+            :generics Value
           :tests $ []
             %{} 'TestEntry (:name |preserves-opaque-router-data)
               :code $ quote $ let
@@ -1175,10 +1118,9 @@
                 (:ok decoded)
                   Result :ok $ Option :some decoded
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'String) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Option String) String
+            :generics Input
         'decode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-router (value)
             match (decode-source value)
@@ -1198,10 +1140,9 @@
                               (:ok router)
                                 Result :ok $ schema/Router :name name :title title :data data :router router
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'cumulo-reel.schema/Router 'String
+          :schema $ quote $ Fn Input
+            -> $ Result cumulo-reel.schema/Router String
+            :generics Input
         'decode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-session (value)
             match (decode-source value)
@@ -1224,34 +1165,30 @@
                                   (:ok messages)
                                     Result :ok $ schema/Session :user-id user-id :id id :nickname nickname :router router :messages messages
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'cumulo-reel.schema/Session 'String
+          :schema $ quote $ Fn Input
+            -> $ Result cumulo-reel.schema/Session String
+            :generics Input
         'decode-source $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-source (value)
             try-decode-map-as
               if (struct? value) (&struct:to-map value) value
               :: 'Map 'Tag 'Dynamic
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Map 'Tag 'Dynamic) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Map Tag Dynamic) String
+            :generics Input
         'decode-string $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-string (value) (try-decode-map-as value 'String)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'String 'String
+          :schema $ quote $ Fn Input
+            -> $ Result String String
+            :generics Input
         'decode-tag $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-tag (value) (try-decode-map-as value 'Tag)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'Tag 'String
+          :schema $ quote $ Fn Input
+            -> $ Result Tag String
+            :generics Input
         'encode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-client-store (store)
             .assoc
@@ -1264,16 +1201,14 @@
                 , :session $ encode-session $ :session store
               , :name $ encode-optional-string $ :name store
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'cumulo-reel.schema/ClientStore
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn cumulo-reel.schema/ClientStore
+            -> $ Map Tag Dynamic
         'encode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-client-user (user)
             .assoc (&struct:to-map user) :avatar $ encode-optional-string $ :avatar user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'cumulo-reel.schema/ClientUser
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn cumulo-reel.schema/ClientUser
+            -> $ Map Tag Dynamic
         'encode-optional-string $ %{} 'CodeEntry
           :doc "|Project an internal Option<String> to the legacy wire nil/String representation; not an internal absence model."
           :code $ quote $ defn encode-optional-string (value)
@@ -1281,18 +1216,16 @@
               (:none) nil
               (:some text) text
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Option 'String
-            :return $ :: 'JsNullish 'String
+          :schema $ quote $ Fn (Option String)
+            -> $ JsNullish String
         'encode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-router (router)
             .assoc (&struct:to-map router) :router $ match (:router router)
               (:none) nil
               (:some nested) (encode-router nested)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'cumulo-reel.schema/Router
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn cumulo-reel.schema/Router
+            -> $ Map Tag Dynamic
         'encode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-session (session)
             .assoc
@@ -1305,18 +1238,16 @@
                   (:some value) value
               , :nickname $ encode-optional-string $ :nickname session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'cumulo-reel.schema/Session
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn cumulo-reel.schema/Session
+            -> $ Map Tag Dynamic
         'parse-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-client-action (raw)
             match (.parse-cirru-edn raw)
               (:ok value) (decode-client-action value)
               (:err detail) (Result :err detail)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'Result 'cumulo-reel.schema/Op 'String
+          :schema $ quote $ Fn String
+            -> $ Result cumulo-reel.schema/Op String
           :tests $ []
             %{} 'TestEntry (:name |accepts-anonymous-sign-up)
               :code $ quote $ assert=
@@ -1362,7 +1293,7 @@
           :code $ quote $ def patch-class-mapper
             {} $ :change-op patch-schema/change-op
           :examples $ []
-          :schema $ :: 'Map 'Tag 'EnumDef
+          :schema $ quote $ Map Tag EnumDef
         'receive-server-patch! $ %{} 'CodeEntry (:doc "|只在 patch 与完整结果解码都成功后更新客户端 Ref。")
           :code $ quote $ defn receive-server-patch! (target data)
             match
@@ -1371,12 +1302,11 @@
               (:ok next-store)
                 do (reset! target next-store) (Result :ok &unit)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ []
-              :: 'Ref $ :: 'Option 'cumulo-reel.schema/ClientStore
-              , 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result 'Unit 'String
+          :schema $ quote $ Fn
+            Ref $ Option cumulo-reel.schema/ClientStore
+            , Input
+              -> $ Result Unit String
+              :generics Input
           :tests $ []
             %{} 'TestEntry (:name |rejects-invalid-result-without-publishing)
               :code $ quote $ let
@@ -1496,7 +1426,7 @@
         '*client-caches $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *client-caches ({})
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Number 'cumulo-reel.schema/ClientStore
+          :schema $ quote $ Ref (Map Number cumulo-reel.schema/ClientStore)
         '*initial-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *initial-db
             if
@@ -1505,16 +1435,16 @@
                 cumulo-reel.app.storage/decode-database $ parse-cirru-edn $ read-text! storage-file
               do (println "|Found no data") database
           :examples $ []
-          :schema $ :: 'Ref 'cumulo-reel.schema/Database
+          :schema $ quote $ Ref cumulo-reel.schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reader-reel @*reel
           :examples $ []
-          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
+          :schema $ quote $ Ref (cumulo-reel.core/ReelState cumulo-reel.schema/Database)
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
             cumulo-reel.core/ReelState :base @*initial-db :db @*initial-db :records ([]) :merged? false
           :examples $ []
-          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
+          :schema $ quote $ Ref (cumulo-reel.core/ReelState cumulo-reel.schema/Database)
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op sid)
             let
@@ -1527,8 +1457,7 @@
                   reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
                   , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'cumulo-reel.schema/Op 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Op Number (-> Unit)
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -1541,8 +1470,7 @@
                 (:some value) (str value |-snapshot.cirru)
                 (:none) (str nil |-snapshot.cirru)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ []
+          :schema $ quote $ Fn (-> String)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -1557,14 +1485,11 @@
             every! 600000 $ fn () $ persist-db!
             on-interrupt! on-exit!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -1576,15 +1501,13 @@
               check-write-text! storage-path file-content
               check-write-text! backup-path file-content
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println "|Code updated.") (clear-twig-caches!) (reset-twig-memos!)
             reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'render-loop! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-loop! ()
             when
@@ -1593,8 +1516,7 @@
               sync-clients! @*reader-reel
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'resolve-server-port $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn resolve-server-port (configured default-port)
             match configured
@@ -1609,8 +1531,7 @@
                   (:err _)
                     raise $ str |Invalid-server-port: text
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] (:: 'Option 'String) 'Number
+          :schema $ quote $ Fn (Option String) Number (-> Number)
           :tests $ []
             %{} 'TestEntry (:name |accepts-configured-integer)
               :code $ quote $ assert= 9000
@@ -1689,16 +1610,14 @@
                     dispatch! (:: :session/disconnect) sid
                 (:blob sid) (eprintln "|Unexpected binary message from:" sid)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'ws-edn.server/NodeWebSocketServerHost)
-            :args $ [] 'Number
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number (-> ws-edn.server/NodeWebSocketServerHost) (:features :js-ffi)
         'storage-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def storage-file
             if (empty? calcit-dirname)
               str calcit-dirname $ :storage-file config/site
               str calcit-dirname |/ $ :storage-file config/site
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'sync-clients! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sync-clients! (reel) (begin-twig-frame!)
             each! $ fn (sid)
@@ -1727,8 +1646,7 @@
                   , &unit
             finish-twig-frame!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] $ :: 'cumulo-reel.core/ReelState 'cumulo-reel.schema/Database
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState cumulo-reel.schema/Database) (-> Unit)
         'updater-from-record $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater-from-record (db op sid op-id op-time)
             let
@@ -1756,9 +1674,7 @@
                   _ $ raise |Invalid-record-operation
               updater db typed-op (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'OpInput 'SidInput 'IdInput 'TimeInput
-            :generics $ [] 'OpInput 'SidInput 'IdInput 'TimeInput
+          :schema $ quote $ Fn cumulo-reel.schema/Database OpInput SidInput IdInput TimeInput (-> cumulo-reel.schema/Database) (:generics OpInput SidInput IdInput TimeInput)
           :tests $ [] $ %{} 'TestEntry (:name |replays-legacy-connect-operation)
             :code $ quote $ assert=
               updater database (cumulo-reel.schema/Op :session/connect) 1 |op-1 0
@@ -1783,28 +1699,21 @@
       :defs $ {}
         'LocalDateHost $ %{} 'CodeEntry (:doc "|仅暴露备份命名所需的宿主本地月、日读取。")
           :code $ quote $ deftrait LocalDateHost
-            .get-month $ :: 'Fn $ {}
-              :args $ [] 'cumulo-reel.app.server-host/LocalDateHost
-              :return 'Number
-            .get-date $ :: 'Fn $ {}
-              :args $ [] 'cumulo-reel.app.server-host/LocalDateHost
-              :return 'Number
+            .get-month $ quote $ Fn cumulo-reel.app.server-host/LocalDateHost (-> Number)
+            .get-date $ quote $ Fn cumulo-reel.app.server-host/LocalDateHost (-> Number)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :node)
             :names $ {} (:get-date |getDate) (:get-month |getMonth)
-          :schema $ :: 'Trait
+          :schema $ quote Trait
         'NodeProcessHost $ %{} 'CodeEntry (:doc "|仅用于订阅 Node 的 SIGINT 信号。")
           :code $ quote $ deftrait NodeProcessHost
-            .on $ :: 'Fn $ {}
-              :args $ [] 'cumulo-reel.app.server-host/NodeProcessHost 'String $ :: 'Fn
-                {}
-                  :args $ [] 'String 'Number
-                  :return 'Unit
-              :return 'cumulo-reel.app.server-host/NodeProcessHost
+            .on $ quote $ Fn cumulo-reel.app.server-host/NodeProcessHost String
+              Fn String Number $ -> Unit
+              -> cumulo-reel.app.server-host/NodeProcessHost
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :node)
             :names $ {} $ :on |on
-          :schema $ :: 'Trait
+          :schema $ quote Trait
         'check-write-text! $ %{} 'CodeEntry (:doc "|内容未变时跳过写入，按需建立一级备份目录。")
           :code $ quote $ defn check-write-text! (path content)
             let
@@ -1817,9 +1726,7 @@
                 write-text! path content
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'String 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn String String (-> Unit) (:features :js-ffi)
         'ensure-directory! $ %{} 'CodeEntry (:doc "|递归建立缺少的父目录，避免备份月份目录不存在时写入失败。")
           :code $ quote $ defn ensure-directory! (directory)
             if (file-exists? directory) &unit $ do
@@ -1827,17 +1734,14 @@
               mkdir! directory
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn String (-> Unit) (:features :js-ffi)
         'every! $ %{} 'CodeEntry (:doc "|由 Node 宿主重复调度 Unit 回调。")
           :code $ quote $ defn every! (delay callback) (js/setInterval callback delay) &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Number $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number
+            Fn $ -> Unit
+            -> Unit
+            :features :js-ffi
         'local-month-day! $ %{} 'CodeEntry (:doc "|读取 Node 宿主本地时区的月份与日期。")
           :code $ quote $ defn local-month-day! ()
             let
@@ -1846,27 +1750,23 @@
                 :month $ inc $ date .get-month
                 :day $ date .get-date
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ []
-            :features $ #{} :js-ffi
-            :return $ :: 'Map 'Tag 'Number
+          :schema $ quote $ Fn
+            -> $ Map Tag Number
+            :features :js-ffi
         'on-interrupt! $ %{} 'CodeEntry (:doc "|将 SIGINT 交给业务退出回调，而不依赖 native CLI 注入。")
           :code $ quote $ defn on-interrupt! (callback)
             let
                 process $ js-cast js/process 'NodeProcessHost
               process .on |SIGINT $ fn (signal-name signal-number)
-                hint-fn $ {}
-                  :args $ [] 'String 'Number
-                  :return 'Unit
+                hint-fn $ Fn String Number $ -> Unit
                 callback
                 , &unit
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn
+            Fn $ -> Unit
+            -> Unit
+            :features :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server-host
           :require $ js-ffi.node :refer $ file-exists? read-text! write-text! mkdir! path-dirname
@@ -1875,15 +1775,15 @@
         '*clients $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *clients ({})
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Number 'ws-edn.server/NodeWebSocketHost
+          :schema $ quote $ Ref (Map Number ws-edn.server/NodeWebSocketHost)
         '*next-sid $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *next-sid 0
           :examples $ []
-          :schema $ :: 'Ref 'Number
+          :schema $ quote $ Ref Number
         'SocketEvent $ %{} 'CodeEntry (:doc "|适配器向业务层报告的连接、原始文本消息、断线和二进制通知。")
           :code $ quote $ defenum SocketEvent (:connect 'Number) (:message 'Number 'String) (:disconnect 'Number) (:blob 'Number)
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ quote Enum
         'close-session! $ %{} 'CodeEntry (:doc "|连接关闭或错误只通知业务层一次断线。")
           :code $ quote $ defn close-session! (sid on-event)
             match (get @*clients sid)
@@ -1894,10 +1794,9 @@
               (:none) &unit
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Number $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ [] 'cumulo-reel.app.server-ws/SocketEvent
+          :schema $ quote $ Fn Number
+            Fn cumulo-reel.app.server-ws/SocketEvent $ -> Unit
+            -> Unit
           :tests $ [] $ %{} 'TestEntry (:name |ignores-unknown-session)
             :code $ quote $ let
                 calls $ ref 0
@@ -1909,13 +1808,13 @@
             each (keys @*clients) handler
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ [] 'Number
+          :schema $ quote $ Fn
+            Fn Number $ -> Unit
+            -> Unit
           :tests $ [] $ %{} 'TestEntry (:name |skips-disconnected-sessions)
             :code $ quote $ let
-                seen $ ref $ assert-type ([]) (:: 'List 'Number)
+                seen $ ref $ assert-type ([])
+                  quote $ List Number
               reset! *clients $ {}
               each! $ fn (sid) (swap! seen conj sid) &unit
               assert= ([]) @seen
@@ -1923,7 +1822,7 @@
           :code $ quote $ defn send! (sid message)
             match
               get
-                assert-type @*clients $ :: 'Map 'Number 'ws-edn.server/NodeWebSocketHost
+                assert-type @*clients $ quote $ Map Number ws-edn.server/NodeWebSocketHost
                 , sid
               (:some socket)
                 let
@@ -1932,9 +1831,7 @@
               (:none) (eprintln |WebSocket-client-missing: sid)
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Number 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number String (-> Unit) (:features :js-ffi)
         'serve! $ %{} 'CodeEntry
           :doc "|启动 Node WebSocket server，保留 Number SID 与原事件语义。可选 WSS_BIND_ADDRESS 指定监听地址；未设置保持原宿主默认，空字符串明确拒绝。"
           :code $ quote $ defn serve! (port on-event)
@@ -1965,11 +1862,10 @@
               server .on |error $ fn (error) (eprintln |WebSocket-server-error: error) (quit! 1) &unit
               , server
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'ws-edn.server/NodeWebSocketServerHost)
-            :args $ [] 'Number $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ [] 'cumulo-reel.app.server-ws/SocketEvent
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number
+            Fn cumulo-reel.app.server-ws/SocketEvent $ -> Unit
+            -> ws-edn.server/NodeWebSocketServerHost
+            :features :js-ffi
         'server-options $ %{} 'CodeEntry
           :doc "|生成 Node WebSocket 配置；缺失地址保留宿主默认监听，显式空地址拒绝，不替换为全网卡。"
           :code $ quote $ defn server-options (port bind-address)
@@ -1978,9 +1874,7 @@
               (:some address)
                 if (= address |) (raise "|WSS_BIND_ADDRESS must not be empty") (&js-object :port port :host address)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'JsObject)
-            :args $ [] 'Number $ :: 'Option 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number (Option String) (-> JsObject) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server-ws
           :require
@@ -2008,9 +1902,7 @@
                     (:none)
                       decode-map-as nil $ :: 'Map 'Tag 'Dynamic
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'Input
-            :generics $ [] 'Input
+          :schema $ quote $ Fn Input (-> cumulo-reel.schema/Database) (:generics Input)
           :tests $ []
             %{} 'TestEntry (:name |restores-legacy-user-database)
               :code $ quote $ let
@@ -2053,25 +1945,18 @@
                   rejected $ try
                     do (cumulo-reel.app.storage/decode-database raw) false
                     fn (message)
-                      hint-fn $ {}
-                        :args $ [] 'String
-                        :return 'Bool
+                      hint-fn $ Fn String $ -> Bool
                       not $ empty? message
                 assert= true rejected
               :tags $ #{} :protocol :storage
             %{} 'TestEntry (:name |preserves-database-option-consumer-errors)
               :code $ quote $ let
                   error-of $ fn (raw)
-                    hint-fn $ {}
-                      :generics $ [] 'Input
-                      :args $ [] 'Input
-                      :return 'String
+                    hint-fn $ Fn Input (-> String) (:generics Input)
                     try
                       let () (cumulo-reel.app.storage/decode-database raw) |unexpected-success
                       fn (message)
-                        hint-fn $ {}
-                          :args $ [] 'String
-                          :return 'String
+                        hint-fn $ Fn String $ -> String
                         , message
                   nil-error "|decode-map-as failed at $: expected map, got nil"
                 assert= nil-error $ error-of $ {}
@@ -2095,15 +1980,12 @@
             filter-map-kv
               decode-map-as value $ :: 'Map 'Number 'Dynamic
               fn (key value)
-                hint-fn $ {}
-                  :args $ [] 'Number 'Dynamic
-                  :return $ :: 'MapEntryDecision 'Number 'cumulo-reel.schema/Session
+                hint-fn $ Fn Number Dynamic $ -> (MapEntryDecision Number cumulo-reel.schema/Session)
                 MapEntryDecision :keep key $ require-decoded $ protocol/decode-session value
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Map 'Number 'cumulo-reel.schema/Session
+          :schema $ quote $ Fn Input
+            -> $ Map Number cumulo-reel.schema/Session
+            :generics Input
         'decode-stored-avatar $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-stored-avatar (value)
             if (enum? value)
@@ -2118,10 +2000,9 @@
                 _ $ Result :err |Expected-stored-avatar-Option
               protocol/decode-optional-string value
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Result (:: 'Option 'String) 'String
+          :schema $ quote $ Fn Input
+            -> $ Result (Option String) String
+            :generics Input
         'decode-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-user (value)
             let
@@ -2136,23 +2017,18 @@
                       require-decoded $ protocol/decode-field source :avatar decode-stored-avatar
                       , :password $ require-decoded $ protocol/decode-field source :password protocol/decode-string
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/User)
-            :args $ [] 'Input
-            :generics $ [] 'Input
+          :schema $ quote $ Fn Input (-> cumulo-reel.schema/User) (:generics Input)
         'decode-users $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-users (value)
             filter-map-kv
               decode-map-as value $ :: 'Map 'String 'Dynamic
               fn (key value)
-                hint-fn $ {}
-                  :args $ [] 'String 'Dynamic
-                  :return $ :: 'MapEntryDecision 'String 'cumulo-reel.schema/User
+                hint-fn $ Fn String Dynamic $ -> (MapEntryDecision String cumulo-reel.schema/User)
                 MapEntryDecision :keep key $ decode-user value
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Input
-            :generics $ [] 'Input
-            :return $ :: 'Map 'String 'cumulo-reel.schema/User
+          :schema $ quote $ Fn Input
+            -> $ Map String cumulo-reel.schema/User
+            :generics Input
         'require-decoded $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn require-decoded (result)
             match result
@@ -2160,9 +2036,7 @@
                 raise $ str |Invalid-storage: detail
               (:ok value) value
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'T)
-            :args $ [] $ :: 'Result 'T 'String
-            :generics $ [] 'T
+          :schema $ quote $ Fn (Result T String) (-> T) (:generics T)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.storage
           :require (cumulo-reel.schema :as schema) (cumulo-reel.app.protocol :as protocol)
@@ -2172,14 +2046,11 @@
           :code $ quote $ defn rand-hex-color! ()
             contract/expect-string |randomcolor $ randomcolor-host
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> String) (:features :js-ffi)
         'reset-twig-memos! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reset-twig-memos! () (reset-twig-memo!) &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
           :tests $ [] $ %{} 'TestEntry
             :name |keeps-typed-projections-and-releases-old-contexts
             :code $ quote $ do (recollect.memo/reset-twig-memo!)
@@ -2229,15 +2100,15 @@
                   Option :some $ memo-twig-by1 user-id twig-user user
                   Option :none
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientStore)
-            :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Session $ :: 'List (:: 'List 'Dynamic)
+          :schema $ quote $ Fn cumulo-reel.schema/Database cumulo-reel.schema/Session
+            List $ List Dynamic
+            -> cumulo-reel.schema/ClientStore
         'twig-members $ %{} 'CodeEntry
           :doc "|Project session member names into the legacy router wire map. Internal session absence uses Option; output nil/String values preserve the existing client wire protocol."
           :code $ quote $ defn twig-members (sessions users)
             filter-map-kv sessions $ fn (sid session)
-              hint-fn $ {}
-                :args $ [] 'Number 'cumulo-reel.schema/Session
-                :return $ :: 'MapEntryDecision 'Number $ :: 'JsNullish 'String
+              hint-fn $ Fn Number cumulo-reel.schema/Session $ ->
+                MapEntryDecision Number $ JsNullish String
               MapEntryDecision :keep sid $ cumulo-reel.app.protocol/encode-optional-string $ match (:user-id session)
                 (:none) (Option :none)
                 (:some id)
@@ -2246,9 +2117,8 @@
                     (:some user)
                       Option :some $ :name user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Number 'cumulo-reel.schema/Session) (:: 'Map 'String 'cumulo-reel.schema/User)
-            :return $ :: 'Map 'Number $ :: 'JsNullish 'String
+          :schema $ quote $ Fn (Map Number cumulo-reel.schema/Session) (Map String cumulo-reel.schema/User)
+            -> $ Map Number $ JsNullish String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.twig.container
           :require
@@ -2263,8 +2133,7 @@
           :code $ quote $ defn twig-user (user)
             schema/ClientUser :name (:name user) :id (:id user) :nickname (:nickname user) :avatar $ :avatar user
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/ClientUser)
-            :args $ [] 'cumulo-reel.schema/User
+          :schema $ quote $ Fn cumulo-reel.schema/User (-> cumulo-reel.schema/ClientUser)
           :tests $ [] $ %{} 'TestEntry (:name |omits-password)
             :code $ quote $ let
                 user $ struct-with schema/user (:name |Ada) (:id |u1) (:nickname |Ada) (:password |secret)
@@ -2290,8 +2159,7 @@
               (:router/change data) (router/change db data sid op-id op-time)
               _ $ do (eprintln "|Unknown op" op) db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'cumulo-reel.schema/Op 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database cumulo-reel.schema/Op Number String Number (-> cumulo-reel.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater
           :require (cumulo-reel.app.updater.session :as session) (cumulo-reel.app.updater.user :as user) (cumulo-reel.app.updater.router :as router) (cumulo-reel.schema :as schema)
@@ -2310,8 +2178,7 @@
                   struct-with schema/router $ :name route-name
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'Tag 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database Tag Number String Number (-> cumulo-reel.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.router
           :require $ cumulo-reel.schema :as schema
@@ -2322,14 +2189,12 @@
             struct-with db $ :sessions $ .assoc (:sessions db) sid
               struct-with schema/session $ :id $ Option :some sid
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database Number String Number (-> cumulo-reel.schema/Database)
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
             struct-with db $ :sessions $ .dissoc db.:sessions sid
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database Number String Number (-> cumulo-reel.schema/Database)
         'remove-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn remove-message (db message-id sid op-id op-time)
             let
@@ -2341,8 +2206,7 @@
                 next-session $ struct-with session $ :messages (.dissoc session.:messages message-id)
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'String 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database String Number String Number (-> cumulo-reel.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.session
           :require $ cumulo-reel.schema :as schema
@@ -2354,9 +2218,7 @@
                 maybe-user $ find
                   .to-list $ .distinct-values db.:users
                   fn (user)
-                    hint-fn $ {}
-                      :args $ [] 'cumulo-reel.schema/User
-                      :return 'Bool
+                    hint-fn $ Fn cumulo-reel.schema/User $ -> Bool
                     = username user.:name
                 session $ assert-type
                   match (get db.:sessions sid)
@@ -2375,8 +2237,7 @@
                       schema/Message :id op-id :text $ str "|No user named: " username
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database String String Number String Number (-> cumulo-reel.schema/Database)
         'log-out $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-out (db sid op-id op-time)
             let
@@ -2388,24 +2249,19 @@
                 next-session $ struct-with session $ :user-id (Option :none)
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database Number String Number (-> cumulo-reel.schema/Database)
         'md5 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn md5 (text)
             contract/expect-string |md5 $ md5-host text
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn String (-> String) (:features :js-ffi)
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
                 maybe-user $ find
                   .to-list $ .distinct-values db.:users
                   fn (user)
-                    hint-fn $ {}
-                      :args $ [] 'cumulo-reel.schema/User
-                      :return 'Bool
+                    hint-fn $ Fn cumulo-reel.schema/User $ -> Bool
                     = username user.:name
                 session $ assert-type
                   match (get db.:sessions sid)
@@ -2426,8 +2282,7 @@
                     :sessions $ .assoc db.:sessions sid next-session
                     :users $ .assoc db.:users op-id next-user
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.schema/Database)
-            :args $ [] 'cumulo-reel.schema/Database 'String 'String 'Number 'String 'Number
+          :schema $ quote $ Fn cumulo-reel.schema/Database String String Number String Number (-> cumulo-reel.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.user
           :require (cumulo-reel.schema :as schema) (|md5 :default md5-host) (js-ffi.contract :as contract)
@@ -2451,8 +2306,7 @@
                 :on-click $ fn (e d!)
                   d! $ :: :effect/persist
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'Number $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn Number (Map Tag Dynamic) (-> respo.schema/Component)
         'css-click $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-click
             {} $ |$0 $ {} (:cursor :pointer)
@@ -2460,13 +2314,13 @@
               :font-size :12
               :text-decoration :underline
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-reel
             {} $ |$0 $ {} (:padding 8) (:position :absolute) (:bottom 8) (:right 8) (:font-size 12)
               :color $ hsl 0 0 60
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.comp.reel
           :require
@@ -2480,22 +2334,21 @@
       :defs $ {}
         'ReelState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ReelState ([] 'Db) (:base 'Db) (:db 'Db)
-            :records $ :: 'List $ :: 'List 'Dynamic
+            :records $ quote $ List (List Dynamic)
             :merged? 'Bool
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'play-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn play-records (db records updater)
             if (.empty? records) db $ let[] (op sid op-id op-time)
               .unwrap $ .get records 0
               recur (updater db op sid op-id op-time) (.rest records) updater
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Db)
-            :args $ [] 'Db
-              :: 'List $ :: 'List 'RecordValue
-              :: 'Fn $ {} (:return 'Db)
-                :args $ [] 'Db 'RecordValue 'RecordValue 'RecordValue 'RecordValue
-            :generics $ [] 'Db 'RecordValue
+          :schema $ quote $ Fn Db
+            List $ List RecordValue
+            Fn Db RecordValue RecordValue RecordValue RecordValue $ -> Db
+            -> Db
+            :generics Db RecordValue
         'reel-reducer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reel-reducer (reel updater op sid op-id op-time dev?)
             let
@@ -2521,22 +2374,19 @@
                       :records reel
                     :db next-db
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'cumulo-reel.core/ReelState 'Db)
-              :: 'Fn $ {} (:return 'Db)
-                :args $ [] 'Db 'Op 'Sid 'OpId 'Number
-              , 'Op 'Sid 'OpId 'Number 'Bool
-            :generics $ [] 'Db 'Op 'Sid 'OpId
-            :return $ :: 'cumulo-reel.core/ReelState 'Db
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState Db)
+            Fn Db Op Sid OpId Number $ -> Db
+            , Op Sid OpId Number Bool
+              -> $ cumulo-reel.core/ReelState Db
+              :generics Db Op Sid OpId
           :tests $ []
             %{} 'TestEntry (:name |resets-from-base)
               :code $ quote $ let
                   reel $ assert-type
                     ReelState :base 1 :db 2 :records ([]) :merged? false
-                    :: 'cumulo-reel.core/ReelState 'Number
+                    quote $ cumulo-reel.core/ReelState Number
                   updater $ fn (db op sid op-id op-time)
-                    hint-fn $ {} (:return 'Number)
-                      :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
+                    hint-fn $ Fn Number cumulo-reel.schema/Op String String Number $ -> Number
                     , db
                   op $ cumulo-reel.schema/Op :reel/reset
                   result $ reel-reducer reel updater op |s |o 0 false
@@ -2546,10 +2396,9 @@
               :code $ quote $ let
                   reel $ assert-type
                     ReelState :base 1 :db 1 :records ([]) :merged? false
-                    :: 'cumulo-reel.core/ReelState 'Number
+                    quote $ cumulo-reel.core/ReelState Number
                   updater $ fn (db op sid op-id op-time)
-                    hint-fn $ {} (:return 'Number)
-                      :args $ [] 'Number 'cumulo-reel.schema/Op 'String 'String 'Number
+                    hint-fn $ Fn Number cumulo-reel.schema/Op String String Number $ -> Number
                     inc db
                   op $ cumulo-reel.schema/Op :session/connect
                   result $ reel-reducer reel updater op |s |o 0 true
@@ -2560,7 +2409,7 @@
           :code $ quote $ def reel-schema
             ReelState :base nil :db nil :records ([]) :merged? false
           :examples $ []
-          :schema $ :: 'cumulo-reel.core/ReelState 'Nil
+          :schema $ quote $ cumulo-reel.core/ReelState Nil
         'refresh-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn refresh-reel (reel base updater)
             let
@@ -2568,23 +2417,19 @@
                 next-db $ play-records next-base (:records reel) updater
               struct-with reel (:base next-base) (:db next-db)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'cumulo-reel.core/ReelState 'Db) 'Db $ :: 'Fn
-              {} (:return 'Db)
-                :args $ [] 'Db 'Dynamic 'Dynamic 'Dynamic 'Dynamic
-            :generics $ [] 'Db
-            :return $ :: 'cumulo-reel.core/ReelState 'Db
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState Db) Db
+            Fn Db Dynamic Dynamic Dynamic Dynamic $ -> Db
+            -> $ cumulo-reel.core/ReelState Db
+            :generics Db
           :tests $ [] $ %{} 'TestEntry (:name |preserves-database-type-and-merged-base)
             :code $ quote $ let
                 reel $ assert-type
                   ReelState :base 1 :db 99 :records
                     [] $ [] 2 :opaque |legacy-id 3
                     , :merged? true
-                  :: 'cumulo-reel.core/ReelState 'Number
+                  quote $ cumulo-reel.core/ReelState Number
                 replay $ fn (db op sid op-id op-time)
-                  hint-fn $ {}
-                    :args $ [] 'Number 'Dynamic 'Dynamic 'Dynamic 'Dynamic
-                    :return 'Number
+                  hint-fn $ Fn Number Dynamic Dynamic Dynamic Dynamic $ -> Number
                   + db $ decode-map-as op 'Number
                 refreshed $ refresh-reel reel 1000 replay
               assert= 1 $ :base refreshed
@@ -2597,55 +2442,57 @@
         'PartitionAction $ %{} 'CodeEntry
           :doc "|One transport action for a connection: drop a revoked partition, or send its snapshot or delta chain."
           :code $ quote $ defenum PartitionAction ([] 'K 'V) (:drop 'K)
-            :snapshot $ :: 'cumulo-reel.partition/PartitionState 'K 'V
-            :deltas (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'List 'cumulo-reel.partition/PartitionDelta)
+            :snapshot $ quote $ cumulo-reel.partition/PartitionState K V
+            :deltas
+              quote $ cumulo-reel.partition/PartitionState K V
+              quote $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'PartitionAdvance $ %{} 'CodeEntry
           :doc "|Outcome of projecting a new partition view: no change, one retained delta, or a reset that forces snapshots."
           :code $ quote $ defenum PartitionAdvance (:unchanged) (:delta 'cumulo-reel.partition/PartitionDelta 'recollect.diff/DiffStats) (:reset 'recollect.diff/DiffStats)
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'PartitionApplyCursor $ %{} 'CodeEntry
           :doc "|内部 patch 链累积状态：revision 保持 Number，view 在整条链完成后才交给业务 decoder 校验。"
           :code $ quote $ defenum PartitionApplyCursor (:ready 'Number 'Dynamic) (:failed 'String)
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'PartitionDelta $ %{} 'CodeEntry
           :doc "|One retained diff step of a partition, computed once and reused for every subscriber at its base revision."
           :code $ quote $ defstruct PartitionDelta (:base 'Number) (:revision 'Number)
-            :changes $ :: 'List 'recollect.schema/change-op
+            :changes $ quote $ List recollect.schema/change-op
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'PartitionProgress $ %{} 'CodeEntry
           :doc "|Per-connection progress for one subscribed partition: acknowledged revision plus at most one unacknowledged send."
           :code $ quote $ defstruct PartitionProgress (:epoch 'Number) (:acked 'Number)
-            :in-flight $ :: 'Option 'Number
+            :in-flight $ quote $ Option Number
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'PartitionSendPlan $ %{} 'CodeEntry
           :doc "|What one subscriber needs next: nothing, a full snapshot, or the retained contiguous delta chain from its acknowledged revision."
           :code $ quote $ defenum PartitionSendPlan (:idle) (:snapshot)
-            :deltas $ :: 'List 'cumulo-reel.partition/PartitionDelta
+            :deltas $ quote $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'PartitionSlot $ %{} 'CodeEntry
           :doc "|Client cache of one subscribed partition: lineage epoch, applied revision and validated view."
           :code $ quote $ defstruct PartitionSlot ([] 'V) (:epoch 'Number) (:revision 'Number) (:view 'V)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'PartitionState $ %{} 'CodeEntry
           :doc "|Server-owned hot state of one partition. epoch changes whenever revisions restart, so old acknowledgements never match a new lineage."
           :code $ quote $ defstruct PartitionState ([] 'K 'V) (:key 'K) (:epoch 'Number) (:revision 'Number) (:view 'V)
-            :history $ :: 'List 'cumulo-reel.partition/PartitionDelta
+            :history $ quote $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'PartitionStep $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct PartitionStep ([] 'K 'V)
-            :state $ :: 'cumulo-reel.partition/PartitionState 'K 'V
+            :state $ quote $ cumulo-reel.partition/PartitionState K V
             :advance 'cumulo-reel.partition/PartitionAdvance
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'ack-partition-progress $ %{} 'CodeEntry
           :doc "|Advance the baseline only for the matching epoch and pending revision; stale, duplicate, and reordered ACKs are ignored."
           :code $ quote $ defn ack-partition-progress (progress epoch revision)
@@ -2660,8 +2507,7 @@
                   , progress
               (:none) progress
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
-            :args $ [] 'cumulo-reel.partition/PartitionProgress 'Number 'Number
+          :schema $ quote $ Fn cumulo-reel.partition/PartitionProgress Number Number (-> cumulo-reel.partition/PartitionProgress)
           :tests $ [] $ %{} 'TestEntry (:name |single-pending-send-and-stale-acks)
             :code $ quote $ let
                 s1 $ new-partition |lobby 7 $ test-view ([] |a)
@@ -2711,10 +2557,9 @@
                           , history-limit
                       , :advance $ PartitionAdvance :delta delta stats
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) 'V 'recollect.diff/DiffBudget 'Number 'Number
-            :generics $ [] 'K 'V
-            :return $ :: 'cumulo-reel.partition/PartitionStep 'K 'V
+          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) V recollect.diff/DiffBudget Number Number
+            -> $ cumulo-reel.partition/PartitionStep K V
+            :generics K V
           :tests $ []
             %{} 'TestEntry (:name |unchanged-view-keeps-revision)
               :code $ quote $ let
@@ -2736,9 +2581,7 @@
                   progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
                   plans $ map (range 5)
                     fn (_idx)
-                      hint-fn $ {}
-                        :args $ [] 'Number
-                        :return 'cumulo-reel.partition/PartitionSendPlan
+                      hint-fn $ Fn Number $ -> cumulo-reel.partition/PartitionSendPlan
                       plan-partition-send next-state $ Option :some progress
                 match (:advance step)
                   (:delta delta _stats)
@@ -2781,9 +2624,7 @@
                   applied $ .foldl deltas
                     PartitionApplyCursor :ready (:revision slot) (:view slot)
                     fn (acc delta)
-                      hint-fn $ {}
-                        :args $ [] 'PartitionApplyCursor 'cumulo-reel.partition/PartitionDelta
-                        :return 'PartitionApplyCursor
+                      hint-fn $ Fn PartitionApplyCursor cumulo-reel.partition/PartitionDelta $ -> PartitionApplyCursor
                       match acc
                         (:failed _) acc
                         (:ready revision view)
@@ -2806,13 +2647,10 @@
                         Result :ok $ PartitionSlot :epoch epoch :revision revision :view typed
                       (:err detail) (Result :err detail)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'cumulo-reel.partition/PartitionSlot 'V) 'Number (:: 'List 'cumulo-reel.partition/PartitionDelta)
-              :: 'Fn $ {}
-                :args $ [] 'Dynamic
-                :return $ :: 'Result 'V 'String
-            :generics $ [] 'V
-            :return $ :: 'Result (:: 'cumulo-reel.partition/PartitionSlot 'V) 'String
+          :schema $ quote $ Fn (cumulo-reel.partition/PartitionSlot V) Number (List cumulo-reel.partition/PartitionDelta)
+            Fn Dynamic $ -> $ Result V String
+            -> $ Result (cumulo-reel.partition/PartitionSlot V) String
+            :generics V
           :tests $ []
             %{} 'TestEntry (:name |atomic-chain-application)
               :code $ quote $ let
@@ -2841,9 +2679,8 @@
                 assert= true $ match
                   apply-partition-deltas slot 7 (:history s3)
                     fn (_value)
-                      hint-fn $ {}
-                        :args $ [] 'Dynamic
-                        :return $ :: 'Result (:: 'Map 'String 'String) 'String
+                      hint-fn $ Fn Dynamic $ ->
+                        Result (Map String String) String
                       Result :err |rejected-by-decoder
                   (:err detail) (includes? detail |rejected-by-decoder)
                   _ false
@@ -2861,9 +2698,8 @@
                   slot $ PartitionSlot :epoch 7 :revision 1 :view v1
                   *decodes $ ref 0
                   decode $ fn (value)
-                    hint-fn $ {}
-                      :args $ [] 'Dynamic
-                      :return $ :: 'Result (:: 'Map 'String 'String) 'String
+                    hint-fn $ Fn Dynamic $ ->
+                      Result (Map String String) String
                     reset! *decodes $ inc @*decodes
                     decode-test-view value
                   bad-chain $ []
@@ -2893,26 +2729,24 @@
             let
                 drops $ .foldl (map-entries progress)
                   assert-type ([])
-                    :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                    quote $ List $ cumulo-reel.partition/PartitionAction K V
                   fn (acc entry)
-                    hint-fn $ {}
-                      :args $ []
-                        :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
-                        :: 'calcit.core/MapEntry 'K 'cumulo-reel.partition/PartitionProgress
-                      :return $ :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                    hint-fn $ Fn
+                      List $ cumulo-reel.partition/PartitionAction K V
+                      calcit.core/MapEntry K cumulo-reel.partition/PartitionProgress
+                      -> $ List $ cumulo-reel.partition/PartitionAction K V
                     if
                       includes? desired $ :key entry
                       , acc $ conj acc $ PartitionAction :drop (:key entry)
                 sends $ assert-type
                   .foldl (.to-list desired)
                     assert-type ([])
-                      :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                      quote $ List $ cumulo-reel.partition/PartitionAction K V
                     fn (acc key)
-                      hint-fn $ {}
-                        :args $ []
-                          :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
-                          , 'K
-                        :return $ :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                      hint-fn $ Fn
+                        List $ cumulo-reel.partition/PartitionAction K V
+                        , K $ ->
+                          List $ cumulo-reel.partition/PartitionAction K V
                       match (get partitions key)
                         (:none) acc
                         (:some state)
@@ -2924,16 +2758,15 @@
                                 conj acc $ PartitionAction :snapshot state
                               (:deltas deltas)
                                 conj acc $ PartitionAction :deltas state deltas
-                  :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+                  quote $ List $ cumulo-reel.partition/PartitionAction K V
               .concat drops sends
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ []
-              :: 'Map 'K $ :: 'cumulo-reel.partition/PartitionState 'K 'V
-              :: 'Map 'K 'cumulo-reel.partition/PartitionProgress
-              :: 'Set 'K
-            :generics $ [] 'K 'V
-            :return $ :: 'List $ :: 'cumulo-reel.partition/PartitionAction 'K 'V
+          :schema $ quote $ Fn
+            Map K $ cumulo-reel.partition/PartitionState K V
+            Map K cumulo-reel.partition/PartitionProgress
+            Set K
+            -> $ List $ cumulo-reel.partition/PartitionAction K V
+            :generics K V
           :tests $ [] $ %{} 'TestEntry (:name |drops-revoked-and-plans-authorized)
             :code $ quote $ let
                 lobby $ new-partition |lobby 7 $ test-view ([] |a)
@@ -2942,12 +2775,13 @@
                   , test-budget 8 64
                 partitions $ assert-type
                   {} $ |lobby lobby2
-                  :: 'Map 'String $ :: 'cumulo-reel.partition/PartitionState 'String $ :: 'Map 'String 'String
+                  quote $ Map String $ cumulo-reel.partition/PartitionState String (Map String String)
                 acked $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
                 progress $ assert-type
                   {} (|lobby acked) (|board/gone acked)
-                  :: 'Map 'String 'cumulo-reel.partition/PartitionProgress
-                no-progress $ assert-type ({}) (:: 'Map 'String 'cumulo-reel.partition/PartitionProgress)
+                  quote $ Map String cumulo-reel.partition/PartitionProgress
+                no-progress $ assert-type ({})
+                  quote $ Map String cumulo-reel.partition/PartitionProgress
                 actions $ connection-actions partitions progress $ #{} |lobby |user/u1
               assert= 2 $ count actions
               assert= true $ includes? actions $ PartitionAction :drop |board/gone
@@ -2961,17 +2795,14 @@
           :code $ quote $ defn decode-test-view (value)
             try-decode-map-as value $ :: 'Map 'String 'String
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Result (:: 'Map 'String 'String) 'String
+          :schema $ quote $ Fn Dynamic
+            -> $ Result (Map String String) String
         'delta-chain $ %{} 'CodeEntry
           :doc "|Return the complete retained chain from an acknowledged revision to the current revision, or none when any link was trimmed or reset."
           :code $ quote $ defn delta-chain (history from to)
             match
               find-index history $ fn (delta)
-                hint-fn $ {}
-                  :args $ [] 'cumulo-reel.partition/PartitionDelta
-                  :return 'Bool
+                hint-fn $ Fn cumulo-reel.partition/PartitionDelta $ -> Bool
                 = from $ :base delta
               (:none) (Option :none)
               (:some index)
@@ -2985,9 +2816,8 @@
                         Option :none
                     (:none) (Option :none)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'List 'cumulo-reel.partition/PartitionDelta) 'Number 'Number
-            :return $ :: 'Option $ :: 'List 'cumulo-reel.partition/PartitionDelta
+          :schema $ quote $ Fn (List cumulo-reel.partition/PartitionDelta) Number Number
+            -> $ Option $ List cumulo-reel.partition/PartitionDelta
           :tests $ [] $ %{} 'TestEntry (:name |replayed-chain-converges)
             :code $ quote $ let
                 v1 $ test-view $ [] |a |b
@@ -3003,9 +2833,7 @@
                 (:some chain)
                   let
                       replayed $ .foldl chain v1 $ fn (acc delta)
-                        hint-fn $ {}
-                          :args $ [] (:: 'Map 'String 'String) 'cumulo-reel.partition/PartitionDelta
-                          :return $ :: 'Map 'String 'String
+                        hint-fn $ Fn (Map String String) cumulo-reel.partition/PartitionDelta $ -> (Map String String)
                         match
                           .apply-to
                             patch-batch $ :changes delta
@@ -3036,17 +2864,14 @@
                   (:none) 0
               PartitionProgress :epoch (:epoch state) :acked acked :in-flight $ Option :some $ :revision state
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
-            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'Option 'cumulo-reel.partition/PartitionProgress)
-            :generics $ [] 'K 'V
+          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) (Option cumulo-reel.partition/PartitionProgress) (-> cumulo-reel.partition/PartitionProgress) (:generics K V)
         'new-partition $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-partition (key epoch view)
             PartitionState :key key :epoch epoch :revision 1 :view view :history $ []
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'K 'Number 'V
-            :generics $ [] 'K 'V
-            :return $ :: 'cumulo-reel.partition/PartitionState 'K 'V
+          :schema $ quote $ Fn K Number V
+            -> $ cumulo-reel.partition/PartitionState K V
+            :generics K V
         'plan-partition-send $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn plan-partition-send (state progress-option)
             match progress-option
@@ -3064,9 +2889,7 @@
                     (:some deltas) (PartitionSendPlan :deltas deltas)
                     (:none) (PartitionSendPlan :snapshot)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionSendPlan)
-            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) (:: 'Option 'cumulo-reel.partition/PartitionProgress)
-            :generics $ [] 'K 'V
+          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) (Option cumulo-reel.partition/PartitionProgress) (-> cumulo-reel.partition/PartitionSendPlan) (:generics K V)
           :tests $ []
             %{} 'TestEntry (:name |trimmed-history-falls-back-to-snapshot)
               :code $ quote $ let
@@ -3081,9 +2904,7 @@
                     test-view $ [] |d
                     , test-budget 2 64
                   at $ fn (acked)
-                    hint-fn $ {}
-                      :args $ [] 'Number
-                      :return 'cumulo-reel.partition/PartitionSendPlan
+                    hint-fn $ Fn Number $ -> cumulo-reel.partition/PartitionSendPlan
                     plan-partition-send s4 $ Option :some $ PartitionProgress :epoch 7 :acked acked :in-flight (Option :none)
                 assert= 4 $ :revision s4
                 assert= 2 $ count $ :history s4
@@ -3109,8 +2930,7 @@
           :code $ quote $ defn release-partition-send (progress)
             struct-with progress $ :in-flight $ Option :none
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'cumulo-reel.partition/PartitionProgress)
-            :args $ [] 'cumulo-reel.partition/PartitionProgress
+          :schema $ quote $ Fn cumulo-reel.partition/PartitionProgress (-> cumulo-reel.partition/PartitionProgress)
         'reset-step $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reset-step (state view stats)
             PartitionStep :state
@@ -3120,10 +2940,9 @@
                 :history $ []
               , :advance $ PartitionAdvance :reset stats
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'cumulo-reel.partition/PartitionState 'K 'V) 'V 'recollect.diff/DiffStats
-            :generics $ [] 'K 'V
-            :return $ :: 'cumulo-reel.partition/PartitionStep 'K 'V
+          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) V recollect.diff/DiffStats
+            -> $ cumulo-reel.partition/PartitionStep K V
+            :generics K V
         'struct-tree-input $ %{} 'CodeEntry
           :doc "|Recursively turn untrusted struct trees, including struct payloads inside nominal enums, into maps so try-decode-map-as can validate them against a nominal schema."
           :code $ quote $ defn struct-tree-input (value)
@@ -3134,9 +2953,7 @@
                 filter-map-kv
                   decode-map-as value $ :: 'Map 'Dynamic 'Dynamic
                   fn (key item)
-                    hint-fn $ {}
-                      :args $ [] 'Dynamic 'Dynamic
-                      :return $ :: 'MapEntryDecision 'Dynamic 'Dynamic
+                    hint-fn $ Fn Dynamic Dynamic $ -> (MapEntryDecision Dynamic Dynamic)
                     MapEntryDecision :keep key $ struct-tree-input item
               (list? value)
                 map
@@ -3146,14 +2963,11 @@
                 .foldl
                   range 1 $ .count value
                   , value $ fn (acc idx)
-                    hint-fn $ {}
-                      :args $ [] 'Enum 'Number
-                      :return 'Enum
+                    hint-fn $ Fn Enum Number $ -> Enum
                     assoc acc idx $ struct-tree-input $ .unwrap (nth value idx)
               true value
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> Dynamic)
           :tests $ [] $ %{} 'TestEntry (:name |structs-become-maps)
             :code $ quote $ let
                 progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :some 2
@@ -3166,21 +2980,19 @@
           :code $ quote $ def test-budget
             DiffBudget :max-visited (Option :some 10000) :max-emitted $ Option :some 10000
           :examples $ []
-          :schema $ :: 'recollect.diff/DiffBudget
+          :schema $ quote recollect.diff/DiffBudget
         'test-view $ %{} 'CodeEntry
           :doc "|Deterministic keyed view used by partition engine tests: different labels give different views."
           :code $ quote $ defn test-view (labels)
             .foldl labels
-              assert-type ({}) (:: 'Map 'String 'String)
+              assert-type ({})
+                quote $ Map String String
               fn (acc label)
-                hint-fn $ {}
-                  :args $ [] (:: 'Map 'String 'String) 'String
-                  :return $ :: 'Map 'String 'String
+                hint-fn $ Fn (Map String String) String $ -> (Map String String)
                 .assoc acc label $ str |item- label
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'List 'String
-            :return $ :: 'Map 'String 'String
+          :schema $ quote $ Fn (List String)
+            -> $ Map String String
         'trim-history $ %{} 'CodeEntry
           :doc "|Keep only the newest deltas; subscribers older than the retained chain receive a snapshot."
           :code $ quote $ defn trim-history (history limit)
@@ -3190,9 +3002,8 @@
                 .slice history (- size limit) (Option :none)
                 , history
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'List 'cumulo-reel.partition/PartitionDelta) 'Number
-            :return $ :: 'List 'cumulo-reel.partition/PartitionDelta
+          :schema $ quote $ Fn (List cumulo-reel.partition/PartitionDelta) Number
+            -> $ List cumulo-reel.partition/PartitionDelta
       :ns $ %{} 'NsEntry
         :doc "|Pure partition synchronization: one bounded diff per partition revision shared by every subscriber, epoch-scoped ACK progress, per-connection send planning, and atomic client-side delta application. Key and view types are generic."
         :code $ quote $ ns cumulo-reel.partition
@@ -3203,76 +3014,76 @@
       :defs $ {}
         'ClientStore $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientStore (:session 'cumulo-reel.schema/Session) (:router 'cumulo-reel.schema/Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number)
-            :name $ :: 'Option 'String
-            :user $ :: 'Option 'cumulo-reel.schema/ClientUser
+            :name $ quote $ Option String
+            :user $ quote $ Option cumulo-reel.schema/ClientUser
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientUser (:name 'String) (:id 'String) (:nickname 'String)
-            :avatar $ :: 'Option 'String
+            :avatar $ quote $ Option String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Database
-            :sessions $ :: 'Map 'Number 'Session
-            :users $ :: 'Map 'String 'User
-            :pages $ :: 'Map 'Tag 'Dynamic
+            :sessions $ quote $ Map Number Session
+            :users $ quote $ Map String User
+            :pages $ quote $ Map Tag Dynamic
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Message (:id 'String) (:text 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'String) (:user/log-in 'String 'String) (:user/sign-up 'String 'String) (:user/log-out) (:router/change 'Tag) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ quote Enum
         'Router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Router (:name 'Tag) (:title 'String) (:data 'Dynamic)
-            :router $ :: 'Option 'cumulo-reel.schema/Router
+            :router $ quote $ Option cumulo-reel.schema/Router
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Session
-            :user-id $ :: 'Option 'String
-            :id $ :: 'Option 'Number
-            :nickname $ :: 'Option 'String
+            :user-id $ quote $ Option String
+            :id $ quote $ Option Number
+            :nickname $ quote $ Option String
             :router 'cumulo-reel.schema/Router
-            :messages $ :: 'Map 'String 'cumulo-reel.schema/Message
+            :messages $ quote $ Map String cumulo-reel.schema/Message
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'SiteConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct SiteConfig (:port 'Number) (:title 'String) (:icon 'String) (:dev-ui 'String) (:release-ui 'String) (:cdn-url 'String) (:theme 'String) (:storage-key 'String) (:storage-file 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'User $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct User (:name 'String) (:id 'String) (:nickname 'String)
-            :avatar $ :: 'Option 'String
+            :avatar $ quote $ Option String
             :password 'String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def database
             Database :sessions ({}) :users ({}) :pages $ {}
           :examples $ []
-          :schema $ :: 'cumulo-reel.schema/Database
+          :schema $ quote cumulo-reel.schema/Database
         'router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def router
             Router :name :home :title | :data ({}) :router $ Option :none
           :examples $ []
-          :schema $ :: 'cumulo-reel.schema/Router
+          :schema $ quote cumulo-reel.schema/Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
             Session :user-id (Option :none) :id (Option :none) :nickname (Option :none) :router
               Router :name :home :title | :data nil :router $ Option :none
               , :messages $ {}
           :examples $ []
-          :schema $ :: 'cumulo-reel.schema/Session
+          :schema $ quote cumulo-reel.schema/Session
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
             User :name | :id | :nickname | :avatar (Option :none) :password |
           :examples $ []
-          :schema $ :: 'cumulo-reel.schema/User
+          :schema $ quote cumulo-reel.schema/User
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.schema
     'cumulo-reel.style $ %{} 'FileEntry
@@ -3283,15 +3094,13 @@
               :color $ hsl 240 80 80
               :font-family ui/font-fancy
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Map Tag Dynamic
         'merge-styles $ %{} 'CodeEntry
           :doc "|Combines heterogeneous Respo style maps at the rendering boundary."
           :code $ quote $ defn merge-styles (x0 & xs) (reduce xs x0 &merge)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
-            :rest $ :: 'Map 'Tag 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) & (Map Tag Dynamic)
+            -> $ Map Tag Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.style
           :require

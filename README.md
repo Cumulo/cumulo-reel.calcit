@@ -2,26 +2,32 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.1.0-alpha.3 候选：对使用者的影响
+## 0.1.0 正式版候选：对使用者的影响
 
-配对正式 Calcit CLI / `@calcit/procs` **0.32.1**，下游须同步升级整张依赖图。Snapshot 类型写法已用 `edit format` 迁移到 0.32 语法，源码行为不变。
-依赖为 Util 0.0.35、Message 0.1.0-alpha.4、UI 0.9.0、Respo 0.17.1、
-JS-FFI 0.2.9、Recollect 0.1.0-alpha.5、WS-EDN 0.0.51；传递 Router 0.9.0-alpha.4、
-Value 0.6.0。全部使用已发布精确 tag，不以 main/hash 或缓存覆盖代替发布。
-0.30 消费者继续使用原维护线，不能只切换模块版本。
+配对正式 Calcit CLI / `@calcit/procs` **0.32.1**，下游须同步升级整张依赖图、
+重新生成两端 JS 并刷新。仅更新模块版本不能完成迁移；0.30 消费者继续使用原维护线。
 
-迁移 24 个定义中的 51 处旧集合调用：List/Map/Set 使用对应方法，Struct 字段使用
-`struct-with`，省略结束位置的 List 切片显式传 `Option :none`。已检查长度的 List
-下标读取使用 `.get` / `.unwrap`，有效输入的值和顺序不变，越界仍失败，错误文本可能变化。
-Enum 的 `.count` 走公开 Countable 合同；两处 Enum 更新保留公开 `assoc`，因为正式
-0.31.0 的 strict 仍拒绝 Enum `.assoc` 的旧式无来源实现，不伪造 trait 或放宽门禁。
+本候选将 Message **0.1.0-alpha.4 → 0.1.0**、Recollect **0.1.0-alpha.5 → 0.1.0**，
+解除消费者另行使用正式 Message 时的 strict Caps 版本冲突。其余依赖保持 Util 0.0.35、
+UI 0.9.0、Respo 0.17.1、JS-FFI 0.2.9、WS-EDN 0.0.51，传递 Value 0.6.0 与
+UI 固定的 Router 0.9.0-alpha.4；全部为已发布精确 tag，不引用 main/hash。
 
-公开 schema、原 63 项测试、协议、存档、监听、派发与 reload 行为保持不变。
-原双入口完整 strict（空 diagnostics）、类型检查、63/63 原生测试、两端构建和七组
-Node 回归已通过；原共享协议/分区/成员测试在 native/JS 各 35 项通过，零排除。
-本机网络验收只绑定回环，默认全网卡监听的真实验证仍只在原隔离 CI runner 执行。
-这些证据不代表已完成生产或下游业务应用验收；最终发布仍需精确 CI、评审与 main 验证。
-保留原一小时 npm 隔离、Caps strict、全部门禁及 COS 内置校验，不新增验证脚本。
+相对当前 main，本候选仅调整 deps/package 模块版本与说明；Snapshot、公开 schema、
+原63项附带测试及断言、七组 Node 回归、协议、存档、监听、派发、reload 与页面错误展示
+均保持。Message 正式版相对 alpha.4 只有 Demo config 返回 schema 变化；Recollect
+正式版相对 alpha.5 只有17处 Demo/bench/历史探针返回 schema 收紧，执行代码不变。
+这不代表开放 wire、路由和异构状态已成为闭合业务模型，也不宣称修复依赖的既有显示限制。
+
+官方 Calcit 0.32.1 release binary 下，Caps 九模块 strict/toolchain、原两入口公开检查
+103/125项、两份完整 strict（空 diagnostics）、原生63/63、原共享 native/JS 各35项（零排除）、
+原七组 Node 回归及两端构建均通过。154个完整定义视图前后相同，canonical 无变化；
+实际回环页面验证双访客、断开和刷新重连，控制台无 warning/error，未创建账户或读取真实数据。
+本机默认全网卡监听测试仍按原流程留给隔离 CI，不把本地配置断言当作监听验收。
+
+候选仍需精确 CI/评审及合并 main 验证，完成后才创建 Git tag。保留一小时 npm 隔离、
+全部原门禁与 COS 内置校验，不增加验证脚本或预算；不发布 npm，不合并或部署下游业务应用。
+原项目在 main push 时上传 Demo 前端到 COS；同一工作流对同仓库非 Draft PR
+也会上传带 PR 专属前缀的 Demo 前端。两种路径都不部署后端。
 
 以下为历史迁移记录，不代替当前候选的验收。
 

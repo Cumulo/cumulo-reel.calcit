@@ -55,9 +55,9 @@
                       do
                         reset! *states $ decode-map-as
                           update-state-tree @*states
-                            decode-map-as cursor $ :: 'List 'Dynamic
+                            decode-map-as cursor $ quote $ List Dynamic
                             , s
-                          :: 'Map 'Tag 'Dynamic
+                          quote $ Map Tag Dynamic
                         , &unit
                     (:effect/connect)
                       do (connect!) &unit
@@ -156,7 +156,7 @@
               browser/storage-get $ :storage-key config/site
               (:some raw)
                 match
-                  try-parse-cirru-edn-as raw $ :: 'List 'String
+                  try-parse-cirru-edn-as raw $ quote $ List String
                   (:ok pair)
                     if
                       = 2 $ .len pair
@@ -216,7 +216,7 @@
                         >>
                           either states $ {}
                           , :login
-                        :: 'Map 'Tag 'Dynamic
+                        quote $ Map Tag Dynamic
                     comp-status-color store-typed.:color
                     comp-messages
                       filter-map-kv (session.:messages)
@@ -230,8 +230,12 @@
                         d! $ :: :session/remove-message $ match (calcit.core/get info :id)
                           (:some value) (decode-map-as value 'String)
                           (:none) (decode-map-as nil 'String)
-                    when config/dev? $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
-                    when config/dev? $ comp-reel store-typed.:reel-length $ {}
+                    if config/dev?
+                      Option :some $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
+                      Option :none
+                    if config/dev?
+                      Option :some $ comp-reel store-typed.:reel-length $ {}
+                      Option :none
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) (Option cumulo-reel.schema/ClientStore) (-> respo.schema/Component)
         'comp-offline $ %{} 'CodeEntry (:doc |)
@@ -294,7 +298,7 @@
     'cumulo-reel.app.comp.login $ %{} 'FileEntry
       :defs $ {}
         'LoginState $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct LoginState (:username 'String) (:password 'String)
+          :code $ quote $ defstruct LoginState (:username String) (:password String)
           :examples $ []
           :schema $ quote StructDef
         'comp-login $ %{} 'CodeEntry (:doc |)
@@ -482,7 +486,7 @@
           :doc "|Validate legacy member wire keys and nil/String names before typed display; reject malformed names without dropping guest entries."
           :code $ quote $ defn decode-member-names (value)
             filter-map-kv
-              decode-map-as value $ :: 'Map 'Number 'Dynamic
+              decode-map-as value $ quote $ Map Number Dynamic
               fn (key name)
                 hint-fn $ Fn Number Dynamic $ ->
                   calcit.core/MapEntryDecision Number $ Option String
@@ -591,7 +595,7 @@
                         (:none) (Result :err |Missing-patch-data)
                         (:some raw-changes)
                           match
-                            try-decode-map-as raw-changes $ :: 'List 'recollect.schema/change-op
+                            try-decode-map-as raw-changes $ quote $ List recollect.schema/change-op
                             (:err detail)
                               Result :err $ str |Invalid-changes: detail
                             (:ok changes)
@@ -795,7 +799,8 @@
                 :session/remove-message $ if
                   = 2 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value) (:: 'List 'String)
+                    try-decode-map-as (&enum:params value)
+                      quote $ List String
                     (:ok params)
                       Result :ok $ schema/Op :session/remove-message $ .unwrap (.get params 0)
                     (:err detail) (Result :err detail)
@@ -803,7 +808,8 @@
                 :user/log-in $ if
                   = 3 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value) (:: 'List 'String)
+                    try-decode-map-as (&enum:params value)
+                      quote $ List String
                     (:ok params)
                       Result :ok $ schema/Op :user/log-in
                         .unwrap $ .get params 0
@@ -813,7 +819,8 @@
                 :user/sign-up $ if
                   = 3 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value) (:: 'List 'String)
+                    try-decode-map-as (&enum:params value)
+                      quote $ List String
                     (:ok params)
                       Result :ok $ schema/Op :user/sign-up
                         .unwrap $ .get params 0
@@ -827,7 +834,8 @@
                 :router/change $ if
                   = 2 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value) (:: 'List 'Tag)
+                    try-decode-map-as (&enum:params value)
+                      quote $ List Tag
                     (:ok params)
                       Result :ok $ schema/Op :router/change $ .unwrap (.get params 0)
                     (:err detail) (Result :err detail)
@@ -981,7 +989,7 @@
         'decode-messages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-messages (value)
             match
-              try-decode-map-as value $ :: 'Map 'String 'Dynamic
+              try-decode-map-as value $ quote $ Map String Dynamic
               (:err detail) (Result :err detail)
               (:ok entries)
                 .foldl
@@ -1172,7 +1180,7 @@
           :code $ quote $ defn decode-source (value)
             try-decode-map-as
               if (struct? value) (&struct:to-map value) value
-              :: 'Map 'Tag 'Dynamic
+              quote $ Map Tag Dynamic
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Map Tag Dynamic) String
@@ -1781,7 +1789,7 @@
           :examples $ []
           :schema $ quote $ Ref Number
         'SocketEvent $ %{} 'CodeEntry (:doc "|适配器向业务层报告的连接、原始文本消息、断线和二进制通知。")
-          :code $ quote $ defenum SocketEvent (:connect 'Number) (:message 'Number 'String) (:disconnect 'Number) (:blob 'Number)
+          :code $ quote $ defenum SocketEvent (:connect Number) (:message Number String) (:disconnect Number) (:blob Number)
           :examples $ []
           :schema $ quote Enum
         'close-session! $ %{} 'CodeEntry (:doc "|连接关闭或错误只通知业务层一次断线。")
@@ -1898,9 +1906,9 @@
                     (:none) (decode-sessions nil)
                   , :pages $ match (calcit.core/get source :pages)
                     (:some value)
-                      decode-map-as value $ :: 'Map 'Tag 'Dynamic
+                      decode-map-as value $ quote $ Map Tag Dynamic
                     (:none)
-                      decode-map-as nil $ :: 'Map 'Tag 'Dynamic
+                      decode-map-as nil $ quote $ Map Tag Dynamic
           :examples $ []
           :schema $ quote $ Fn Input (-> cumulo-reel.schema/Database) (:generics Input)
           :tests $ []
@@ -1978,7 +1986,7 @@
         'decode-sessions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-sessions (value)
             filter-map-kv
-              decode-map-as value $ :: 'Map 'Number 'Dynamic
+              decode-map-as value $ quote $ Map Number Dynamic
               fn (key value)
                 hint-fn $ Fn Number Dynamic $ -> (MapEntryDecision Number cumulo-reel.schema/Session)
                 MapEntryDecision :keep key $ require-decoded $ protocol/decode-session value
@@ -2021,7 +2029,7 @@
         'decode-users $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-users (value)
             filter-map-kv
-              decode-map-as value $ :: 'Map 'String 'Dynamic
+              decode-map-as value $ quote $ Map String Dynamic
               fn (key value)
                 hint-fn $ Fn String Dynamic $ -> (MapEntryDecision String cumulo-reel.schema/User)
                 MapEntryDecision :keep key $ decode-user value
@@ -2333,9 +2341,9 @@
     'cumulo-reel.core $ %{} 'FileEntry
       :defs $ {}
         'ReelState $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ReelState ([] 'Db) (:base 'Db) (:db 'Db)
+          :code $ quote $ defstruct ReelState ([] Db) (:base Db) (:db Db)
             :records $ quote $ List (List Dynamic)
-            :merged? 'Bool
+            :merged? Bool
           :examples $ []
           :schema $ quote StructDef
         'play-records $ %{} 'CodeEntry (:doc |)
@@ -2441,7 +2449,7 @@
       :defs $ {}
         'PartitionAction $ %{} 'CodeEntry
           :doc "|One transport action for a connection: drop a revoked partition, or send its snapshot or delta chain."
-          :code $ quote $ defenum PartitionAction ([] 'K 'V) (:drop 'K)
+          :code $ quote $ defenum PartitionAction ([] K V) (:drop K)
             :snapshot $ quote $ cumulo-reel.partition/PartitionState K V
             :deltas
               quote $ cumulo-reel.partition/PartitionState K V
@@ -2450,23 +2458,23 @@
           :schema $ quote EnumDef
         'PartitionAdvance $ %{} 'CodeEntry
           :doc "|Outcome of projecting a new partition view: no change, one retained delta, or a reset that forces snapshots."
-          :code $ quote $ defenum PartitionAdvance (:unchanged) (:delta 'cumulo-reel.partition/PartitionDelta 'recollect.diff/DiffStats) (:reset 'recollect.diff/DiffStats)
+          :code $ quote $ defenum PartitionAdvance (:unchanged) (:delta cumulo-reel.partition/PartitionDelta recollect.diff/DiffStats) (:reset recollect.diff/DiffStats)
           :examples $ []
           :schema $ quote EnumDef
         'PartitionApplyCursor $ %{} 'CodeEntry
           :doc "|内部 patch 链累积状态：revision 保持 Number，view 在整条链完成后才交给业务 decoder 校验。"
-          :code $ quote $ defenum PartitionApplyCursor (:ready 'Number 'Dynamic) (:failed 'String)
+          :code $ quote $ defenum PartitionApplyCursor (:ready Number Dynamic) (:failed String)
           :examples $ []
           :schema $ quote EnumDef
         'PartitionDelta $ %{} 'CodeEntry
           :doc "|One retained diff step of a partition, computed once and reused for every subscriber at its base revision."
-          :code $ quote $ defstruct PartitionDelta (:base 'Number) (:revision 'Number)
+          :code $ quote $ defstruct PartitionDelta (:base Number) (:revision Number)
             :changes $ quote $ List recollect.schema/change-op
           :examples $ []
           :schema $ quote StructDef
         'PartitionProgress $ %{} 'CodeEntry
           :doc "|Per-connection progress for one subscribed partition: acknowledged revision plus at most one unacknowledged send."
-          :code $ quote $ defstruct PartitionProgress (:epoch 'Number) (:acked 'Number)
+          :code $ quote $ defstruct PartitionProgress (:epoch Number) (:acked Number)
             :in-flight $ quote $ Option Number
           :examples $ []
           :schema $ quote StructDef
@@ -2478,19 +2486,19 @@
           :schema $ quote EnumDef
         'PartitionSlot $ %{} 'CodeEntry
           :doc "|Client cache of one subscribed partition: lineage epoch, applied revision and validated view."
-          :code $ quote $ defstruct PartitionSlot ([] 'V) (:epoch 'Number) (:revision 'Number) (:view 'V)
+          :code $ quote $ defstruct PartitionSlot ([] V) (:epoch Number) (:revision Number) (:view V)
           :examples $ []
           :schema $ quote StructDef
         'PartitionState $ %{} 'CodeEntry
           :doc "|Server-owned hot state of one partition. epoch changes whenever revisions restart, so old acknowledgements never match a new lineage."
-          :code $ quote $ defstruct PartitionState ([] 'K 'V) (:key 'K) (:epoch 'Number) (:revision 'Number) (:view 'V)
+          :code $ quote $ defstruct PartitionState ([] K V) (:key K) (:epoch Number) (:revision Number) (:view V)
             :history $ quote $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
           :schema $ quote StructDef
         'PartitionStep $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct PartitionStep ([] 'K 'V)
+          :code $ quote $ defstruct PartitionStep ([] K V)
             :state $ quote $ cumulo-reel.partition/PartitionState K V
-            :advance 'cumulo-reel.partition/PartitionAdvance
+            :advance cumulo-reel.partition/PartitionAdvance
           :examples $ []
           :schema $ quote StructDef
         'ack-partition-progress $ %{} 'CodeEntry
@@ -2793,7 +2801,7 @@
         'decode-test-view $ %{} 'CodeEntry
           :doc "|View decoder used by partition engine tests; applications pass their own nominal decoder to apply-partition-deltas."
           :code $ quote $ defn decode-test-view (value)
-            try-decode-map-as value $ :: 'Map 'String 'String
+            try-decode-map-as value $ quote $ Map String String
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Result (Map String String) String
@@ -2840,7 +2848,7 @@
                             , acc
                           (:ok next)
                             match
-                              try-decode-map-as next $ :: 'Map 'String 'String
+                              try-decode-map-as next $ quote $ Map String String
                               (:ok view) view
                               (:err error)
                                 raise $ str |Invalid-view: error
@@ -2951,13 +2959,13 @@
                 struct-tree-input $ &struct:to-map value
               (map? value)
                 filter-map-kv
-                  decode-map-as value $ :: 'Map 'Dynamic 'Dynamic
+                  decode-map-as value $ quote $ Map Dynamic Dynamic
                   fn (key item)
                     hint-fn $ Fn Dynamic Dynamic $ -> (MapEntryDecision Dynamic Dynamic)
                     MapEntryDecision :keep key $ struct-tree-input item
               (list? value)
                 map
-                  decode-map-as value $ :: 'List 'Dynamic
+                  decode-map-as value $ quote $ List Dynamic
                   , struct-tree-input
               (enum? value)
                 .foldl
@@ -3013,13 +3021,13 @@
     'cumulo-reel.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientStore $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ClientStore (:session 'cumulo-reel.schema/Session) (:router 'cumulo-reel.schema/Router) (:logged-in? 'Bool) (:color 'String) (:count 'Number) (:reel-length 'Number)
+          :code $ quote $ defstruct ClientStore (:session cumulo-reel.schema/Session) (:router cumulo-reel.schema/Router) (:logged-in? Bool) (:color String) (:count Number) (:reel-length Number)
             :name $ quote $ Option String
             :user $ quote $ Option cumulo-reel.schema/ClientUser
           :examples $ []
           :schema $ quote StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ClientUser (:name 'String) (:id 'String) (:nickname 'String)
+          :code $ quote $ defstruct ClientUser (:name String) (:id String) (:nickname String)
             :avatar $ quote $ Option String
           :examples $ []
           :schema $ quote StructDef
@@ -3031,15 +3039,15 @@
           :examples $ []
           :schema $ quote StructDef
         'Message $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct Message (:id 'String) (:text 'String)
+          :code $ quote $ defstruct Message (:id String) (:text String)
           :examples $ []
           :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'String) (:user/log-in 'String 'String) (:user/sign-up 'String 'String) (:user/log-out) (:router/change 'Tag) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
+          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message String) (:user/log-in String String) (:user/sign-up String String) (:user/log-out) (:router/change Tag) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
           :examples $ []
           :schema $ quote Enum
         'Router $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct Router (:name 'Tag) (:title 'String) (:data 'Dynamic)
+          :code $ quote $ defstruct Router (:name Tag) (:title String) (:data Dynamic)
             :router $ quote $ Option cumulo-reel.schema/Router
           :examples $ []
           :schema $ quote StructDef
@@ -3048,18 +3056,18 @@
             :user-id $ quote $ Option String
             :id $ quote $ Option Number
             :nickname $ quote $ Option String
-            :router 'cumulo-reel.schema/Router
+            :router cumulo-reel.schema/Router
             :messages $ quote $ Map String cumulo-reel.schema/Message
           :examples $ []
           :schema $ quote StructDef
         'SiteConfig $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct SiteConfig (:port 'Number) (:title 'String) (:icon 'String) (:dev-ui 'String) (:release-ui 'String) (:cdn-url 'String) (:theme 'String) (:storage-key 'String) (:storage-file 'String)
+          :code $ quote $ defstruct SiteConfig (:port Number) (:title String) (:icon String) (:dev-ui String) (:release-ui String) (:cdn-url String) (:theme String) (:storage-key String) (:storage-file String)
           :examples $ []
           :schema $ quote StructDef
         'User $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct User (:name 'String) (:id 'String) (:nickname 'String)
+          :code $ quote $ defstruct User (:name String) (:id String) (:nickname String)
             :avatar $ quote $ Option String
-            :password 'String
+            :password String
           :examples $ []
           :schema $ quote StructDef
         'database $ %{} 'CodeEntry (:doc |)

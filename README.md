@@ -2,7 +2,13 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.1.0 正式版候选：对使用者的影响
+## 0.1.1：Calcit 0.34.3 与 Respo 0.18.1 兼容线
+
+配对正式 Calcit CLI / `@calcit/procs` **0.34.3**。依赖全部换成 Respo 0.18.1 兼容线上的正式 tag：Respo 0.18.1、UI 0.12.1、Message 0.1.4、Recollect 0.2.1、cumulo-util 0.0.37、ws-edn 0.0.53、JS-FFI 0.2.9，`caps --strict` 下是一张一致的图。不能与要求 Respo 0.19.1 / JS-FFI 0.2.10 的 UI 0.14.0 混装（Recollect 依赖的 Respo Value 仍在 0.18.1，见 Respo/respo.calcit#341）。
+
+代码只改了一处：容器里开发模式下的 Store 检查面板和 Reel 计数，从没有 else 的 `when` 改为 `Option :some` / `Option :none`，以通过 0.34 的 `E_IMPLICIT_NIL_BRANCH`；`edit format` 迁移旧 `::` 类型写法。下游使用者需同步升级整张依赖图并重新生成 JS。
+
+## 历史 0.1.0 正式版候选：对使用者的影响
 
 配对正式 Calcit CLI / `@calcit/procs` **0.32.1**，下游须同步升级整张依赖图、
 重新生成两端 JS 并刷新。仅更新模块版本不能完成迁移；0.30 消费者继续使用原维护线。

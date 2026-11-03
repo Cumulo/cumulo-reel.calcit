@@ -19,6 +19,7 @@ const replayDefinitions = (snapshot, ...filters) => execFileSync(process.execPat
 
 test('component Map reads preserve host rejection, cursor identity and nil-state fallback', async () => {
   const c = await import('../js-out/calcit.core.mjs');
+  const { RespoEvent } = await import('../js-out/respo.schema.mjs');
   const login = await import('../js-out/cumulo-reel.app.comp.login.mjs');
   const container = await import('../js-out/cumulo-reel.app.comp.container.mjs');
   const protocol = await import('../js-out/cumulo-reel.app.protocol.mjs');
@@ -66,8 +67,20 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
     assert.equal(calls.length, 0, 'invalid events must not dispatch');
     for (const text of ['', '中文']) {
       assert.equal(handler(c._$n__$M_(c.turn_tag('value'), text), dispatch), undefined);
-      const [actualCursor, state] = calls.at(-1);
+      const [operation] = calls.at(-1);
+      assert.equal(operation.tag.value, 'states');
+      const [actualCursor, state] = [operation.get(1), operation.get(2)];
       assert.equal(actualCursor, cursor, 'keep the original Tag/String/Number cursor object');
+      assert.equal(state.get(field), text);
+    }
+    for (const text of ['', '中文']) {
+      const event = c._$n__PCT__$M_(RespoEvent, ...RespoEvent.fields.flatMap(tag => [tag,
+        tag.value === 'type' ? c.turn_tag('input') : tag.value === 'value' ? text : null]));
+      assert.equal(handler(event, dispatch), undefined);
+      const [operation] = calls.at(-1);
+      assert.equal(operation.tag.value, 'states');
+      const [actualCursor, state] = [operation.get(1), operation.get(2)];
+      assert.equal(actualCursor, cursor, 'nominal DOM events keep the original state cursor');
       assert.equal(state.get(field), text);
     }
     const failure = new Error('dispatch failed');
@@ -107,11 +120,11 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
       assert.equal(handler(c.parse_cirru_edn('{} (:value |typed)'), (...args) => { calls.push(args); }), undefined);
       assert.equal(calls.length, 1);
       if (value === absentCursor) {
-        assert.deepEqual(c.to_js_data(calls[0][0]), [], 'an absent cursor dispatches at the root cursor');
+        assert.deepEqual(c.to_js_data(calls[0][0].get(1)), [], 'an absent cursor dispatches at the root cursor');
       } else {
-        assert.equal(calls[0][0], value, 'keep a present cursor value as given');
+        assert.equal(calls[0][0].get(1), value, 'keep a present cursor value as given');
       }
-      assert.equal(calls[0][1].get(field), 'typed');
+      assert.equal(calls[0][0].get(2).get(field), 'typed');
       const failure = new Error('cursor dispatch failed');
       assert.throws(() => handler(c.parse_cirru_edn('{} (:value |typed)'), () => { throw failure; }), error => error === failure);
     }
@@ -131,6 +144,8 @@ test('component Map reads preserve host rejection, cursor identity and nil-state
   :reel-length 0
   :name nil
   :user nil`);
+  assert.equal(protocol.parse_client_action(':: :states ([] :login) ({})').get(1), 'Unknown client operation',
+    'local state operations must never become accepted wire operations');
   const decoded = protocol.decode_client_store(raw);
   assert.equal(decoded.tag.value, 'ok');
   const store = c.nil__GT_option(decoded.get(1));

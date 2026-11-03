@@ -140,13 +140,13 @@
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! (renderer)
-            renderer mount-target (comp-container @*states @*store)
+            with-memo-frame $ fn () $ renderer mount-target (comp-container @*states @*store)
               fn (op)
                 dispatch! op $ Option :none
           :examples $ []
           :schema $ quote $ Fn
             Fn respo.dom/DomElement respo.schema/Component
-              Fn Dynamic $ -> Unit
+              Fn cumulo-reel.schema/Op $ -> Unit
               -> Unit
             -> Unit
             :features :js-ffi
@@ -190,6 +190,7 @@
             js-ffi.browser :as browser
             js-ffi.shared :as shared
             cumulo-reel.app.protocol :as protocol
+            respo.memo :refer $ with-memo-frame
     'cumulo-reel.app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
@@ -328,40 +329,53 @@
                         :value $ :username state
                         :style ui/input
                         :on-input $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn cumulo-reel.schema/Op $ -> Unit
                             -> Unit
-                          d!
+                          d! $ schema/Op :states
                             .unwrap-or cursor $ []
-                            struct-with state $ :username $ match (calcit.core/get e :value)
+                            struct-with state $ :username $ match
+                              calcit.core/get (event-fields e) :value
                               (:some value) (decode-map-as value 'String)
                               (:none) (decode-map-as nil 'String)
-                    =< nil 8
+                    space-y 8
                     div ({})
                       input $ {} (:placeholder |Password)
                         :value $ :password state
                         :style ui/input
                         :on-input $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn cumulo-reel.schema/Op $ -> Unit
                             -> Unit
-                          d!
+                          d! $ schema/Op :states
                             .unwrap-or cursor $ []
-                            struct-with state $ :password $ match (calcit.core/get e :value)
+                            struct-with state $ :password $ match
+                              calcit.core/get (event-fields e) :value
                               (:some value) (decode-map-as value 'String)
                               (:none) (decode-map-as nil 'String)
-                  =< nil 8
+                  space-y 8
                   div
                     {} $ :style $ {} (:text-align :right)
                     span $ {} (:inner-text "|Sign up")
                       :style $ style/merge-styles style/link
                       :on-click $ on-submit (:username state) (:password state) true
-                    =< 8 nil
+                    space-x 8
                     span $ {} (:inner-text "|Log in")
                       :style $ style/merge-styles style/link
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
+        'event-fields $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn event-fields (event)
+            if (struct? event)
+              struct-match event
+                respo.schema/RespoEvent checked $ .to-map checked
+                _ _ $ raise "|Expected RespoEvent or a Tag-keyed event Map"
+              decode-map-as event $ quote $ Map Tag Dynamic
+          :examples $ []
+          :schema $ quote $ Fn Dynamic
+            -> $ Map Tag Dynamic
+          :tags $ #{} :internal
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
@@ -369,7 +383,7 @@
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
-              hint-fn $ Fn (Map Tag Dynamic)
+              hint-fn $ Fn respo.schema/RespoEvent
                 Fn cumulo-reel.schema/Op $ -> Unit
                 -> Unit
               dispatch! $ if signup? (schema/Op :user/sign-up username password) (schema/Op :user/log-in username password)
@@ -381,7 +395,7 @@
         :code $ quote $ ns cumulo-reel.app.comp.login
           :require
             respo.core :refer $ defcomp <> div input button span
-            respo.comp.space :refer $ =<
+            respo.comp.space :refer $ space-x space-y
             respo.comp.inspect :refer $ comp-inspect
             respo-ui.core :as ui
             cumulo-reel.schema :as schema
@@ -399,14 +413,14 @@
                   :on-click $ fn (e d!)
                     d! $ :: :router/change :home
                   :style $ {} $ :cursor :pointer
-                <> (:title config/site) nil
+                <> $ :title config/site
               div
                 {}
                   :style $ {} $ :cursor |pointer
                   :on-click $ fn (e d!)
                     d! $ :: :router/change :profile
                 <> $ if logged-in? |Me |Guest
-                =< 8 nil
+                space-x 8
                 <> $ str count-members
           :examples $ []
           :schema $ quote $ Fn Bool Number (-> respo.schema/Component)
@@ -423,7 +437,7 @@
             respo.util.format :refer $ hsl
             respo-ui.core :as ui
             respo-ui.css :as css
-            respo.comp.space :refer $ =<
+            respo.comp.space :refer $ space-x space-y
             respo.core :refer $ defcomp <> span div
             respo.css :refer $ defstyle
             cumulo-reel.app.config :as config
@@ -438,11 +452,11 @@
                 {} (:class-name css/font-fancy)
                   :style $ {} (:font-size 32) (:font-weight 100)
                 <> $ str "|Hello! " $ :name user
-              =< nil 16
+              space-y 16
               div
                 {} $ :class-name css/row
                 <> |Members:
-                =< 8 nil
+                space-x 8
                 list->
                   {} $ :class-name css/row
                   map (map-entries members)
@@ -451,7 +465,7 @@
                         div
                           {} $ :class-name css-member-label
                           <> $ member-display-name $ :value entry
-              =< nil 48
+              space-y 48
               div ({})
                 button
                   {} (:class-name css/button)
@@ -461,7 +475,7 @@
                         , |?time= $ shared/now-ms
                       , &unit
                   <> |Refresh
-                =< 8 nil
+                space-x 8
                 button
                   {} (:class-name css/button)
                     :style $ {} (:color :red) (:border-color :red)
@@ -559,7 +573,7 @@
             respo-ui.core :as ui
             respo-ui.css :as css
             respo.core :refer $ defcomp list-> <> span div button
-            respo.comp.space :refer $ =<
+            respo.comp.space :refer $ space-x space-y
             cumulo-reel.app.config :as config
             js-ffi.browser :as browser
             js-ffi.shared :as shared
@@ -1791,7 +1805,7 @@
         'SocketEvent $ %{} 'CodeEntry (:doc "|适配器向业务层报告的连接、原始文本消息、断线和二进制通知。")
           :code $ quote $ defenum SocketEvent (:connect Number) (:message Number String) (:disconnect Number) (:blob Number)
           :examples $ []
-          :schema $ quote Enum
+          :schema $ quote EnumDef
         'close-session! $ %{} 'CodeEntry (:doc "|连接关闭或错误只通知业务层一次断线。")
           :code $ quote $ defn close-session! (sid on-event)
             match (get @*clients sid)
@@ -2300,16 +2314,16 @@
           :code $ quote $ defcomp comp-reel (size addional-styles)
             div
               {} (:class-name css-reel) (:style addional-styles)
-              <> (str |Length: size) nil
-              =< 8 nil
+              <> $ str |Length: size
+              space-x 8
               span $ {} (:inner-text |Reset) (:class-name css-click)
                 :on-click $ fn (e d!)
                   d! $ :: :reel/reset
-              =< 8 nil
+              space-x 8
               span $ {} (:inner-text |Merge) (:class-name css-click)
                 :on-click $ fn (e d!)
                   d! $ :: :reel/merge
-              =< 8 nil
+              space-x 8
               span $ {} (:inner-text |Persist) (:class-name css-click)
                 :on-click $ fn (e d!)
                   d! $ :: :effect/persist
@@ -2337,7 +2351,7 @@
             respo-ui.core :as ui
             respo.core :refer $ defcomp <> span button div
             respo.css :refer $ defstyle
-            respo.comp.space :refer $ =<
+            respo.comp.space :refer $ space-x space-y
     'cumulo-reel.core $ %{} 'FileEntry
       :defs $ {}
         'ReelState $ %{} 'CodeEntry (:doc |)
@@ -3043,9 +3057,9 @@
           :examples $ []
           :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message String) (:user/log-in String String) (:user/sign-up String String) (:user/log-out) (:router/change Tag) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge)
+          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message String) (:user/log-in String String) (:user/sign-up String String) (:user/log-out) (:router/change Tag) (:effect/persist) (:effect/ping) (:effect/pong) (:effect/connect) (:reel/reset) (:reel/merge) (:states Dynamic Dynamic)
           :examples $ []
-          :schema $ quote Enum
+          :schema $ quote EnumDef
         'Router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Router (:name Tag) (:title String) (:data Dynamic)
             :router $ quote $ Option cumulo-reel.schema/Router

@@ -2,7 +2,41 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.1.1：Calcit 0.34.3 与 Respo 0.18.1 兼容线
+## 0.2.0 候选：现代 Respo 依赖图与事件边界
+
+使用者需配对正式 Calcit CLI / `@calcit/procs` **0.34.3**，同步完整精确依赖图并
+重新生成两端 JS：Util 0.0.38、WS-EDN 0.0.54、Message 0.2.1、Recollect 0.2.2、
+UI 0.14.1、Respo 0.19.2、JS-FFI 0.2.10，传递 Value 0.7.0 / Router 0.11.2。
+这些依赖已发布正式 Git tag；本库 0.2.0 仍是候选，不能以 main/hash 或关闭 Caps strict 代替。
+
+Respo 的 EventHandler 现在接收名义 RespoEvent。登录事件保留旧 Tag-keyed Map
+字段语义与错误拒绝，通过一个内部受检边界兼容新事件；Map decoder 可能重建容器，
+不承诺 JS Map 对象身份。组件状态游标对象、无效文本拒绝、dispatch 异常和回调顺序保持。
+输入 handler 改为派发单一具名 `Op :states`，renderer 回调收紧为 `Fn<Op,Unit>`，
+与现代 Respo 的单参数事件合同一致。两个 states payload 对应原 raw cursor/state，仍由
+原客户端入口检查游标后再修改状态，不伪装成已验证的业务模型。原外部 `dispatch!`
+兼容入口保持；本地 states 操作不会发送到服务端，原 wire decoder 仍拒绝它。
+
+组件构建与 renderer 调用放在同一 managed memo frame，覆盖原 render/SSR 入口。
+Bool/List 等非 nil 异构数据 key 保持，不用 CoordKey 收窄 wire 数据或原存档；
+Value 查看器的既有 nil Map key 限制不扩展为 Recollect 核心 diff/patch 的限制。
+11 处 spacer 保持原尺寸：7 处横向 8px，4 处纵向 8/8/16/48px；两处文本省略旧 nil style。
+Op / SocketEvent 的定义值 schema 从误写的 Enum 修正为 EnumDef。Op 增加仅客户端消费的
+`:states` 变体；wire decoder 的允许集合、协议和 payload 解析不变。
+
+原 154 个定义全部保留：7 个代码体、5 个导入变化，3 处 schema 元数据修正；
+原附带测试、doc、examples 和其他 schema 保持，新增一个 internal 事件边界。
+原 Node 测试在已有输入组适配单参数状态 Op，补充名义 RespoEvent 和本地状态 wire 拒绝；
+旧 Map、字段/游标身份、异常和非法值断言全部保留，不增加测试组。
+无新永久脚本、框架、预算或强转；不以 union 伪装开放 wire/状态已被闭合验证。
+
+本地候选图已通过双入口完整 strict、原 63 项 native、原共享 native/JS 各35项和
+原七组 Node；实际隔离页面覆盖访客连接、中文/emoji 输入保留到导航重绘、单操作派发和
+刷新重连，无控制台错误。未注册或登录，不作为账户/存档恢复验收。
+正式根 Caps strict/toolchain 与 immutable 安装也已通过；最终精确 CI 结果以本 PR 为准；不合并部署下游业务应用，不发布 npm。
+原工作流只上传 Demo 前端 COS（action 内置 verify），不部署后端。
+
+## 历史 0.1.1：Calcit 0.34.3 与 Respo 0.18.1 兼容线
 
 配对正式 Calcit CLI / `@calcit/procs` **0.34.3**。依赖全部换成 Respo 0.18.1 兼容线上的正式 tag：Respo 0.18.1、UI 0.12.1、Message 0.1.4、Recollect 0.2.1、cumulo-util 0.0.37、ws-edn 0.0.53、JS-FFI 0.2.9，`caps --strict` 下是一张一致的图。不能与要求 Respo 0.19.1 / JS-FFI 0.2.10 的 UI 0.14.0 混装（Recollect 依赖的 Respo Value 仍在 0.18.1，见 Respo/respo.calcit#341）。
 

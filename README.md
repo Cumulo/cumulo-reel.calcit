@@ -2,7 +2,17 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.3.0 候选：使用者影响
+## 0.3.1 候选：使用者影响
+
+配对正式 Calcit CLI / `@calcit/procs` **0.35.1**。消费者需同步完整精确图并重新生成两端 JS：
+Util **0.0.40**、WS-EDN **0.0.56**、Message **0.3.1**、Recollect **0.3.2**、UI **0.15.1**、
+Respo **0.19.4**、JS-FFI **0.2.13**，传递 Value **0.7.3** / Router **0.12.1**。
+相对 #87 main，Snapshot、公开状态和操作、wire、存档、HUD 及原部署路径保持。
+保留 `merge-styles` 泛型和 `link` 样式 union，不把真实异构数据收窄为有限 union。
+原双入口 strict、native / JS、运行时回归与门禁不变；精确 PR / main 验收后再发布。
+原工作流仅部署 Demo 前端 COS，不部署或启动生产后端。
+
+## 历史 0.3.0 配对
 
 配对正式 Calcit CLI / `@calcit/procs` **0.35.0**。消费者需同步完整精确图并重新生成
 两端 JS：Util **0.0.39**、WS-EDN **0.0.55**、Message **0.3.0**、Recollect **0.3.0**、

@@ -2,7 +2,27 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.2.0 候选：现代 Respo 依赖图与事件边界
+## 0.3.0 候选：使用者影响
+
+配对正式 Calcit CLI / `@calcit/procs` **0.35.0**。消费者需同步完整精确图并重新生成
+两端 JS：Util **0.0.39**、WS-EDN **0.0.55**、Message **0.3.0**、Recollect **0.3.0**、
+UI **0.15.0**、Respo **0.19.3**、JS-FFI **0.2.12**，传递 Value **0.7.1** / Router **0.12.0**。
+本库正式 tag 发布前仍是候选，不引用 main/hash 代替。
+
+`cumulo-reel.style/merge-styles` 的 Map 值改用同一泛型 V；单独声明为不同值类型的 Map
+需先提供共同 union 类型。固定 `link` 样式使用 UI 既有 `StyleValue`（String / Number / Tag），
+不再是 Dynamic。两项声明共移除四处 Dynamic；这是 minor 的静态合同变化。
+函数体、覆盖顺序和固定样式值不变。开放 wire、异构 key、状态与存档仍保留真实边界，
+不以有限 union 冒充已经验证的外部业务数据，HUD 保留。
+
+官方 0.35.0 格式化后逐定义对照：155 个项目定义（排除生成的 `$meta`）全部执行代码、
+附带测试、doc 和其他元数据相同，仅上述两个 schema 变化。原双入口检查与完整 strict、
+63 项 native、原共享 native / JS 各 35 项（零排除）、原七组 Node 回归、两端构建、
+九模块 Caps strict / toolchain、immutable 和 canonical 检查通过。
+本轮未进行账户或浏览器存档交互验收；默认全网卡监听按原 runner 仅在 CI 验证。
+工作流、类型门禁、测试和预算均未修改；原工作流只部署 Demo 前端 COS，不部署后端。
+
+## 历史 0.2.0：现代 Respo 依赖图与事件边界
 
 使用者需配对正式 Calcit CLI / `@calcit/procs` **0.34.3**，同步完整精确依赖图并
 重新生成两端 JS：Util 0.0.38、WS-EDN 0.0.54、Message 0.2.1、Recollect 0.2.2、

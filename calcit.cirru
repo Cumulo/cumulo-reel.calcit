@@ -55,9 +55,9 @@
                       do
                         reset! *states $ decode-map-as
                           update-state-tree @*states
-                            decode-map-as cursor $ quote $ List Dynamic
+                            decode-map-as cursor $ List Dynamic
                             , s
-                          quote $ Map Tag Dynamic
+                          Map Tag Dynamic
                         , &unit
                     (:effect/connect)
                       do (connect!) &unit
@@ -156,7 +156,7 @@
               browser/storage-get $ :storage-key config/site
               (:some raw)
                 match
-                  try-parse-cirru-edn-as raw $ quote $ List String
+                  try-parse-cirru-edn-as raw $ List String
                   (:ok pair)
                     if
                       = 2 $ .len pair
@@ -217,7 +217,7 @@
                         >>
                           either states $ {}
                           , :login
-                        quote $ Map Tag Dynamic
+                        Map Tag Dynamic
                     comp-status-color store-typed.:color
                     comp-messages
                       filter-map-kv (session.:messages)
@@ -371,7 +371,7 @@
               struct-match event
                 respo.schema/RespoEvent checked $ .to-map checked
                 _ _ $ raise "|Expected RespoEvent or a Tag-keyed event Map"
-              decode-map-as event $ quote $ Map Tag Dynamic
+              decode-map-as event $ Map Tag Dynamic
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Map Tag Dynamic
@@ -500,7 +500,7 @@
           :doc "|Validate legacy member wire keys and nil/String names before typed display; reject malformed names without dropping guest entries."
           :code $ quote $ defn decode-member-names (value)
             filter-map-kv
-              decode-map-as value $ quote $ Map Number Dynamic
+              decode-map-as value $ Map Number Dynamic
               fn (key name)
                 hint-fn $ Fn Number Dynamic $ ->
                   calcit.core/MapEntryDecision Number $ Option String
@@ -609,7 +609,7 @@
                         (:none) (Result :err |Missing-patch-data)
                         (:some raw-changes)
                           match
-                            try-decode-map-as raw-changes $ quote $ List recollect.schema/change-op
+                            try-decode-map-as raw-changes $ List recollect.schema/change-op
                             (:err detail)
                               Result :err $ str |Invalid-changes: detail
                             (:ok changes)
@@ -813,8 +813,7 @@
                 :session/remove-message $ if
                   = 2 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value)
-                      quote $ List String
+                    try-decode-map-as (&enum:params value) (List String)
                     (:ok params)
                       Result :ok $ schema/Op :session/remove-message $ .unwrap (.get params 0)
                     (:err detail) (Result :err detail)
@@ -822,8 +821,7 @@
                 :user/log-in $ if
                   = 3 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value)
-                      quote $ List String
+                    try-decode-map-as (&enum:params value) (List String)
                     (:ok params)
                       Result :ok $ schema/Op :user/log-in
                         .unwrap $ .get params 0
@@ -833,8 +831,7 @@
                 :user/sign-up $ if
                   = 3 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value)
-                      quote $ List String
+                    try-decode-map-as (&enum:params value) (List String)
                     (:ok params)
                       Result :ok $ schema/Op :user/sign-up
                         .unwrap $ .get params 0
@@ -848,8 +845,7 @@
                 :router/change $ if
                   = 2 $ &enum:count value
                   match
-                    try-decode-map-as (&enum:params value)
-                      quote $ List Tag
+                    try-decode-map-as (&enum:params value) (List Tag)
                     (:ok params)
                       Result :ok $ schema/Op :router/change $ .unwrap (.get params 0)
                     (:err detail) (Result :err detail)
@@ -1003,14 +999,14 @@
         'decode-messages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-messages (value)
             match
-              try-decode-map-as value $ quote $ Map String Dynamic
+              try-decode-map-as value $ Map String Dynamic
               (:err detail) (Result :err detail)
               (:ok entries)
                 .foldl
                   .to-list $ .keys entries
                   assert-type
                     Result :ok $ {}
-                    quote $ Result (Map String cumulo-reel.schema/Message) String
+                    Result (Map String cumulo-reel.schema/Message) String
                   fn (acc key)
                     hint-fn $ Fn
                       Result (Map String cumulo-reel.schema/Message) String
@@ -1194,7 +1190,7 @@
           :code $ quote $ defn decode-source (value)
             try-decode-map-as
               if (struct? value) (&struct:to-map value) value
-              quote $ Map Tag Dynamic
+              Map Tag Dynamic
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Map Tag Dynamic) String
@@ -1721,15 +1717,15 @@
       :defs $ {}
         'LocalDateHost $ %{} 'CodeEntry (:doc "|仅暴露备份命名所需的宿主本地月、日读取。")
           :code $ quote $ deftrait LocalDateHost
-            .get-month $ quote $ Fn cumulo-reel.app.server-host/LocalDateHost (-> Number)
-            .get-date $ quote $ Fn cumulo-reel.app.server-host/LocalDateHost (-> Number)
+            .get-month $ Fn cumulo-reel.app.server-host/LocalDateHost $ -> Number
+            .get-date $ Fn cumulo-reel.app.server-host/LocalDateHost $ -> Number
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :node)
             :names $ {} (:get-date |getDate) (:get-month |getMonth)
           :schema $ quote Trait
         'NodeProcessHost $ %{} 'CodeEntry (:doc "|仅用于订阅 Node 的 SIGINT 信号。")
           :code $ quote $ deftrait NodeProcessHost
-            .on $ quote $ Fn cumulo-reel.app.server-host/NodeProcessHost String
+            .on $ Fn cumulo-reel.app.server-host/NodeProcessHost String
               Fn String Number $ -> Unit
               -> cumulo-reel.app.server-host/NodeProcessHost
           :examples $ []
@@ -1844,7 +1840,7 @@
           :code $ quote $ defn send! (sid message)
             match
               get
-                assert-type @*clients $ quote $ Map Number ws-edn.server/NodeWebSocketHost
+                assert-type @*clients $ Map Number ws-edn.server/NodeWebSocketHost
                 , sid
               (:some socket)
                 let
@@ -1920,9 +1916,9 @@
                     (:none) (decode-sessions nil)
                   , :pages $ match (calcit.core/get source :pages)
                     (:some value)
-                      decode-map-as value $ quote $ Map Tag Dynamic
+                      decode-map-as value $ Map Tag Dynamic
                     (:none)
-                      decode-map-as nil $ quote $ Map Tag Dynamic
+                      decode-map-as nil $ Map Tag Dynamic
           :examples $ []
           :schema $ quote $ Fn Input (-> cumulo-reel.schema/Database) (:generics Input)
           :tests $ []
@@ -2000,7 +1996,7 @@
         'decode-sessions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-sessions (value)
             filter-map-kv
-              decode-map-as value $ quote $ Map Number Dynamic
+              decode-map-as value $ Map Number Dynamic
               fn (key value)
                 hint-fn $ Fn Number Dynamic $ -> (MapEntryDecision Number cumulo-reel.schema/Session)
                 MapEntryDecision :keep key $ require-decoded $ protocol/decode-session value
@@ -2043,7 +2039,7 @@
         'decode-users $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-users (value)
             filter-map-kv
-              decode-map-as value $ quote $ Map String Dynamic
+              decode-map-as value $ Map String Dynamic
               fn (key value)
                 hint-fn $ Fn String Dynamic $ -> (MapEntryDecision String cumulo-reel.schema/User)
                 MapEntryDecision :keep key $ decode-user value
@@ -2356,7 +2352,7 @@
       :defs $ {}
         'ReelState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ReelState ([] Db) (:base Db) (:db Db)
-            :records $ quote $ List (List Dynamic)
+            :records $ List $ List Dynamic
             :merged? Bool
           :examples $ []
           :schema $ quote StructDef
@@ -2464,10 +2460,8 @@
         'PartitionAction $ %{} 'CodeEntry
           :doc "|One transport action for a connection: drop a revoked partition, or send its snapshot or delta chain."
           :code $ quote $ defenum PartitionAction ([] K V) (:drop K)
-            :snapshot $ quote $ cumulo-reel.partition/PartitionState K V
-            :deltas
-              quote $ cumulo-reel.partition/PartitionState K V
-              quote $ List cumulo-reel.partition/PartitionDelta
+            :snapshot $ cumulo-reel.partition/PartitionState K V
+            :deltas (cumulo-reel.partition/PartitionState K V) (List cumulo-reel.partition/PartitionDelta)
           :examples $ []
           :schema $ quote EnumDef
         'PartitionAdvance $ %{} 'CodeEntry
@@ -2483,19 +2477,19 @@
         'PartitionDelta $ %{} 'CodeEntry
           :doc "|One retained diff step of a partition, computed once and reused for every subscriber at its base revision."
           :code $ quote $ defstruct PartitionDelta (:base Number) (:revision Number)
-            :changes $ quote $ List recollect.schema/change-op
+            :changes $ List recollect.schema/change-op
           :examples $ []
           :schema $ quote StructDef
         'PartitionProgress $ %{} 'CodeEntry
           :doc "|Per-connection progress for one subscribed partition: acknowledged revision plus at most one unacknowledged send."
           :code $ quote $ defstruct PartitionProgress (:epoch Number) (:acked Number)
-            :in-flight $ quote $ Option Number
+            :in-flight $ Option Number
           :examples $ []
           :schema $ quote StructDef
         'PartitionSendPlan $ %{} 'CodeEntry
           :doc "|What one subscriber needs next: nothing, a full snapshot, or the retained contiguous delta chain from its acknowledged revision."
           :code $ quote $ defenum PartitionSendPlan (:idle) (:snapshot)
-            :deltas $ quote $ List cumulo-reel.partition/PartitionDelta
+            :deltas $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
           :schema $ quote EnumDef
         'PartitionSlot $ %{} 'CodeEntry
@@ -2506,12 +2500,12 @@
         'PartitionState $ %{} 'CodeEntry
           :doc "|Server-owned hot state of one partition. epoch changes whenever revisions restart, so old acknowledgements never match a new lineage."
           :code $ quote $ defstruct PartitionState ([] K V) (:key K) (:epoch Number) (:revision Number) (:view V)
-            :history $ quote $ List cumulo-reel.partition/PartitionDelta
+            :history $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
           :schema $ quote StructDef
         'PartitionStep $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct PartitionStep ([] K V)
-            :state $ quote $ cumulo-reel.partition/PartitionState K V
+            :state $ cumulo-reel.partition/PartitionState K V
             :advance cumulo-reel.partition/PartitionAdvance
           :examples $ []
           :schema $ quote StructDef
@@ -2751,7 +2745,7 @@
             let
                 drops $ .foldl (map-entries progress)
                   assert-type ([])
-                    quote $ List $ cumulo-reel.partition/PartitionAction K V
+                    List $ cumulo-reel.partition/PartitionAction K V
                   fn (acc entry)
                     hint-fn $ Fn
                       List $ cumulo-reel.partition/PartitionAction K V
@@ -2763,7 +2757,7 @@
                 sends $ assert-type
                   .foldl (.to-list desired)
                     assert-type ([])
-                      quote $ List $ cumulo-reel.partition/PartitionAction K V
+                      List $ cumulo-reel.partition/PartitionAction K V
                     fn (acc key)
                       hint-fn $ Fn
                         List $ cumulo-reel.partition/PartitionAction K V
@@ -2780,7 +2774,7 @@
                                 conj acc $ PartitionAction :snapshot state
                               (:deltas deltas)
                                 conj acc $ PartitionAction :deltas state deltas
-                  quote $ List $ cumulo-reel.partition/PartitionAction K V
+                  List $ cumulo-reel.partition/PartitionAction K V
               .concat drops sends
           :examples $ []
           :schema $ quote $ Fn
@@ -2815,7 +2809,7 @@
         'decode-test-view $ %{} 'CodeEntry
           :doc "|View decoder used by partition engine tests; applications pass their own nominal decoder to apply-partition-deltas."
           :code $ quote $ defn decode-test-view (value)
-            try-decode-map-as value $ quote $ Map String String
+            try-decode-map-as value $ Map String String
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Result (Map String String) String
@@ -2973,13 +2967,13 @@
                 struct-tree-input $ &struct:to-map value
               (map? value)
                 filter-map-kv
-                  decode-map-as value $ quote $ Map Dynamic Dynamic
+                  decode-map-as value $ Map Dynamic Dynamic
                   fn (key item)
                     hint-fn $ Fn Dynamic Dynamic $ -> (MapEntryDecision Dynamic Dynamic)
                     MapEntryDecision :keep key $ struct-tree-input item
               (list? value)
                 map
-                  decode-map-as value $ quote $ List Dynamic
+                  decode-map-as value $ List Dynamic
                   , struct-tree-input
               (enum? value)
                 .foldl
@@ -3007,8 +3001,7 @@
           :doc "|Deterministic keyed view used by partition engine tests: different labels give different views."
           :code $ quote $ defn test-view (labels)
             .foldl labels
-              assert-type ({})
-                quote $ Map String String
+              assert-type ({}) (Map String String)
               fn (acc label)
                 hint-fn $ Fn (Map String String) String $ -> (Map String String)
                 .assoc acc label $ str |item- label
@@ -3036,20 +3029,20 @@
       :defs $ {}
         'ClientStore $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientStore (:session cumulo-reel.schema/Session) (:router cumulo-reel.schema/Router) (:logged-in? Bool) (:color String) (:count Number) (:reel-length Number)
-            :name $ quote $ Option String
-            :user $ quote $ Option cumulo-reel.schema/ClientUser
+            :name $ Option String
+            :user $ Option cumulo-reel.schema/ClientUser
           :examples $ []
           :schema $ quote StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientUser (:name String) (:id String) (:nickname String)
-            :avatar $ quote $ Option String
+            :avatar $ Option String
           :examples $ []
           :schema $ quote StructDef
         'Database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Database
-            :sessions $ quote $ Map Number Session
-            :users $ quote $ Map String User
-            :pages $ quote $ Map Tag Dynamic
+            :sessions $ Map Number Session
+            :users $ Map String User
+            :pages $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
         'Message $ %{} 'CodeEntry (:doc |)
@@ -3062,16 +3055,16 @@
           :schema $ quote EnumDef
         'Router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Router (:name Tag) (:title String) (:data Dynamic)
-            :router $ quote $ Option cumulo-reel.schema/Router
+            :router $ Option cumulo-reel.schema/Router
           :examples $ []
           :schema $ quote StructDef
         'Session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Session
-            :user-id $ quote $ Option String
-            :id $ quote $ Option Number
-            :nickname $ quote $ Option String
+            :user-id $ Option String
+            :id $ Option Number
+            :nickname $ Option String
             :router cumulo-reel.schema/Router
-            :messages $ quote $ Map String cumulo-reel.schema/Message
+            :messages $ Map String cumulo-reel.schema/Message
           :examples $ []
           :schema $ quote StructDef
         'SiteConfig $ %{} 'CodeEntry (:doc |)
@@ -3080,7 +3073,7 @@
           :schema $ quote StructDef
         'User $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct User (:name String) (:id String) (:nickname String)
-            :avatar $ quote $ Option String
+            :avatar $ Option String
             :password String
           :examples $ []
           :schema $ quote StructDef
@@ -3116,13 +3109,14 @@
               :color $ hsl 240 80 80
               :font-family ui/font-fancy
           :examples $ []
-          :schema $ quote $ Map Tag Dynamic
+          :schema $ quote $ Map Tag respo-ui.schema/StyleValue
         'merge-styles $ %{} 'CodeEntry
           :doc "|Combines heterogeneous Respo style maps at the rendering boundary."
           :code $ quote $ defn merge-styles (x0 & xs) (reduce xs x0 &merge)
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) & (Map Tag Dynamic)
-            -> $ Map Tag Dynamic
+          :schema $ quote $ Fn (Map Tag V) & (Map Tag V)
+            -> $ Map Tag V
+            :generics V
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.style
           :require

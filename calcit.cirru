@@ -6,11 +6,11 @@
     :default $ {} (:description |) (:init-fn 'cumulo-reel.app.client/main!) (:mode :js) (:reload-fn 'cumulo-reel.app.client/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
+      :type-slots $ {} $ :dispatch-op 'cumulo-reel.schema/Op
     :server $ {} (:description |) (:init-fn 'cumulo-reel.app.server/main!) (:mode :js) (:reload-fn 'cumulo-reel.app.server/reload!) (:target :node)
       :feature-policy $ {}
       :modules $ [] |recollect/ |ws-edn.calcit/ |cumulo-util.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |cumulo-reel.schema/Op
+      :type-slots $ {} $ :dispatch-op 'cumulo-reel.schema/Op
   :files $ {}
     'cumulo-reel.app.client $ %{} 'FileEntry
       :defs $ {}
@@ -42,26 +42,31 @@
           :examples $ []
           :schema $ quote $ Fn (-> ws-edn.client/WsClient) (:features :js-ffi)
         'dispatch! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn dispatch! (op op-data)
-            let
-                data $ .unwrap-or op-data nil
-              println |Dispatch op data
-              if (list? op)
-                recur (:: :states op data) (Option :none)
-                if (tag? op)
-                  recur (:: op data) (Option :none)
-                  match op
-                    (:states cursor s)
-                      do
-                        reset! *states $ decode-map-as
-                          update-state-tree @*states
-                            decode-map-as cursor $ List Dynamic
-                            , s
-                          Map Tag Dynamic
-                        , &unit
-                    (:effect/connect)
-                      do (connect!) &unit
-                    _ $ ws-send! op
+          :code $ quote $ defn dispatch! (op op-data) (println |Dispatch op op-data)
+            if (list? op)
+              recur
+                match op-data
+                  (:some data) (:: :states op data)
+                  (:none) (:: :states op nil)
+                Option :none
+              if (tag? op)
+                recur
+                  match op-data
+                    (:some data) (:: op data)
+                    (:none) (:: op nil)
+                  Option :none
+                match op
+                  (:states cursor s)
+                    do
+                      reset! *states $ decode-map-as
+                        update-state-tree @*states
+                          decode-map-as cursor $ List Dynamic
+                          , s
+                        Map Tag Dynamic
+                      , &unit
+                  (:effect/connect)
+                    do (connect!) &unit
+                  _ $ ws-send! op
           :examples $ []
           :schema $ quote $ Fn Dynamic (Option Dynamic) (-> Unit) (:features :js-ffi)
           :tests $ []
@@ -226,7 +231,7 @@
                       {}
                       fn (info d!)
                         hint-fn $ Fn (Map Tag Dynamic)
-                          Fn Dynamic & Dynamic $ -> Unit
+                          Fn cumulo-reel.schema/Op $ -> Unit
                           -> Unit
                         d! $ :: :session/remove-message $ match (calcit.core/get info :id)
                           (:some value) (decode-map-as value 'String)
@@ -334,10 +339,7 @@
                             -> Unit
                           d! $ schema/Op :states
                             .unwrap-or cursor $ []
-                            struct-with state $ :username $ match
-                              calcit.core/get (event-fields e) :value
-                              (:some value) (decode-map-as value 'String)
-                              (:none) (decode-map-as nil 'String)
+                            struct-with state $ :username $ event-value e
                     space-y 8
                     div ({})
                       input $ {} (:placeholder |Password)
@@ -349,10 +351,7 @@
                             -> Unit
                           d! $ schema/Op :states
                             .unwrap-or cursor $ []
-                            struct-with state $ :password $ match
-                              calcit.core/get (event-fields e) :value
-                              (:some value) (decode-map-as value 'String)
-                              (:none) (decode-map-as nil 'String)
+                            struct-with state $ :password $ event-value e
                   space-y 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -365,17 +364,20 @@
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
-        'event-fields $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn event-fields (event)
+        'event-value $ %{} 'CodeEntry
+          :doc "|Read a checked string from a Respo event or the legacy Tag-keyed event Map."
+          :code $ quote $ defn event-value (event)
             if (struct? event)
               struct-match event
-                respo.schema/RespoEvent checked $ .to-map checked
+                respo.schema/RespoEvent checked $ decode-map-as checked.:value 'String
                 _ _ $ raise "|Expected RespoEvent or a Tag-keyed event Map"
-              decode-map-as event $ Map Tag Dynamic
+              let
+                  fields $ decode-map-as event $ Map Tag Dynamic
+                match (calcit.core/get fields :value)
+                  (:some value) (decode-map-as value 'String)
+                  (:none) (decode-map-as nil 'String)
           :examples $ []
-          :schema $ quote $ Fn Dynamic
-            -> $ Map Tag Dynamic
-          :tags $ #{} :internal
+          :schema $ quote $ Fn Input (-> String) (:generics Input)
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
@@ -614,10 +616,7 @@
                               Result :err $ str |Invalid-changes: detail
                             (:ok changes)
                               match
-                                .apply-to (patch-batch changes)
-                                  match store
-                                    (:none) nil
-                                    (:some current) (encode-client-store current)
+                                .apply-to (patch-batch changes) (encode-optional-wire store encode-client-store)
                                 (:err error)
                                   Result :err $ str |Invalid-patch: error
                                 (:ok next-store) (decode-nullable-store next-store)
@@ -1212,9 +1211,7 @@
             .assoc
               .assoc
                 .assoc
-                  .assoc (&struct:to-map store) :user $ match (:user store)
-                    (:none) nil
-                    (:some user) (encode-client-user user)
+                  .assoc (&struct:to-map store) :user $ encode-optional-wire (:user store) encode-client-user
                   , :router $ encode-router $ :router store
                 , :session $ encode-session $ :session store
               , :name $ encode-optional-string $ :name store
@@ -1236,24 +1233,33 @@
           :examples $ []
           :schema $ quote $ Fn (Option String)
             -> $ JsNullish String
+        'encode-optional-wire $ %{} 'CodeEntry
+          :doc "|Encode absence as the legacy wire nil at serialization and patch boundaries."
+          :code $ quote $ defn encode-optional-wire (value encode)
+            match value
+              (:none) nil
+              (:some item) (encode item)
+          :examples $ []
+          :schema $ quote $ Fn (Option T)
+            Fn T $ -> $ Map Tag Dynamic
+            -> $ JsNullish $ Map Tag Dynamic
+            :generics T
         'encode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-router (router)
-            .assoc (&struct:to-map router) :router $ match (:router router)
-              (:none) nil
-              (:some nested) (encode-router nested)
+            .assoc (&struct:to-map router) :router $ encode-optional-wire (:router router) encode-router
           :examples $ []
           :schema $ quote $ Fn cumulo-reel.schema/Router
             -> $ Map Tag Dynamic
         'encode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-session (session)
             .assoc
-              .assoc
-                .assoc
-                  .assoc (&struct:to-map session) :router $ encode-router $ :router session
-                  , :user-id $ encode-optional-string $ :user-id session
-                , :id $ match (:id session)
-                  (:none) nil
-                  (:some value) value
+              let
+                  wire $ .assoc
+                    .assoc (&struct:to-map session) :router $ encode-router $ :router session
+                    , :user-id $ encode-optional-string (:user-id session)
+                match (:id session)
+                  (:none) (.assoc wire :id nil)
+                  (:some value) (.assoc wire :id value)
               , :nickname $ encode-optional-string $ :nickname session
           :examples $ []
           :schema $ quote $ Fn cumulo-reel.schema/Session
@@ -1647,9 +1653,7 @@
                       (:some found) found
                       (:none) cumulo-reel.schema/session
                     , 'cumulo-reel.schema/Session
-                  old-store $ match (get @*client-caches sid)
-                    (:some cached) (cumulo-reel.app.protocol/encode-client-store cached)
-                    (:none) nil
+                  old-store $ cumulo-reel.app.protocol/encode-optional-wire (get @*client-caches sid) cumulo-reel.app.protocol/encode-client-store
                   new-store $ twig-container db session records
                   changes $ diff-twig old-store (cumulo-reel.app.protocol/encode-client-store new-store)
                     {} $ :key :id
@@ -1831,8 +1835,7 @@
             -> Unit
           :tests $ [] $ %{} 'TestEntry (:name |skips-disconnected-sessions)
             :code $ quote $ let
-                seen $ ref $ assert-type ([])
-                  quote $ List Number
+                seen $ ref $ assert-type ([]) (List Number)
               reset! *clients $ {}
               each! $ fn (sid) (swap! seen conj sid) &unit
               assert= ([]) @seen
@@ -1929,25 +1932,13 @@
                   persisted $ struct-with actual $ :sessions ({})
                 assert=
                   cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar $ Option :none
-                  match
-                    calcit.core/get (:users actual) |u1
-                    (:some value) value
-                    (:none) nil
+                  .unwrap $ calcit.core/get (:users actual) |u1
                 assert= (Option :some |portrait)
-                  :avatar $ match
-                    calcit.core/get (:users actual) |u2
-                    (:some value) value
-                    (:none) nil
+                  :avatar $ .unwrap $ calcit.core/get (:users actual) |u2
                 assert= (Option :some 1)
-                  :id $ match
-                    calcit.core/get (:sessions actual) 1
-                    (:some value) value
-                    (:none) nil
+                  :id $ .unwrap $ calcit.core/get (:sessions actual) 1
                 assert= (Option :some |u1)
-                  :user-id $ match
-                    calcit.core/get (:sessions actual) 1
-                    (:some value) value
-                    (:none) nil
+                  :user-id $ .unwrap $ calcit.core/get (:sessions actual) 1
                 assert=
                   {} $ :home $ [] 1 |two
                   :pages actual
@@ -2402,7 +2393,7 @@
               :code $ quote $ let
                   reel $ assert-type
                     ReelState :base 1 :db 2 :records ([]) :merged? false
-                    quote $ cumulo-reel.core/ReelState Number
+                    cumulo-reel.core/ReelState Number
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ Fn Number cumulo-reel.schema/Op String String Number $ -> Number
                     , db
@@ -2414,7 +2405,7 @@
               :code $ quote $ let
                   reel $ assert-type
                     ReelState :base 1 :db 1 :records ([]) :merged? false
-                    quote $ cumulo-reel.core/ReelState Number
+                    cumulo-reel.core/ReelState Number
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ Fn Number cumulo-reel.schema/Op String String Number $ -> Number
                     inc db
@@ -2445,7 +2436,7 @@
                   ReelState :base 1 :db 99 :records
                     [] $ [] 2 :opaque |legacy-id 3
                     , :merged? true
-                  quote $ cumulo-reel.core/ReelState Number
+                  cumulo-reel.core/ReelState Number
                 replay $ fn (db op sid op-id op-time)
                   hint-fn $ Fn Number Dynamic Dynamic Dynamic Dynamic $ -> Number
                   + db $ decode-map-as op 'Number
@@ -2791,13 +2782,12 @@
                   , test-budget 8 64
                 partitions $ assert-type
                   {} $ |lobby lobby2
-                  quote $ Map String $ cumulo-reel.partition/PartitionState String (Map String String)
+                  Map String $ cumulo-reel.partition/PartitionState String $ Map String String
                 acked $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
                 progress $ assert-type
                   {} (|lobby acked) (|board/gone acked)
-                  quote $ Map String cumulo-reel.partition/PartitionProgress
-                no-progress $ assert-type ({})
-                  quote $ Map String cumulo-reel.partition/PartitionProgress
+                  Map String cumulo-reel.partition/PartitionProgress
+                no-progress $ assert-type ({}) (Map String cumulo-reel.partition/PartitionProgress)
                 actions $ connection-actions partitions progress $ #{} |lobby |user/u1
               assert= 2 $ count actions
               assert= true $ includes? actions $ PartitionAction :drop |board/gone
@@ -2856,7 +2846,7 @@
                             , acc
                           (:ok next)
                             match
-                              try-decode-map-as next $ quote $ Map String String
+                              try-decode-map-as next $ Map String String
                               (:ok view) view
                               (:err error)
                                 raise $ str |Invalid-view: error
@@ -2979,7 +2969,7 @@
                 .foldl
                   range 1 $ .count value
                   , value $ fn (acc idx)
-                    hint-fn $ Fn Enum Number $ -> Enum
+                    hint-fn $ Fn AnyEnum Number $ -> AnyEnum
                     assoc acc idx $ struct-tree-input $ .unwrap (nth value idx)
               true value
           :examples $ []
@@ -3114,7 +3104,8 @@
           :doc "|Combines heterogeneous Respo style maps at the rendering boundary."
           :code $ quote $ defn merge-styles (x0 & xs) (reduce xs x0 &merge)
           :examples $ []
-          :schema $ quote $ Fn (Map Tag V) & (Map Tag V)
+          :schema $ quote $ Fn (Map Tag V)
+            & $ Map Tag V
             -> $ Map Tag V
             :generics V
       :ns $ %{} 'NsEntry (:doc |)

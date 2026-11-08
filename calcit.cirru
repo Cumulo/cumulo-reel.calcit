@@ -1932,8 +1932,8 @@
                   actual $ cumulo-reel.app.storage/decode-database raw
                   persisted $ struct-with actual $ :sessions ({})
                 assert=
-                  cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar $ Option :none
-                  .unwrap $ calcit.core/get (:users actual) |u1
+                  Option :some $ cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar $ Option :none
+                  calcit.core/get (:users actual) |u1
                 assert= (Option :some |portrait)
                   :avatar $ .unwrap $ calcit.core/get (:users actual) |u2
                 assert= (Option :some 1)

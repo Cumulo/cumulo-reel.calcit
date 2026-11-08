@@ -280,6 +280,34 @@ async function waitFor(predicate, label) {
   assert.fail(`Timed out waiting for ${label}`);
 }
 
+test('bare reconnect dispatch creates a local WebSocket client', () => {
+  const source = `
+    import assert from 'node:assert/strict';
+    import * as c from './js-out/calcit.core.mjs';
+    globalThis.location = new URL('http://127.0.0.1/');
+    globalThis.window = { location, addEventListener() {}, removeEventListener() {} };
+    globalThis.document = {
+      visibilityState: 'visible', querySelector: () => ({}),
+      createElement: () => ({ getContext: () => ({}) }),
+      addEventListener() {}, removeEventListener() {},
+    };
+    let opened = 0;
+    globalThis.WebSocket = class {
+      readyState = 0;
+      onopen = null; onclose = null; onerror = null; onmessage = null;
+      constructor() { opened += 1; }
+      send() { assert.fail('reconnect must not send a wire operation'); }
+      close() {}
+    };
+    const client = await import('./js-out/cumulo-reel.app.client.mjs');
+    client.dispatch_$x_(c.turn_tag('effect/connect'), c.nil__GT_option(null));
+    assert.equal(opened, 1);
+    const ws = await import('./js-out/ws-edn.client.mjs');
+    c.invoke_method('close', c.option_$o_unwrap(c.deref(ws._$s_global_client)));
+  `;
+  execFileSync(process.execPath, ['--input-type=module', '-e', source], { cwd: projectRoot, timeout: 5000 });
+});
+
 test('WebSocket adapter handles text, binary, broadcast, disconnect, and reconnect', async (context) => {
   assert.deepEqual(serverOptions(0, serverCore.nil__GT_option(null)), { port: 0 },
     'an omitted bind address must preserve the original host-default options');

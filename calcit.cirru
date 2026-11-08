@@ -53,7 +53,8 @@
                 recur
                   match op-data
                     (:some data) (:: op data)
-                    (:none) (:: op nil)
+                    (:none)
+                      if (= op :effect/connect) (:: :effect/connect) (:: op nil)
                   Option :none
                 match op
                   (:states cursor s)

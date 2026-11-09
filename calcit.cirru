@@ -1870,7 +1870,7 @@
                     fn (current key value) (.assoc current key value)
                     , sid socket
                   on-event $ SocketEvent :connect sid
-                  socket .on |message $ fn (raw-data binary?)
+                  .on-message socket |message $ fn (raw-data binary?)
                     let
                         is-binary? $ contract/expect-bool |ws-message-is-binary binary?
                       if is-binary?

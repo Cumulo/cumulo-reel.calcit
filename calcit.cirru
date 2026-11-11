@@ -229,7 +229,7 @@
                       {}
                       fn (info d!)
                         hint-fn $ Fn (Map Tag Dynamic)
-                          Fn cumulo-reel.schema/Op $ -> Unit
+                          Fn schema/Op $ -> Unit
                           -> Unit
                         d! $ :: :session/remove-message $ match (calcit.core/get info :id)
                           (:some value) (decode-map-as value 'String)
@@ -333,7 +333,7 @@
                         :style ui/input
                         :on-input $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn cumulo-reel.schema/Op $ -> Unit
+                            Fn schema/Op $ -> Unit
                             -> Unit
                           d! $ schema/Op :states
                             .unwrap-or cursor $ []
@@ -345,7 +345,7 @@
                         :style ui/input
                         :on-input $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn cumulo-reel.schema/Op $ -> Unit
+                            Fn schema/Op $ -> Unit
                             -> Unit
                           d! $ schema/Op :states
                             .unwrap-or cursor $ []
@@ -384,7 +384,7 @@
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
               hint-fn $ Fn respo.schema/RespoEvent
-                Fn cumulo-reel.schema/Op $ -> Unit
+                Fn schema/Op $ -> Unit
                 -> Unit
               dispatch! $ if signup? (schema/Op :user/sign-up username password) (schema/Op :user/log-in username password)
               browser/storage-set! (:storage-key config/site)
@@ -503,7 +503,7 @@
               decode-map-as value $ Map Number Dynamic
               fn (key name)
                 hint-fn $ Fn Number Dynamic $ ->
-                  calcit.core/MapEntryDecision Number $ Option String
+                  MapEntryDecision Number $ Option String
                 match (cumulo-reel.app.protocol/decode-optional-string name)
                   (:err detail)
                     raise $ str |Invalid-member-name-at- key |: detail
@@ -998,12 +998,12 @@
                   .to-list $ .keys entries
                   assert-type
                     Result :ok $ {}
-                    Result (Map String cumulo-reel.schema/Message) String
+                    Result (Map String schema/Message) String
                   fn (acc key)
                     hint-fn $ Fn
-                      Result (Map String cumulo-reel.schema/Message) String
+                      Result (Map String schema/Message) String
                       , String $ ->
-                        Result (Map String cumulo-reel.schema/Message) String
+                        Result (Map String schema/Message) String
                     match acc
                       (:err detail) (Result :err detail)
                       (:ok decoded)
@@ -1976,7 +1976,7 @@
             filter-map-kv
               decode-map-as value $ Map Number Dynamic
               fn (key value)
-                hint-fn $ Fn Number Dynamic $ -> (MapEntryDecision Number cumulo-reel.schema/Session)
+                hint-fn $ Fn Number Dynamic $ -> (MapEntryDecision Number schema/Session)
                 MapEntryDecision :keep key $ require-decoded $ protocol/decode-session value
           :examples $ []
           :schema $ quote $ Fn Input
@@ -2018,7 +2018,7 @@
             filter-map-kv
               decode-map-as value $ Map String Dynamic
               fn (key value)
-                hint-fn $ Fn String Dynamic $ -> (MapEntryDecision String cumulo-reel.schema/User)
+                hint-fn $ Fn String Dynamic $ -> (MapEntryDecision String schema/User)
                 MapEntryDecision :keep key $ decode-user value
           :examples $ []
           :schema $ quote $ Fn Input
@@ -2083,7 +2083,7 @@
                   match (get users user-id)
                     (:some found) found
                     (:none) schema/user
-                  , 'cumulo-reel.schema/User
+                  , schema/User
                 absent None
               schema/ClientStore :logged-in? logged-in? :session session :reel-length (.len records) :router
                 if logged-in?
@@ -2102,7 +2102,7 @@
           :doc "|Project session member names into the legacy router wire map. Internal session absence uses Option; output nil/String values preserve the existing client wire protocol."
           :code $ quote $ defn twig-members (sessions users)
             filter-map-kv sessions $ fn (sid session)
-              hint-fn $ Fn Number cumulo-reel.schema/Session $ ->
+              hint-fn $ Fn Number schema/Session $ ->
                 MapEntryDecision Number $ JsNullish String
               MapEntryDecision :keep sid $ cumulo-reel.app.protocol/encode-optional-string $ match (:user-id session)
                 (:none) None
@@ -2168,7 +2168,7 @@
                   match (get db.:sessions sid)
                     (:some found) found
                     (:none) schema/session
-                  , 'cumulo-reel.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :router
                   struct-with schema/router $ :name route-name
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
@@ -2197,7 +2197,7 @@
                   match (get db.:sessions sid)
                     (:some found) found
                     (:none) schema/session
-                  , 'cumulo-reel.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :messages (.dissoc session.:messages message-id)
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
@@ -2213,13 +2213,13 @@
                 maybe-user $ find
                   .to-list $ .distinct-values db.:users
                   fn (user)
-                    hint-fn $ Fn cumulo-reel.schema/User $ -> Bool
+                    hint-fn $ Fn schema/User $ -> Bool
                     = username user.:name
                 session $ assert-type
                   match (get db.:sessions sid)
                     (:some found) found
                     (:none) schema/session
-                  , 'cumulo-reel.schema/Session
+                  , schema/Session
                 next-session $ match maybe-user
                   (:some user)
                     if
@@ -2240,7 +2240,7 @@
                   match (get db.:sessions sid)
                     (:some found) found
                     (:none) schema/session
-                  , 'cumulo-reel.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :user-id None
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
@@ -2256,13 +2256,13 @@
                 maybe-user $ find
                   .to-list $ .distinct-values db.:users
                   fn (user)
-                    hint-fn $ Fn cumulo-reel.schema/User $ -> Bool
+                    hint-fn $ Fn schema/User $ -> Bool
                     = username user.:name
                 session $ assert-type
                   match (get db.:sessions sid)
                     (:some found) found
                     (:none) schema/session
-                  , 'cumulo-reel.schema/Session
+                  , schema/Session
               if (.some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
@@ -2328,7 +2328,7 @@
     'cumulo-reel.core $ %{} 'FileEntry
       :defs $ {}
         'ReelState $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ReelState ([] Db) (:base Db) (:db Db)
+          :code $ quote $ defstruct ReelState (:generics Db) (:base Db) (:db Db)
             :records $ List $ List Dynamic
             :merged? Bool
           :examples $ []
@@ -2379,7 +2379,7 @@
               :code $ quote $ let
                   reel $ assert-type
                     ReelState :base 1 :db 2 :records ([]) :merged? false
-                    cumulo-reel.core/ReelState Number
+                    ReelState Number
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ Fn Number cumulo-reel.schema/Op String String Number $ -> Number
                     , db
@@ -2391,7 +2391,7 @@
               :code $ quote $ let
                   reel $ assert-type
                     ReelState :base 1 :db 1 :records ([]) :merged? false
-                    cumulo-reel.core/ReelState Number
+                    ReelState Number
                   updater $ fn (db op sid op-id op-time)
                     hint-fn $ Fn Number cumulo-reel.schema/Op String String Number $ -> Number
                     inc db
@@ -2422,7 +2422,7 @@
                   ReelState :base 1 :db 99 :records
                     [] $ [] 2 :opaque |legacy-id 3
                     , :merged? true
-                  cumulo-reel.core/ReelState Number
+                  ReelState Number
                 replay $ fn (db op sid op-id op-time)
                   hint-fn $ Fn Number Dynamic Dynamic Dynamic Dynamic $ -> Number
                   + db $ decode-map-as op 'Number
@@ -2436,7 +2436,7 @@
       :defs $ {}
         'PartitionAction $ %{} 'CodeEntry
           :doc "|One transport action for a connection: drop a revoked partition, or send its snapshot or delta chain."
-          :code $ quote $ defenum PartitionAction ([] K V) (:drop K)
+          :code $ quote $ defenum PartitionAction (:generics K V) (:drop K)
             :snapshot $ cumulo-reel.partition/PartitionState K V
             :deltas (cumulo-reel.partition/PartitionState K V) (List cumulo-reel.partition/PartitionDelta)
           :examples $ []
@@ -2471,17 +2471,17 @@
           :schema $ quote EnumDef
         'PartitionSlot $ %{} 'CodeEntry
           :doc "|Client cache of one subscribed partition: lineage epoch, applied revision and validated view."
-          :code $ quote $ defstruct PartitionSlot ([] V) (:epoch Number) (:revision Number) (:view V)
+          :code $ quote $ defstruct PartitionSlot (:generics V) (:epoch Number) (:revision Number) (:view V)
           :examples $ []
           :schema $ quote StructDef
         'PartitionState $ %{} 'CodeEntry
           :doc "|Server-owned hot state of one partition. epoch changes whenever revisions restart, so old acknowledgements never match a new lineage."
-          :code $ quote $ defstruct PartitionState ([] K V) (:key K) (:epoch Number) (:revision Number) (:view V)
+          :code $ quote $ defstruct PartitionState (:generics K V) (:key K) (:epoch Number) (:revision Number) (:view V)
             :history $ List cumulo-reel.partition/PartitionDelta
           :examples $ []
           :schema $ quote StructDef
         'PartitionStep $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct PartitionStep ([] K V)
+          :code $ quote $ defstruct PartitionStep (:generics K V)
             :state $ cumulo-reel.partition/PartitionState K V
             :advance cumulo-reel.partition/PartitionAdvance
           :examples $ []
@@ -2572,7 +2572,7 @@
                   progress $ PartitionProgress :epoch 7 :acked 1 :in-flight None
                   plans $ map (range 5)
                     fn (_idx)
-                      hint-fn $ Fn Number $ -> cumulo-reel.partition/PartitionSendPlan
+                      hint-fn $ Fn Number $ -> PartitionSendPlan
                       plan-partition-send next-state $ Some progress
                 match (:advance step)
                   (:delta delta _stats)
@@ -2615,7 +2615,7 @@
                   applied $ .foldl deltas
                     PartitionApplyCursor :ready (:revision slot) (:view slot)
                     fn (acc delta)
-                      hint-fn $ Fn PartitionApplyCursor cumulo-reel.partition/PartitionDelta $ -> PartitionApplyCursor
+                      hint-fn $ Fn PartitionApplyCursor PartitionDelta $ -> PartitionApplyCursor
                       match acc
                         (:failed _) acc
                         (:ready revision view)
@@ -2720,24 +2720,24 @@
             let
                 drops $ .foldl (map-entries progress)
                   assert-type ([])
-                    List $ cumulo-reel.partition/PartitionAction K V
+                    List $ PartitionAction K V
                   fn (acc entry)
                     hint-fn $ Fn
-                      List $ cumulo-reel.partition/PartitionAction K V
-                      calcit.core/MapEntry K cumulo-reel.partition/PartitionProgress
-                      -> $ List $ cumulo-reel.partition/PartitionAction K V
+                      List $ PartitionAction K V
+                      MapEntry K PartitionProgress
+                      -> $ List $ PartitionAction K V
                     if
                       includes? desired $ :key entry
                       , acc $ conj acc $ PartitionAction :drop (:key entry)
                 sends $ assert-type
                   .foldl (.to-list desired)
                     assert-type ([])
-                      List $ cumulo-reel.partition/PartitionAction K V
+                      List $ PartitionAction K V
                     fn (acc key)
                       hint-fn $ Fn
-                        List $ cumulo-reel.partition/PartitionAction K V
+                        List $ PartitionAction K V
                         , K $ ->
-                          List $ cumulo-reel.partition/PartitionAction K V
+                          List $ PartitionAction K V
                       match (get partitions key)
                         (:none) acc
                         (:some state)
@@ -2749,7 +2749,7 @@
                                 conj acc $ PartitionAction :snapshot state
                               (:deltas deltas)
                                 conj acc $ PartitionAction :deltas state deltas
-                  List $ cumulo-reel.partition/PartitionAction K V
+                  List $ PartitionAction K V
               .concat drops sends
           :examples $ []
           :schema $ quote $ Fn
@@ -2766,12 +2766,12 @@
                   , test-budget 8 64
                 partitions $ assert-type
                   {} $ |lobby lobby2
-                  Map String $ cumulo-reel.partition/PartitionState String $ Map String String
+                  Map String $ PartitionState String $ Map String String
                 acked $ PartitionProgress :epoch 7 :acked 1 :in-flight None
                 progress $ assert-type
                   {} (|lobby acked) (|board/gone acked)
-                  Map String cumulo-reel.partition/PartitionProgress
-                no-progress $ assert-type ({}) (Map String cumulo-reel.partition/PartitionProgress)
+                  Map String PartitionProgress
+                no-progress $ assert-type ({}) (Map String PartitionProgress)
                 actions $ connection-actions partitions progress $ #{} |lobby |user/u1
               assert= 2 $ count actions
               assert= true $ includes? actions $ PartitionAction :drop |board/gone
@@ -2792,7 +2792,7 @@
           :code $ quote $ defn delta-chain (history from to)
             match
               find-index history $ fn (delta)
-                hint-fn $ Fn cumulo-reel.partition/PartitionDelta $ -> Bool
+                hint-fn $ Fn PartitionDelta $ -> Bool
                 = from $ :base delta
               (:none) None
               (:some index)
@@ -2823,7 +2823,7 @@
                 (:some chain)
                   let
                       replayed $ .foldl chain v1 $ fn (acc delta)
-                        hint-fn $ Fn (Map String String) cumulo-reel.partition/PartitionDelta $ -> (Map String String)
+                        hint-fn $ Fn (Map String String) PartitionDelta $ -> (Map String String)
                         match
                           .apply-to
                             patch-batch $ :changes delta
@@ -2893,7 +2893,7 @@
                     test-view $ [] |d
                     , test-budget 2 64
                   at $ fn (acked)
-                    hint-fn $ Fn Number $ -> cumulo-reel.partition/PartitionSendPlan
+                    hint-fn $ Fn Number $ -> PartitionSendPlan
                     plan-partition-send s4 $ Some $ PartitionProgress :epoch 7 :acked acked :in-flight None
                 assert= 4 $ :revision s4
                 assert= 2 $ count $ :history s4

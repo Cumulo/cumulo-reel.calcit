@@ -19,9 +19,9 @@
           :examples $ []
           :schema $ quote $ Ref (Map Tag Dynamic)
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defref *store (Option :none)
+          :code $ quote $ defref *store None
           :examples $ []
-          :schema $ quote $ Ref (Option cumulo-reel.schema/ClientStore)
+          :schema $ quote $ Ref (Option schema/ClientStore)
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! ()
             ws-connect!
@@ -30,9 +30,7 @@
                 , |: $ :port config/site
               {}
                 :on-open $ fn (event) (simulate-login!)
-                :on-close $ fn (event)
-                  reset! *store $ Option :none
-                  shared/console-error! "|Lost connection!"
+                :on-close $ fn (event) (reset! *store None) (shared/console-error! "|Lost connection!")
                 :on-data $ fn (data)
                   match (protocol/receive-server-patch! *store data)
                     (:ok _) (shared/console-log! |Applied-server-patch)
@@ -48,14 +46,14 @@
                 match op-data
                   (:some data) (:: :states op data)
                   (:none) (:: :states op nil)
-                Option :none
+                , None
               if (tag? op)
                 recur
                   match op-data
                     (:some data) (:: op data)
                     (:none)
                       if (= op :effect/connect) (:: :effect/connect) (:: op nil)
-                  Option :none
+                  , None
                 match op
                   (:states cursor s)
                     do
@@ -75,7 +73,7 @@
               :code $ quote $ let
                   original @*states
                 reset! *states $ {}
-                assert= &unit $ dispatch! ([] :panel |member 1) (Option :some :ready)
+                assert= &unit $ dispatch! ([] :panel |member 1) (Some :ready)
                 assert=
                   {} $ :panel $ {}
                     |member $ {} $ 1
@@ -83,7 +81,7 @@
                   , @*states
                 assert= &unit $ dispatch!
                   :: :states ([] :panel |member 2) :next
-                  Option :none
+                  , None
                 assert=
                   {} $ :panel $ {}
                     |member $ {}
@@ -97,7 +95,7 @@
                   original @*states
                   rejected $ try
                     do
-                      dispatch! (:: :states 7 :invalid) (Option :none)
+                      dispatch! (:: :states 7 :invalid) None
                       , false
                     fn (message)
                       hint-fn $ Fn String $ -> Bool
@@ -133,7 +131,7 @@
         'on-store-change! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
           :examples $ []
-          :schema $ quote $ Fn (Option cumulo-reel.schema/ClientStore) (Option cumulo-reel.schema/ClientStore) (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (Option schema/ClientStore) (Option schema/ClientStore) (-> Unit) (:features :js-ffi)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (add-watch! *store :changes on-store-change!)
             add-watch! *states :changes $ fn (states prev)
@@ -147,12 +145,11 @@
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! (renderer)
             with-memo-frame $ fn () $ renderer mount-target (comp-container @*states @*store)
-              fn (op)
-                dispatch! op $ Option :none
+              fn (op) (dispatch! op None)
           :examples $ []
           :schema $ quote $ Fn
             Fn respo.dom/DomElement respo.schema/Component
-              Fn cumulo-reel.schema/Op $ -> Unit
+              Fn schema/Op $ -> Unit
               -> Unit
             -> Unit
             :features :js-ffi
@@ -171,7 +168,7 @@
                           :: :user/log-in
                             .unwrap $ .get pair 0
                             .unwrap $ .get pair 1
-                          Option :none
+                          , None
                       eprintln "|Invalid stored login pair"
                   (:err error) (eprintln "|Invalid stored login:" error)
               (:none) (println "|Found no storage.")
@@ -238,13 +235,13 @@
                           (:some value) (decode-map-as value 'String)
                           (:none) (decode-map-as nil 'String)
                     if config/dev?
-                      Option :some $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
-                      Option :none
+                      Some $ comp-inspect |Store store $ {} (:bottom 0) (:left 0) (:max-width |100%)
+                      , None
                     if config/dev?
-                      Option :some $ comp-reel store-typed.:reel-length $ {}
-                      Option :none
+                      Some $ comp-reel store-typed.:reel-length $ {}
+                      , None
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) (Option cumulo-reel.schema/ClientStore) (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Tag Dynamic) (Option schema/ClientStore) (-> respo.schema/Component)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline ()
             div
@@ -382,7 +379,7 @@
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
-          :schema $ quote cumulo-reel.app.comp.login/LoginState
+          :schema $ quote LoginState
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
@@ -488,7 +485,7 @@
                       , &unit
                   <> "|Log out"
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/ClientUser
+          :schema $ quote $ Fn schema/ClientUser
             Map Number $ Option String
             -> respo.schema/Component
         'css-member-label $ %{} 'CodeEntry (:doc |)
@@ -518,9 +515,8 @@
           :tests $ []
             %{} 'TestEntry (:name |preserves-guest-and-named-keys)
               :code $ quote $ assert=
-                {}
-                  7 $ Option :none
-                  9 $ Option :some |Ada
+                {} (7 None)
+                  9 $ Some |Ada
                 decode-member-names $ {} (7 nil) (9 |Ada)
             %{} 'TestEntry (:name |rejects-number-name)
               :code $ quote $ assert= true
@@ -550,14 +546,13 @@
           :schema $ quote $ Fn (Option String) (-> String)
           :tests $ []
             %{} 'TestEntry (:name |nil-is-guest)
-              :code $ quote $ assert= "|访客"
-                member-display-name $ Option :none
+              :code $ quote $ assert= "|访客" (member-display-name None)
             %{} 'TestEntry (:name |present-name-preserved)
               :code $ quote $ assert= |Ada
-                member-display-name $ Option :some |Ada
+                member-display-name $ Some |Ada
             %{} 'TestEntry (:name |empty-name-preserved)
               :code $ quote $ assert= |
-                member-display-name $ Option :some |
+                member-display-name $ Some |
             %{} 'TestEntry (:name |number-key-and-guest-preserved)
               :code $ quote $ match
                 first $ map-entries $ decode-member-names
@@ -591,7 +586,7 @@
           :code $ quote $ def site
             cumulo-reel.schema/SiteConfig :port 5021 :title |Cumulo :icon |http://cdn.tiye.me/logo/cumulo.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/cumulo-reel/ :theme |#eeeeff :storage-key |reel-storage :storage-file |storage.cirru
           :examples $ []
-          :schema $ quote cumulo-reel.schema/SiteConfig
+          :schema $ quote SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.config
           :require
@@ -623,28 +618,28 @@
                                 (:ok next-store) (decode-nullable-store next-store)
                       Result :err $ str |Unknown-message-kind: kind
           :examples $ []
-          :schema $ quote $ Fn (Option cumulo-reel.schema/ClientStore) Input
-            -> $ Result (Option cumulo-reel.schema/ClientStore) String
+          :schema $ quote $ Fn (Option schema/ClientStore) Input
+            -> $ Result (Option schema/ClientStore) String
             :generics Input
           :tests $ []
             %{} 'TestEntry (:name |restores-initial-edn-snapshot)
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
                   legacy-wire $ parse-cirru-edn "|%{} 'ClientStore (:color |blue) (:count 1) (:logged-in? true) (:name nil) (:reel-length 0)\n  :router $ %{} 'Router (:name :profile) (:title |Profile)\n    :data $ {} $ :open ([] 1 |two)\n    :router $ %{} 'Router (:data nil) (:name :child) (:router nil) (:title |Child)\n  :session $ %{} 'Session (:id 1) (:nickname nil) (:user-id nil)\n    :messages $ {} $ |m1\n      %{} 'Message (:id |m1) (:text |hello)\n    :router $ %{} 'Router (:name :profile) (:title |Profile)\n      :data $ {} $ :open ([] 1 |two)\n      :router $ %{} 'Router (:data nil) (:name :child) (:router nil) (:title |Child)\n  :user $ %{} 'ClientUser (:avatar nil) (:id |u1) (:name |Ada) (:nickname |A)"
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ diff-twig nil legacy-wire $ {}
                     , patch-class-mapper
-                  outcome $ apply-server-patch (Option :none) wire
+                  outcome $ apply-server-patch None wire
                 match outcome
                   (:err detail) (raise detail)
                   (:ok actual)
@@ -656,29 +651,28 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                    :user-id $ Option :some |u1
-                    :nickname $ Option :some |A
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :some |avatar-a
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :some |Display) :user $ Option :some fixture-user
-                  old $ struct-with expected (:count 0)
-                    :user $ Option :none
-                    :router $ schema/Router :name :home :title |Home :data ({}) :router $ Option :none
+                    :user-id $ Some |u1
+                    :nickname $ Some |A
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Some |avatar-a
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Some |Display) :user $ Some fixture-user
+                  old $ struct-with expected (:count 0) (:user None)
+                    :router $ schema/Router :name :home :title |Home :data ({}) :router None
                     :session $ struct-with session
-                      :router $ schema/Router :name :home :title |Home :data ({}) :router $ Option :none
-                      :user-id $ Option :none
-                      :nickname $ Option :none
-                    :name $ Option :none
+                      :router $ schema/Router :name :home :title |Home :data ({}) :router None
+                      :user-id None
+                      :nickname None
+                    :name None
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ diff-twig (encode-client-store old) (encode-client-store expected) ({})
                     , patch-class-mapper
-                  outcome $ apply-server-patch (Option :some old) wire
+                  outcome $ apply-server-patch (Some old) wire
                 match outcome
                   (:err detail) (raise detail)
                   (:ok actual)
@@ -687,13 +681,13 @@
                       assert |Expected-present-store false
                 let
                     old-avatar $ struct-with expected $ :user
-                      Option :some $ struct-with fixture-user $ :avatar (Option :none)
+                      Some $ struct-with fixture-user $ :avatar None
                     avatar-wire $ parse-cirru-edn
                       format-cirru-edn $ {} (:kind :patch)
                         :data $ diff-twig (encode-client-store old-avatar) (encode-client-store expected) ({})
                       , patch-class-mapper
                   match
-                    apply-server-patch (Option :some old-avatar) avatar-wire
+                    apply-server-patch (Some old-avatar) avatar-wire
                     (:err detail) (raise detail)
                     (:ok actual)
                       assert= expected $ .unwrap actual
@@ -702,20 +696,20 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
                   legacy $ encode-client-store expected
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ diff-twig nil legacy $ {}
                     , patch-class-mapper
-                  outcome $ apply-server-patch (Option :none) wire
+                  outcome $ apply-server-patch None wire
                 match outcome
                   (:err detail) (raise detail)
                   (:ok actual)
@@ -727,20 +721,20 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ diff-twig (encode-client-store expected) nil $ {}
                     , patch-class-mapper
                 match
-                  apply-server-patch (Option :some expected) wire
+                  apply-server-patch (Some expected) wire
                   (:err detail) (raise detail)
                   (:ok actual)
                     assert= true $ .none? actual
@@ -755,8 +749,7 @@
                       :data $ []
                     {} (:kind :patch) (:data 42)
                   fn (data)
-                    match
-                      apply-server-patch (Option :none) data
+                    match (apply-server-patch None data)
                       (:err detail)
                         assert= true $ string? detail
                       (:ok state) (assert |Invalid-message-was-accepted false)
@@ -765,14 +758,14 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
                   valid-ops $ diff-twig nil (encode-client-store expected) ({})
                 each
                   []
@@ -786,8 +779,7 @@
                           format-cirru-edn $ {} (:kind :patch)
                             :data $ append valid-ops bad-op
                           , patch-class-mapper
-                      match
-                        apply-server-patch (Option :none) wire
+                      match (apply-server-patch None wire)
                         (:err detail)
                           assert= true $ string? detail
                         (:ok actual) (assert |Corrupt-nested-field-was-accepted false)
@@ -878,7 +870,7 @@
               Result :err "|Expected an operation enum"
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result cumulo-reel.schema/Op String
+            -> $ Result schema/Op String
             :generics Input
         'decode-client-store $ %{} 'CodeEntry (:doc "|在传输边界验证全部具名字段并重建 ClientStore；Router.data 保留开放值。")
           :code $ quote $ defn decode-client-store (value)
@@ -912,7 +904,7 @@
                                                 Result :ok $ schema/ClientStore :session session :router router :logged-in? logged-in? :color color :count count :reel-length reel-length :name name :user user
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result cumulo-reel.schema/ClientStore String
+            -> $ Result schema/ClientStore String
             :generics Input
         'decode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-user (value)
@@ -934,7 +926,7 @@
                                 Result :ok $ schema/ClientUser :name name :id id :nickname nickname :avatar avatar
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result cumulo-reel.schema/ClientUser String
+            -> $ Result schema/ClientUser String
             :generics Input
         'decode-field $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-field (source key decoder)
@@ -994,7 +986,7 @@
                         Result :ok $ schema/Message :id id :text text
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result cumulo-reel.schema/Message String
+            -> $ Result schema/Message String
             :generics Input
         'decode-messages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-messages (value)
@@ -1025,7 +1017,7 @@
                             Result :ok $ .assoc decoded key message
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result (Map String cumulo-reel.schema/Message) String
+            -> $ Result (Map String schema/Message) String
             :generics Input
           :tests $ [] $ %{} 'TestEntry (:name |preserves-message-option-consumer-contract)
             :code $ quote $ let ()
@@ -1053,51 +1045,47 @@
             :tags $ #{} :protocol :unit
         'decode-nullable-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-number (value)
-            if (nil? value)
-              Result :ok $ Option :none
+            if (nil? value) (Result :ok None)
               match (decode-number value)
                 (:err detail) (Result :err detail)
                 (:ok decoded)
-                  Result :ok $ Option :some decoded
+                  Result :ok $ Some decoded
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option Number) String
             :generics Input
         'decode-nullable-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-router (value)
-            if (nil? value)
-              Result :ok $ Option :none
+            if (nil? value) (Result :ok None)
               match (decode-router value)
                 (:err detail) (Result :err detail)
                 (:ok router)
-                  Result :ok $ Option :some router
+                  Result :ok $ Some router
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result (Option cumulo-reel.schema/Router) String
+            -> $ Result (Option schema/Router) String
             :generics Input
         'decode-nullable-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-store (value)
-            if (nil? value)
-              Result :ok $ Option :none
+            if (nil? value) (Result :ok None)
               match (decode-client-store value)
                 (:err detail) (Result :err detail)
                 (:ok store)
-                  Result :ok $ Option :some store
+                  Result :ok $ Some store
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result (Option cumulo-reel.schema/ClientStore) String
+            -> $ Result (Option schema/ClientStore) String
             :generics Input
         'decode-nullable-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-user (value)
-            if (nil? value)
-              Result :ok $ Option :none
+            if (nil? value) (Result :ok None)
               match (decode-client-user value)
                 (:err detail) (Result :err detail)
                 (:ok user)
-                  Result :ok $ Option :some user
+                  Result :ok $ Some user
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result (Option cumulo-reel.schema/ClientUser) String
+            -> $ Result (Option schema/ClientUser) String
             :generics Input
         'decode-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-number (value) (try-decode-map-as value 'Number)
@@ -1129,12 +1117,11 @@
               :tags $ #{} :protocol :unit
         'decode-optional-string $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-optional-string (value)
-            if (nil? value)
-              Result :ok $ Option :none
+            if (nil? value) (Result :ok None)
               match (decode-string value)
                 (:err detail) (Result :err detail)
                 (:ok decoded)
-                  Result :ok $ Option :some decoded
+                  Result :ok $ Some decoded
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option String) String
@@ -1159,7 +1146,7 @@
                                 Result :ok $ schema/Router :name name :title title :data data :router router
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result cumulo-reel.schema/Router String
+            -> $ Result schema/Router String
             :generics Input
         'decode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-session (value)
@@ -1184,7 +1171,7 @@
                                     Result :ok $ schema/Session :user-id user-id :id id :nickname nickname :router router :messages messages
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Result cumulo-reel.schema/Session String
+            -> $ Result schema/Session String
             :generics Input
         'decode-source $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-source (value)
@@ -1217,13 +1204,13 @@
                 , :session $ encode-session $ :session store
               , :name $ encode-optional-string $ :name store
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/ClientStore
+          :schema $ quote $ Fn schema/ClientStore
             -> $ Map Tag Dynamic
         'encode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-client-user (user)
             .assoc (&struct:to-map user) :avatar $ encode-optional-string $ :avatar user
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/ClientUser
+          :schema $ quote $ Fn schema/ClientUser
             -> $ Map Tag Dynamic
         'encode-optional-string $ %{} 'CodeEntry
           :doc "|Project an internal Option<String> to the legacy wire nil/String representation; not an internal absence model."
@@ -1249,7 +1236,7 @@
           :code $ quote $ defn encode-router (router)
             .assoc (&struct:to-map router) :router $ encode-optional-wire (:router router) encode-router
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Router
+          :schema $ quote $ Fn schema/Router
             -> $ Map Tag Dynamic
         'encode-session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-session (session)
@@ -1263,7 +1250,7 @@
                   (:some value) (.assoc wire :id value)
               , :nickname $ encode-optional-string $ :nickname session
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Session
+          :schema $ quote $ Fn schema/Session
             -> $ Map Tag Dynamic
         'parse-client-action $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-client-action (raw)
@@ -1272,7 +1259,7 @@
               (:err detail) (Result :err detail)
           :examples $ []
           :schema $ quote $ Fn String
-            -> $ Result cumulo-reel.schema/Op String
+            -> $ Result schema/Op String
           :tests $ []
             %{} 'TestEntry (:name |accepts-anonymous-sign-up)
               :code $ quote $ assert=
@@ -1328,7 +1315,7 @@
                 do (reset! target next-store) (Result :ok &unit)
           :examples $ []
           :schema $ quote $ Fn
-            Ref $ Option cumulo-reel.schema/ClientStore
+            Ref $ Option schema/ClientStore
             , Input
               -> $ Result Unit String
               :generics Input
@@ -1337,17 +1324,17 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
-                  target $ ref $ Option :some expected
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
+                  target $ ref $ Some expected
                   before $ do
-                    reset! target $ Option :some expected
+                    reset! target $ Some expected
                     deref target
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
@@ -1363,17 +1350,17 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
-                  target $ ref $ Option :some expected
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
+                  target $ ref $ Some expected
                   before $ do
-                    reset! target $ Option :some expected
+                    reset! target $ Some expected
                     deref target
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
@@ -1390,17 +1377,17 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
-                  target $ ref $ Option :some expected
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
+                  target $ ref $ Some expected
                   before $ do
-                    reset! target $ Option :some expected
+                    reset! target $ Some expected
                     deref target
                   raw-ops $ parse-cirru-edn "|[] $ %:: 'change-op 'vec-drop |bad" patch-class-mapper
                   wire $ {} (:kind :patch) (:data raw-ops)
@@ -1414,23 +1401,23 @@
               :code $ quote $ let
                   router $ schema/Router :name :profile :title |Profile :data
                     {} $ :open $ [] 1 |two
-                    , :router $ Option :some
-                      schema/Router :name :child :title |Child :data nil :router $ Option :none
+                    , :router $ Some
+                      schema/Router :name :child :title |Child :data nil :router None
                   session $ struct-with schema/session
-                    :id $ Option :some 1
+                    :id $ Some 1
                     :router router
                     :messages $ {} $ |m1 (schema/Message :id |m1 :text |hello)
-                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar $ Option :none
-                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name (Option :none) :user $ Option :some fixture-user
-                  target $ ref $ Option :some expected
+                  fixture-user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                  expected $ schema/ClientStore :session session :router router :logged-in? true :color |blue :count 1 :reel-length 0 :name None :user $ Some fixture-user
+                  target $ ref $ Some expected
                   before $ do
-                    reset! target $ Option :some expected
+                    reset! target $ Some expected
                     deref target
                   wire $ parse-cirru-edn
                     format-cirru-edn $ {} (:kind :patch)
                       :data $ diff-twig nil (encode-client-store expected) ({})
                     , patch-class-mapper
-                reset! target $ Option :none
+                reset! target None
                 match (receive-server-patch! target wire)
                   (:err detail) (raise detail)
                   (:ok value) (assert= &unit value)
@@ -1560,21 +1547,20 @@
           :tests $ []
             %{} 'TestEntry (:name |accepts-configured-integer)
               :code $ quote $ assert= 9000
-                resolve-server-port (Option :some |9000) 5021
+                resolve-server-port (Some |9000) 5021
               :tags $ #{} :server :unit
             %{} 'TestEntry (:name |uses-default-for-missing-setting)
-              :code $ quote $ assert= 5021
-                resolve-server-port (Option :none) 5021
+              :code $ quote $ assert= 5021 (resolve-server-port None 5021)
               :tags $ #{} :server :unit
             %{} 'TestEntry (:name |supports-ephemeral-port)
               :code $ quote $ assert= 0
-                resolve-server-port (Option :some |0) 5021
+                resolve-server-port (Some |0) 5021
               :tags $ #{} :server :unit
             %{} 'TestEntry (:name |rejects-invalid-text)
               :code $ quote $ assert= true
                 try
                   do
-                    resolve-server-port (Option :some |oops) 5021
+                    resolve-server-port (Some |oops) 5021
                     , false
                   fn (error) (starts-with? error |Invalid-server-port:)
               :tags $ #{} :server :unit
@@ -1582,7 +1568,7 @@
               :code $ quote $ assert= true
                 try
                   do
-                    resolve-server-port (Option :some |-1) 5021
+                    resolve-server-port (Some |-1) 5021
                     , false
                   fn (error) (starts-with? error |Invalid-server-port:)
               :tags $ #{} :server :unit
@@ -1590,7 +1576,7 @@
               :code $ quote $ assert= true
                 try
                   do
-                    resolve-server-port (Option :some |65536) 5021
+                    resolve-server-port (Some |65536) 5021
                     , false
                   fn (error) (starts-with? error |Invalid-server-port:)
               :tags $ #{} :server :unit
@@ -1598,7 +1584,7 @@
               :code $ quote $ assert= true
                 try
                   do
-                    resolve-server-port (Option :some |2.5) 5021
+                    resolve-server-port (Some |2.5) 5021
                     , false
                   fn (error) (starts-with? error |Invalid-server-port:)
               :tags $ #{} :server :unit
@@ -1606,7 +1592,7 @@
               :code $ quote $ assert= true
                 try
                   do
-                    resolve-server-port (Option :some |NaN) 5021
+                    resolve-server-port (Some |NaN) 5021
                     , false
                   fn (error) (starts-with? error |Invalid-server-port:)
               :tags $ #{} :server :unit
@@ -1614,7 +1600,7 @@
               :code $ quote $ assert= true
                 try
                   do
-                    resolve-server-port (Option :some |Infinity) 5021
+                    resolve-server-port (Some |Infinity) 5021
                     , false
                   fn (error) (starts-with? error |Invalid-server-port:)
               :tags $ #{} :server :unit
@@ -1818,7 +1804,7 @@
             , &unit
           :examples $ []
           :schema $ quote $ Fn Number
-            Fn cumulo-reel.app.server-ws/SocketEvent $ -> Unit
+            Fn SocketEvent $ -> Unit
             -> Unit
           :tests $ [] $ %{} 'TestEntry (:name |ignores-unknown-session)
             :code $ quote $ let
@@ -1885,7 +1871,7 @@
               , server
           :examples $ []
           :schema $ quote $ Fn Number
-            Fn cumulo-reel.app.server-ws/SocketEvent $ -> Unit
+            Fn SocketEvent $ -> Unit
             -> ws-edn.server/NodeWebSocketServerHost
             :features :js-ffi
         'server-options $ %{} 'CodeEntry
@@ -1924,7 +1910,7 @@
                     (:none)
                       decode-map-as nil $ Map Tag Dynamic
           :examples $ []
-          :schema $ quote $ Fn Input (-> cumulo-reel.schema/Database) (:generics Input)
+          :schema $ quote $ Fn Input (-> schema/Database) (:generics Input)
           :tests $ []
             %{} 'TestEntry (:name |restores-legacy-user-database)
               :code $ quote $ let
@@ -1932,13 +1918,13 @@
                   actual $ cumulo-reel.app.storage/decode-database raw
                   persisted $ struct-with actual $ :sessions ({})
                 assert=
-                  Option :some $ cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar $ Option :none
+                  Some $ cumulo-reel.schema/User :id |u1 :name |Ada :nickname |A :password |old-hash :avatar None
                   calcit.core/get (:users actual) |u1
-                assert= (Option :some |portrait)
+                assert= (Some |portrait)
                   :avatar $ .unwrap $ calcit.core/get (:users actual) |u2
-                assert= (Option :some 1)
+                assert= (Some 1)
                   :id $ .unwrap $ calcit.core/get (:sessions actual) 1
-                assert= (Option :some |u1)
+                assert= (Some |u1)
                   :user-id $ .unwrap $ calcit.core/get (:sessions actual) 1
                 assert=
                   {} $ :home $ [] 1 |two
@@ -1994,19 +1980,18 @@
                 MapEntryDecision :keep key $ require-decoded $ protocol/decode-session value
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Map Number cumulo-reel.schema/Session
+            -> $ Map Number schema/Session
             :generics Input
         'decode-stored-avatar $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-stored-avatar (value)
             if (enum? value)
               match value
-                (:none)
-                  Result :ok $ Option :none
+                (:none) (Result :ok None)
                 (:some avatar)
                   match (protocol/decode-string avatar)
                     (:err detail) (Result :err detail)
                     (:ok decoded)
-                      Result :ok $ Option :some decoded
+                      Result :ok $ Some decoded
                 _ $ Result :err |Expected-stored-avatar-Option
               protocol/decode-optional-string value
           :examples $ []
@@ -2027,7 +2012,7 @@
                       require-decoded $ protocol/decode-field source :avatar decode-stored-avatar
                       , :password $ require-decoded $ protocol/decode-field source :password protocol/decode-string
           :examples $ []
-          :schema $ quote $ Fn Input (-> cumulo-reel.schema/User) (:generics Input)
+          :schema $ quote $ Fn Input (-> schema/User) (:generics Input)
         'decode-users $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-users (value)
             filter-map-kv
@@ -2037,7 +2022,7 @@
                 MapEntryDecision :keep key $ decode-user value
           :examples $ []
           :schema $ quote $ Fn Input
-            -> $ Map String cumulo-reel.schema/User
+            -> $ Map String schema/User
             :generics Input
         'require-decoded $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn require-decoded (result)
@@ -2099,7 +2084,7 @@
                     (:some found) found
                     (:none) schema/user
                   , 'cumulo-reel.schema/User
-                absent $ Option :none
+                absent None
               schema/ClientStore :logged-in? logged-in? :session session :reel-length (.len records) :router
                 if logged-in?
                   struct-with router $ :data $ case router-name (:home pages)
@@ -2107,12 +2092,12 @@
                     router-name $ {}
                   , router
                 , :count (.len sessions) :color (rand-hex-color!) :name absent :user $ if logged-in?
-                  Option :some $ memo-twig-by1 user-id twig-user user
-                  Option :none
+                  Some $ memo-twig-by1 user-id twig-user user
+                  , None
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database cumulo-reel.schema/Session
+          :schema $ quote $ Fn schema/Database schema/Session
             List $ List Dynamic
-            -> cumulo-reel.schema/ClientStore
+            -> schema/ClientStore
         'twig-members $ %{} 'CodeEntry
           :doc "|Project session member names into the legacy router wire map. Internal session absence uses Option; output nil/String values preserve the existing client wire protocol."
           :code $ quote $ defn twig-members (sessions users)
@@ -2120,14 +2105,14 @@
               hint-fn $ Fn Number cumulo-reel.schema/Session $ ->
                 MapEntryDecision Number $ JsNullish String
               MapEntryDecision :keep sid $ cumulo-reel.app.protocol/encode-optional-string $ match (:user-id session)
-                (:none) (Option :none)
+                (:none) None
                 (:some id)
                   match (get users id)
-                    (:none) (Option :none)
+                    (:none) None
                     (:some user)
-                      Option :some $ :name user
+                      Some $ :name user
           :examples $ []
-          :schema $ quote $ Fn (Map Number cumulo-reel.schema/Session) (Map String cumulo-reel.schema/User)
+          :schema $ quote $ Fn (Map Number schema/Session) (Map String schema/User)
             -> $ Map Number $ JsNullish String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.twig.container
@@ -2143,13 +2128,13 @@
           :code $ quote $ defn twig-user (user)
             schema/ClientUser :name (:name user) :id (:id user) :nickname (:nickname user) :avatar $ :avatar user
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/User (-> cumulo-reel.schema/ClientUser)
+          :schema $ quote $ Fn schema/User (-> schema/ClientUser)
           :tests $ [] $ %{} 'TestEntry (:name |omits-password)
             :code $ quote $ let
                 user $ struct-with schema/user (:name |Ada) (:id |u1) (:nickname |Ada) (:password |secret)
                 client-user $ twig-user user
               assert=
-                schema/ClientUser :name |Ada :id |u1 :nickname |Ada :avatar $ Option :none
+                schema/ClientUser :name |Ada :id |u1 :nickname |Ada :avatar None
                 , client-user
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
@@ -2169,7 +2154,7 @@
               (:router/change data) (router/change db data sid op-id op-time)
               _ $ do (eprintln "|Unknown op" op) db
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database cumulo-reel.schema/Op Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Op Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater
           :require (cumulo-reel.app.updater.session :as session) (cumulo-reel.app.updater.user :as user) (cumulo-reel.app.updater.router :as router) (cumulo-reel.schema :as schema)
@@ -2188,7 +2173,7 @@
                   struct-with schema/router $ :name route-name
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database Tag Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database Tag Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.router
           :require $ cumulo-reel.schema :as schema
@@ -2197,14 +2182,14 @@
         'connect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect (db sid op-id op-time)
             struct-with db $ :sessions $ .assoc (:sessions db) sid
-              struct-with schema/session $ :id $ Option :some sid
+              struct-with schema/session $ :id $ Some sid
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database Number String Number (-> schema/Database)
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
             struct-with db $ :sessions $ .dissoc db.:sessions sid
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database Number String Number (-> schema/Database)
         'remove-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn remove-message (db message-id sid op-id op-time)
             let
@@ -2216,7 +2201,7 @@
                 next-session $ struct-with session $ :messages (.dissoc session.:messages message-id)
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database String Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database String Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.session
           :require $ cumulo-reel.schema :as schema
@@ -2239,7 +2224,7 @@
                   (:some user)
                     if
                       = (md5 password) user.:password
-                      struct-with session $ :user-id $ Option :some user.:id
+                      struct-with session $ :user-id $ Some user.:id
                       struct-with session $ :messages $ .assoc session.:messages op-id
                         schema/Message :id op-id :text $ str "|Wrong password for " username
                   (:none)
@@ -2247,7 +2232,7 @@
                       schema/Message :id op-id :text $ str "|No user named: " username
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database String String Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database String String Number String Number (-> schema/Database)
         'log-out $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-out (db sid op-id op-time)
             let
@@ -2256,10 +2241,10 @@
                     (:some found) found
                     (:none) schema/session
                   , 'cumulo-reel.schema/Session
-                next-session $ struct-with session $ :user-id (Option :none)
+                next-session $ struct-with session $ :user-id None
               struct-with db $ :sessions $ .assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database Number String Number (-> schema/Database)
         'md5 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn md5 (text)
             contract/expect-string |md5 $ md5-host text
@@ -2284,15 +2269,15 @@
                       .assoc session.:messages op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
                   struct-with db $ :sessions $ .assoc db.:sessions sid next-session
                 let
-                    next-session $ struct-with session $ :user-id (Option :some op-id)
+                    next-session $ struct-with session $ :user-id (Some op-id)
                     next-user $ struct-with schema/user (:id op-id) (:name username) (:nickname username)
                       :password $ md5 password
-                      :avatar $ Option :none
+                      :avatar None
                   struct-with db
                     :sessions $ .assoc db.:sessions sid next-session
                     :users $ .assoc db.:users op-id next-user
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database String String Number String Number (-> cumulo-reel.schema/Database)
+          :schema $ quote $ Fn schema/Database String String Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater.user
           :require (cumulo-reel.schema :as schema) (|md5 :default md5-host) (js-ffi.contract :as contract)
@@ -2384,10 +2369,10 @@
                       :records reel
                     :db next-db
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.core/ReelState Db)
+          :schema $ quote $ Fn (ReelState Db)
             Fn Db Op Sid OpId Number $ -> Db
             , Op Sid OpId Number Bool
-              -> $ cumulo-reel.core/ReelState Db
+              -> $ ReelState Db
               :generics Db Op Sid OpId
           :tests $ []
             %{} 'TestEntry (:name |resets-from-base)
@@ -2427,9 +2412,9 @@
                 next-db $ play-records next-base (:records reel) updater
               struct-with reel (:base next-base) (:db next-db)
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.core/ReelState Db) Db
+          :schema $ quote $ Fn (ReelState Db) Db
             Fn Db Dynamic Dynamic Dynamic Dynamic $ -> Db
-            -> $ cumulo-reel.core/ReelState Db
+            -> $ ReelState Db
             :generics Db
           :tests $ [] $ %{} 'TestEntry (:name |preserves-database-type-and-merged-base)
             :code $ quote $ let
@@ -2510,36 +2495,34 @@
                   and
                     = epoch $ :epoch progress
                     = revision pending
-                  struct-with progress (:acked revision)
-                    :in-flight $ Option :none
+                  struct-with progress (:acked revision) (:in-flight None)
                   , progress
               (:none) progress
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.partition/PartitionProgress Number Number (-> cumulo-reel.partition/PartitionProgress)
+          :schema $ quote $ Fn PartitionProgress Number Number (-> PartitionProgress)
           :tests $ [] $ %{} 'TestEntry (:name |single-pending-send-and-stale-acks)
             :code $ quote $ let
                 s1 $ new-partition |lobby 7 $ test-view ([] |a)
-                sent $ mark-partition-sent s1 $ Option :none
+                sent $ mark-partition-sent s1 None
                 s2 $ :state $ advance-partition s1
                   test-view $ [] |b
                   , test-budget 8 64
                 wrong-epoch $ ack-partition-progress sent 6 1
                 wrong-revision $ ack-partition-progress sent 7 2
                 acked $ ack-partition-progress sent 7 1
-              assert= (Option :some 1) (:in-flight sent)
+              assert= (Some 1) (:in-flight sent)
               assert= (PartitionSendPlan :idle)
-                plan-partition-send s2 $ Option :some sent
+                plan-partition-send s2 $ Some sent
               assert= sent wrong-epoch
               assert= sent wrong-revision
               assert= 1 $ :acked acked
-              assert= (Option :none) (:in-flight acked)
+              assert= None $ :in-flight acked
               assert= acked $ ack-partition-progress acked 7 1
               assert=
                 PartitionSendPlan :deltas $ :history s2
-                plan-partition-send s2 $ Option :some acked
+                plan-partition-send s2 $ Some acked
               assert= 0 $ :acked $ release-partition-send sent
-              assert= (Option :none)
-                :in-flight $ release-partition-send sent
+              assert= None $ :in-flight $ release-partition-send sent
             :tags $ #{} :partition
         'advance-partition $ %{} 'CodeEntry
           :doc "|Diff the retained view against a new projection exactly once. Budget or operation overflow resets history instead of emitting a partial patch."
@@ -2565,8 +2548,8 @@
                           , history-limit
                       , :advance $ PartitionAdvance :delta delta stats
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) V recollect.diff/DiffBudget Number Number
-            -> $ cumulo-reel.partition/PartitionStep K V
+          :schema $ quote $ Fn (PartitionState K V) V DiffBudget Number Number
+            -> $ PartitionStep K V
             :generics K V
           :tests $ []
             %{} 'TestEntry (:name |unchanged-view-keeps-revision)
@@ -2586,11 +2569,11 @@
                     test-view $ [] |a |c
                     , test-budget 8 64
                   next-state $ :state step
-                  progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
+                  progress $ PartitionProgress :epoch 7 :acked 1 :in-flight None
                   plans $ map (range 5)
                     fn (_idx)
                       hint-fn $ Fn Number $ -> cumulo-reel.partition/PartitionSendPlan
-                      plan-partition-send next-state $ Option :some progress
+                      plan-partition-send next-state $ Some progress
                 match (:advance step)
                   (:delta delta _stats)
                     do
@@ -2599,7 +2582,7 @@
                       assert= 1 $ count $ :history next-state
                       assert= 1 $ count $ distinct plans
                       assert=
-                        Option :some $ PartitionSendPlan :deltas $ [] delta
+                        Some $ PartitionSendPlan :deltas $ [] delta
                         first plans
                   _ $ raise |Expected-one-delta
               :tags $ #{} :partition
@@ -2619,7 +2602,7 @@
                       assert= 3 $ :revision s3
                       assert= 0 $ count $ :history s3
                       assert= (PartitionSendPlan :snapshot)
-                        plan-partition-send s3 $ Option :some $ PartitionProgress :epoch 7 :acked 2 :in-flight (Option :none)
+                        plan-partition-send s3 $ Some $ PartitionProgress :epoch 7 :acked 2 :in-flight None
                   _ $ raise |Expected-reset
               :tags $ #{} :partition
         'apply-partition-deltas $ %{} 'CodeEntry
@@ -2655,9 +2638,9 @@
                         Result :ok $ PartitionSlot :epoch epoch :revision revision :view typed
                       (:err detail) (Result :err detail)
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.partition/PartitionSlot V) Number (List cumulo-reel.partition/PartitionDelta)
+          :schema $ quote $ Fn (PartitionSlot V) Number (List PartitionDelta)
             Fn Dynamic $ -> $ Result V String
-            -> $ Result (cumulo-reel.partition/PartitionSlot V) String
+            -> $ Result (PartitionSlot V) String
             :generics V
           :tests $ []
             %{} 'TestEntry (:name |atomic-chain-application)
@@ -2680,7 +2663,7 @@
                   _ false
                 assert= true $ match
                   apply-partition-deltas slot 7
-                    slice (:history s3) 1 $ Option :some 2
+                    slice (:history s3) 1 $ Some 2
                     , decode-test-view
                   (:err detail) (includes? detail |base)
                   _ false
@@ -2727,7 +2710,7 @@
                 assert= 1 @*decodes
                 assert= (Result :ok slot)
                   apply-partition-deltas slot 7
-                    slice (:history s3) 0 $ Option :some 0
+                    slice (:history s3) 0 $ Some 0
                     , decode
                 assert= 2 @*decodes
               :tags $ #{} :partition
@@ -2770,10 +2753,10 @@
               .concat drops sends
           :examples $ []
           :schema $ quote $ Fn
-            Map K $ cumulo-reel.partition/PartitionState K V
-            Map K cumulo-reel.partition/PartitionProgress
+            Map K $ PartitionState K V
+            Map K PartitionProgress
             Set K
-            -> $ List $ cumulo-reel.partition/PartitionAction K V
+            -> $ List $ PartitionAction K V
             :generics K V
           :tests $ [] $ %{} 'TestEntry (:name |drops-revoked-and-plans-authorized)
             :code $ quote $ let
@@ -2784,7 +2767,7 @@
                 partitions $ assert-type
                   {} $ |lobby lobby2
                   Map String $ cumulo-reel.partition/PartitionState String $ Map String String
-                acked $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
+                acked $ PartitionProgress :epoch 7 :acked 1 :in-flight None
                 progress $ assert-type
                   {} (|lobby acked) (|board/gone acked)
                   Map String cumulo-reel.partition/PartitionProgress
@@ -2811,20 +2794,20 @@
               find-index history $ fn (delta)
                 hint-fn $ Fn cumulo-reel.partition/PartitionDelta $ -> Bool
                 = from $ :base delta
-              (:none) (Option :none)
+              (:none) None
               (:some index)
                 let
-                    chain $ .slice history index $ Option :none
+                    chain $ .slice history index None
                   match (last chain)
                     (:some tail)
                       if
                         = to $ :revision tail
-                        Option :some chain
-                        Option :none
-                    (:none) (Option :none)
+                        Some chain
+                        , None
+                    (:none) None
           :examples $ []
-          :schema $ quote $ Fn (List cumulo-reel.partition/PartitionDelta) Number Number
-            -> $ Option $ List cumulo-reel.partition/PartitionDelta
+          :schema $ quote $ Fn (List PartitionDelta) Number Number
+            -> $ Option $ List PartitionDelta
           :tests $ [] $ %{} 'TestEntry (:name |replayed-chain-converges)
             :code $ quote $ let
                 v1 $ test-view $ [] |a |b
@@ -2854,8 +2837,7 @@
                           (:err error)
                             raise $ str |Patch-failed: error
                     assert= (:view s3) replayed
-                    assert= (Option :none)
-                      delta-chain (:history s3) 5 3
+                    assert= None $ delta-chain (:history s3) 5 3
                 (:none) (raise |Expected-complete-chain)
             :tags $ #{} :partition
         'mark-partition-sent $ %{} 'CodeEntry
@@ -2869,15 +2851,15 @@
                       :acked progress
                       , 0
                   (:none) 0
-              PartitionProgress :epoch (:epoch state) :acked acked :in-flight $ Option :some $ :revision state
+              PartitionProgress :epoch (:epoch state) :acked acked :in-flight $ Some $ :revision state
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) (Option cumulo-reel.partition/PartitionProgress) (-> cumulo-reel.partition/PartitionProgress) (:generics K V)
+          :schema $ quote $ Fn (PartitionState K V) (Option PartitionProgress) (-> PartitionProgress) (:generics K V)
         'new-partition $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-partition (key epoch view)
             PartitionState :key key :epoch epoch :revision 1 :view view :history $ []
           :examples $ []
           :schema $ quote $ Fn K Number V
-            -> $ cumulo-reel.partition/PartitionState K V
+            -> $ PartitionState K V
             :generics K V
         'plan-partition-send $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn plan-partition-send (state progress-option)
@@ -2896,7 +2878,7 @@
                     (:some deltas) (PartitionSendPlan :deltas deltas)
                     (:none) (PartitionSendPlan :snapshot)
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) (Option cumulo-reel.partition/PartitionProgress) (-> cumulo-reel.partition/PartitionSendPlan) (:generics K V)
+          :schema $ quote $ Fn (PartitionState K V) (Option PartitionProgress) (-> PartitionSendPlan) (:generics K V)
           :tests $ []
             %{} 'TestEntry (:name |trimmed-history-falls-back-to-snapshot)
               :code $ quote $ let
@@ -2912,7 +2894,7 @@
                     , test-budget 2 64
                   at $ fn (acked)
                     hint-fn $ Fn Number $ -> cumulo-reel.partition/PartitionSendPlan
-                    plan-partition-send s4 $ Option :some $ PartitionProgress :epoch 7 :acked acked :in-flight (Option :none)
+                    plan-partition-send s4 $ Some $ PartitionProgress :epoch 7 :acked acked :in-flight None
                 assert= 4 $ :revision s4
                 assert= 2 $ count $ :history s4
                 assert= (PartitionSendPlan :snapshot) (at 1)
@@ -2921,23 +2903,22 @@
                   at 2
                 assert= (PartitionSendPlan :idle) (at 4)
                 assert= (PartitionSendPlan :snapshot) (at 9)
-                assert= (PartitionSendPlan :snapshot)
-                  plan-partition-send s4 $ Option :none
+                assert= (PartitionSendPlan :snapshot) (plan-partition-send s4 None)
               :tags $ #{} :partition
             %{} 'TestEntry (:name |epoch-change-forces-snapshot)
               :code $ quote $ let
                   state $ new-partition |lobby 8 $ test-view ([] |a)
-                  stale $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :none
+                  stale $ PartitionProgress :epoch 7 :acked 1 :in-flight None
                 assert= (PartitionSendPlan :snapshot)
-                  plan-partition-send state $ Option :some stale
-                assert= 0 $ :acked $ mark-partition-sent state (Option :some stale)
+                  plan-partition-send state $ Some stale
+                assert= 0 $ :acked $ mark-partition-sent state (Some stale)
               :tags $ #{} :partition
         'release-partition-send $ %{} 'CodeEntry
           :doc "|Forget a send that the transport did not accept or whose ACK may be lost, keeping the acknowledged baseline."
           :code $ quote $ defn release-partition-send (progress)
-            struct-with progress $ :in-flight $ Option :none
+            struct-with progress $ :in-flight None
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.partition/PartitionProgress (-> cumulo-reel.partition/PartitionProgress)
+          :schema $ quote $ Fn PartitionProgress (-> PartitionProgress)
         'reset-step $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reset-step (state view stats)
             PartitionStep :state
@@ -2947,8 +2928,8 @@
                 :history $ []
               , :advance $ PartitionAdvance :reset stats
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.partition/PartitionState K V) V recollect.diff/DiffStats
-            -> $ cumulo-reel.partition/PartitionStep K V
+          :schema $ quote $ Fn (PartitionState K V) V DiffStats
+            -> $ PartitionStep K V
             :generics K V
         'struct-tree-input $ %{} 'CodeEntry
           :doc "|Recursively turn untrusted struct trees, including struct payloads inside nominal enums, into maps so try-decode-map-as can validate them against a nominal schema."
@@ -2977,7 +2958,7 @@
           :schema $ quote $ Fn Dynamic (-> Dynamic)
           :tests $ [] $ %{} 'TestEntry (:name |structs-become-maps)
             :code $ quote $ let
-                progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Option :some 2
+                progress $ PartitionProgress :epoch 7 :acked 1 :in-flight $ Some 2
                 input $ struct-tree-input progress
               assert= true $ map? input
               assert= (Result :ok progress) (try-decode-map-as input 'cumulo-reel.partition/PartitionProgress)
@@ -2985,9 +2966,9 @@
         'test-budget $ %{} 'CodeEntry
           :doc "|Generous deterministic budget used by partition engine tests."
           :code $ quote $ def test-budget
-            DiffBudget :max-visited (Option :some 10000) :max-emitted $ Option :some 10000
+            DiffBudget :max-visited (Some 10000) :max-emitted $ Some 10000
           :examples $ []
-          :schema $ quote recollect.diff/DiffBudget
+          :schema $ quote DiffBudget
         'test-view $ %{} 'CodeEntry
           :doc "|Deterministic keyed view used by partition engine tests: different labels give different views."
           :code $ quote $ defn test-view (labels)
@@ -3005,11 +2986,11 @@
             let
                 size $ .len history
               if (> size limit)
-                .slice history (- size limit) (Option :none)
+                .slice history (- size limit) None
                 , history
           :examples $ []
-          :schema $ quote $ Fn (List cumulo-reel.partition/PartitionDelta) Number
-            -> $ List cumulo-reel.partition/PartitionDelta
+          :schema $ quote $ Fn (List PartitionDelta) Number
+            -> $ List PartitionDelta
       :ns $ %{} 'NsEntry
         :doc "|Pure partition synchronization: one bounded diff per partition revision shared by every subscriber, epoch-scoped ACK progress, per-connection send planning, and atomic client-side delta application. Key and view types are generic."
         :code $ quote $ ns cumulo-reel.partition
@@ -3072,24 +3053,24 @@
           :code $ quote $ def database
             Database :sessions ({}) :users ({}) :pages $ {}
           :examples $ []
-          :schema $ quote cumulo-reel.schema/Database
+          :schema $ quote Database
         'router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def router
-            Router :name :home :title | :data ({}) :router $ Option :none
+            Router :name :home :title | :data ({}) :router None
           :examples $ []
-          :schema $ quote cumulo-reel.schema/Router
+          :schema $ quote Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
-            Session :user-id (Option :none) :id (Option :none) :nickname (Option :none) :router
-              Router :name :home :title | :data nil :router $ Option :none
+            Session :user-id None :id None :nickname None :router
+              Router :name :home :title | :data nil :router None
               , :messages $ {}
           :examples $ []
-          :schema $ quote cumulo-reel.schema/Session
+          :schema $ quote Session
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
-            User :name | :id | :nickname | :avatar (Option :none) :password |
+            User :name | :id | :nickname | :avatar None :password |
           :examples $ []
-          :schema $ quote cumulo-reel.schema/User
+          :schema $ quote User
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.schema
     'cumulo-reel.style $ %{} 'FileEntry

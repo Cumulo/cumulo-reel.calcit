@@ -38,7 +38,7 @@
                       shared/console-error! $ str |Rejected-server-patch: detail
                 :class-mapper protocol/patch-class-mapper
           :examples $ []
-          :schema $ quote $ Fn (-> ws-edn.client/WsClient) (:features :js-ffi)
+          :schema $ quote $ Fn (-> ws-edn.client/WsClient) (:features :io :js-ffi :state)
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op op-data) (println |Dispatch op op-data)
             if (list? op)
@@ -67,7 +67,7 @@
                     do (connect!) &unit
                   _ $ ws-send! op
           :examples $ []
-          :schema $ quote $ Fn Dynamic (Option Dynamic) (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn Dynamic (Option Dynamic) (-> Unit) (:features :io :js-ffi :state)
           :tests $ []
             %{} 'TestEntry (:name |preserves-legacy-list-and-mixed-cursor-keys)
               :code $ quote $ let
@@ -122,7 +122,7 @@
               , &unit
             println "|App started!"
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
             .unwrap $ respo.ffi.browser/query-selector |.app
@@ -131,7 +131,7 @@
         'on-store-change! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
           :examples $ []
-          :schema $ quote $ Fn (Option schema/ClientStore) (Option schema/ClientStore) (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (Option schema/ClientStore) (Option schema/ClientStore) (-> Unit) (:features :io :js-ffi :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (add-watch! *store :changes on-store-change!)
             add-watch! *states :changes $ fn (states prev)
@@ -141,7 +141,7 @@
             render-app! render!
             println "|Code updated."
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! (renderer)
             with-memo-frame $ fn () $ renderer mount-target (comp-container @*states @*store)
@@ -152,7 +152,7 @@
               Fn schema/Op $ -> Unit
               -> Unit
             -> Unit
-            :features :js-ffi
+            :features :io :js-ffi :state
         'simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn simulate-login! ()
             match
@@ -173,7 +173,7 @@
                   (:err error) (eprintln "|Invalid stored login:" error)
               (:none) (println "|Found no storage.")
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'ssr? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def ssr?
             .some? $ browser/query-selector |meta.respo-ssr
@@ -1319,6 +1319,7 @@
             , Input
               -> $ Result Unit String
               :generics Input
+              :features :state
           :tests $ []
             %{} 'TestEntry (:name |rejects-invalid-result-without-publishing)
               :code $ quote $ let
@@ -1469,7 +1470,7 @@
                   reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
                   , &unit
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Op Number (-> Unit)
+          :schema $ quote $ Fn cumulo-reel.schema/Op Number (-> Unit) (:features :io :state)
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -1497,11 +1498,11 @@
             every! 600000 $ fn () $ persist-db!
             on-interrupt! on-exit!
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -1513,13 +1514,13 @@
               check-write-text! storage-path file-content
               check-write-text! backup-path file-content
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println "|Code updated.") (clear-twig-caches!) (reset-twig-memos!)
             reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'render-loop! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-loop! ()
             when
@@ -1528,7 +1529,7 @@
               sync-clients! @*reader-reel
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'resolve-server-port $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn resolve-server-port (configured default-port)
             match configured
@@ -1621,7 +1622,7 @@
                     dispatch! (:: :session/disconnect) sid
                 (:blob sid) (eprintln "|Unexpected binary message from:" sid)
           :examples $ []
-          :schema $ quote $ Fn Number (-> ws-edn.server/NodeWebSocketServerHost) (:features :js-ffi)
+          :schema $ quote $ Fn Number (-> ws-edn.server/NodeWebSocketServerHost) (:features :io :js-ffi :state)
         'storage-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def storage-file
             if (empty? calcit-dirname)
@@ -1655,7 +1656,7 @@
                   , &unit
             finish-twig-frame!
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.core/ReelState cumulo-reel.schema/Database) (-> Unit)
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState cumulo-reel.schema/Database) (-> Unit) (:features :io :state)
         'updater-from-record $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater-from-record (db op sid op-id op-time)
             let
@@ -1683,7 +1684,7 @@
                   _ $ raise |Invalid-record-operation
               updater db typed-op (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/Database OpInput SidInput IdInput TimeInput (-> cumulo-reel.schema/Database) (:generics OpInput SidInput IdInput TimeInput)
+          :schema $ quote $ Fn cumulo-reel.schema/Database OpInput SidInput IdInput TimeInput (-> cumulo-reel.schema/Database) (:generics OpInput SidInput IdInput TimeInput) (:features :io)
           :tests $ [] $ %{} 'TestEntry (:name |replays-legacy-connect-operation)
             :code $ quote $ assert=
               updater database (cumulo-reel.schema/Op :session/connect) 1 |op-1 0
@@ -1806,6 +1807,7 @@
           :schema $ quote $ Fn Number
             Fn SocketEvent $ -> Unit
             -> Unit
+            :features :state
           :tests $ [] $ %{} 'TestEntry (:name |ignores-unknown-session)
             :code $ quote $ let
                 calls $ ref 0
@@ -1820,6 +1822,7 @@
           :schema $ quote $ Fn
             Fn Number $ -> Unit
             -> Unit
+            :features :state
           :tests $ [] $ %{} 'TestEntry (:name |skips-disconnected-sessions)
             :code $ quote $ let
                 seen $ ref $ assert-type ([]) (List Number)
@@ -1839,7 +1842,7 @@
               (:none) (eprintln |WebSocket-client-missing: sid)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Number String (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn Number String (-> Unit) (:features :io :js-ffi :state)
         'serve! $ %{} 'CodeEntry
           :doc "|启动 Node WebSocket server，保留 Number SID 与原事件语义。可选 WSS_BIND_ADDRESS 指定监听地址；未设置保持原宿主默认，空字符串明确拒绝。"
           :code $ quote $ defn serve! (port on-event)
@@ -1873,7 +1876,7 @@
           :schema $ quote $ Fn Number
             Fn SocketEvent $ -> Unit
             -> ws-edn.server/NodeWebSocketServerHost
-            :features :js-ffi
+            :features :io :js-ffi :state
         'server-options $ %{} 'CodeEntry
           :doc "|生成 Node WebSocket 配置；缺失地址保留宿主默认监听，显式空地址拒绝，不替换为全网卡。"
           :code $ quote $ defn server-options (port bind-address)
@@ -2154,7 +2157,7 @@
               (:router/change data) (router/change db data sid op-id op-time)
               _ $ do (eprintln "|Unknown op" op) db
           :examples $ []
-          :schema $ quote $ Fn schema/Database schema/Op Number String Number (-> schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Op Number String Number (-> schema/Database) (:features :io)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.updater
           :require (cumulo-reel.app.updater.session :as session) (cumulo-reel.app.updater.user :as user) (cumulo-reel.app.updater.router :as router) (cumulo-reel.schema :as schema)
@@ -2374,6 +2377,7 @@
             , Op Sid OpId Number Bool
               -> $ ReelState Db
               :generics Db Op Sid OpId
+              :features :io
           :tests $ []
             %{} 'TestEntry (:name |resets-from-base)
               :code $ quote $ let

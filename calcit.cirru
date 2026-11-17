@@ -149,8 +149,9 @@
           :examples $ []
           :schema $ quote $ Fn
             Fn respo.dom/DomElement respo.schema/Component
-              Fn schema/Op $ -> Unit
+              Fn schema/Op (-> Unit) (:features :io :state)
               -> Unit
+              :features :io :state
             -> Unit
             :features :io :js-ffi :state
         'simulate-login! $ %{} 'CodeEntry (:doc |)
@@ -241,7 +242,7 @@
                       Some $ comp-reel store-typed.:reel-length $ {}
                       , None
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) (Option schema/ClientStore) (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Tag Dynamic) (Option schema/ClientStore) (-> respo.schema/Component) (:features :io :state)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline ()
             div
@@ -361,7 +362,7 @@
                       :style $ style/merge-styles style/link
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component) (:features :io :state)
         'event-value $ %{} 'CodeEntry
           :doc "|Read a checked string from a Respo event or the legacy Tag-keyed event Map."
           :code $ quote $ defn event-value (event)
@@ -384,13 +385,13 @@
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
               hint-fn $ Fn respo.schema/RespoEvent
-                Fn schema/Op $ -> Unit
+                Fn schema/Op (-> Unit) (:features :io :state)
                 -> Unit
               dispatch! $ if signup? (schema/Op :user/sign-up username password) (schema/Op :user/log-in username password)
               browser/storage-set! (:storage-key config/site)
                 format-cirru-edn $ [] username password
           :examples $ []
-          :schema $ quote $ Fn String String Bool (-> respo.schema/EventHandler) (:features :js-ffi)
+          :schema $ quote $ Fn String String Bool (-> respo.schema/EventHandler) (:features :io :js-ffi :state)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.login
           :require
@@ -1774,9 +1775,9 @@
               , &unit
           :examples $ []
           :schema $ quote $ Fn
-            Fn $ -> Unit
+            Fn (-> Unit) (:features :io :state)
             -> Unit
-            :features :js-ffi
+            :features :io :js-ffi :state
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.server-host
           :require $ js-ffi.node :refer $ file-exists? read-text! write-text! mkdir! path-dirname
@@ -2048,7 +2049,7 @@
         'reset-twig-memos! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reset-twig-memos! () (reset-twig-memo!) &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :state)
           :tests $ [] $ %{} 'TestEntry
             :name |keeps-typed-projections-and-releases-old-contexts
             :code $ quote $ do (recollect.memo/reset-twig-memo!)
@@ -2101,6 +2102,7 @@
           :schema $ quote $ Fn schema/Database schema/Session
             List $ List Dynamic
             -> schema/ClientStore
+            :features :state
         'twig-members $ %{} 'CodeEntry
           :doc "|Project session member names into the legacy router wire map. Internal session absence uses Option; output nil/String values preserve the existing client wire protocol."
           :code $ quote $ defn twig-members (sessions users)
@@ -2344,9 +2346,10 @@
           :examples $ []
           :schema $ quote $ Fn Db
             List $ List RecordValue
-            Fn Db RecordValue RecordValue RecordValue RecordValue $ -> Db
+            Fn Db RecordValue RecordValue RecordValue RecordValue (-> Db) (:features :io)
             -> Db
             :generics Db RecordValue
+            :features :io
         'reel-reducer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reel-reducer (reel updater op sid op-id op-time dev?)
             let
@@ -2373,7 +2376,7 @@
                     :db next-db
           :examples $ []
           :schema $ quote $ Fn (ReelState Db)
-            Fn Db Op Sid OpId Number $ -> Db
+            Fn Db Op Sid OpId Number (-> Db) (:features :io)
             , Op Sid OpId Number Bool
               -> $ ReelState Db
               :generics Db Op Sid OpId
@@ -2417,9 +2420,10 @@
               struct-with reel (:base next-base) (:db next-db)
           :examples $ []
           :schema $ quote $ Fn (ReelState Db) Db
-            Fn Db Dynamic Dynamic Dynamic Dynamic $ -> Db
+            Fn Db Dynamic Dynamic Dynamic Dynamic (-> Db) (:features :io)
             -> $ ReelState Db
             :generics Db
+            :features :io
           :tests $ [] $ %{} 'TestEntry (:name |preserves-database-type-and-merged-base)
             :code $ quote $ let
                 reel $ assert-type
@@ -2555,6 +2559,7 @@
           :schema $ quote $ Fn (PartitionState K V) V DiffBudget Number Number
             -> $ PartitionStep K V
             :generics K V
+            :features :state
           :tests $ []
             %{} 'TestEntry (:name |unchanged-view-keeps-revision)
               :code $ quote $ let

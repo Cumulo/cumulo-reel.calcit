@@ -2,10 +2,10 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.3.4 候选使用说明
+## 0.3.5 候选使用说明
 
 前后端需配对 Calcit 和 `@calcit/procs` 0.43.0，统一 `deps.cirru` 中的正式依赖并重新生成 JS。
-Recollect 使用 0.3.8，WS-EDN 使用 0.2.3；存档与 wire 合同保持原有行为。
+Recollect 使用 0.3.8，WS-EDN 使用 0.2.4；存档与 wire 合同保持原有行为。
 `reel-reducer`、`play-records` 和 `refresh-reel` 的 updater 回调允许 `:io`，
 严格检查时，调用这三个函数的代码都需声明 `:io`，即使 updater 本身是纯函数；
 memo 入口也声明了已有的 `:state` 效果。

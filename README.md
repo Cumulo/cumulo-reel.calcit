@@ -2,6 +2,13 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+## 0.3.4 候选使用说明
+
+前后端需配对 Calcit 和 `@calcit/procs` 0.43.0，统一 `deps.cirru` 中的正式依赖并重新生成 JS。
+Recollect 使用 0.3.8，WS-EDN 使用 0.2.3；存档与 wire 合同保持原有行为。
+`reel-reducer`、`play-records` 和 `refresh-reel` 的 updater 回调允许 `:io`，
+调用回放函数的代码需声明相应效果；memo 入口也声明了已有的 `:state` 效果。
+
 ## 0.3.3 候选使用说明
 
 请配套升级 Calcit 与 `@calcit/procs` 至正式 0.42.1，按 `deps.cirru` 重新安装并生成前后端 JS。正式依赖包括 Recollect 0.3.4、Message 0.4.0 和 WS-EDN 0.2.0。登录输入和消息回调使用明确类型，旧事件、混合状态游标及存档仍可读取。Node 服务端使用 ws-edn 的具名消息监听，保留文本、二进制和连接生命周期的行为。

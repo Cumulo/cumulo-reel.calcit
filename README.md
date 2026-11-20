@@ -2,6 +2,10 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+## 0.3.7 候选使用说明
+
+使用已发布 Cumulo Util 0.0.45 与 WS-EDN 0.2.5，前后端仍配对 Calcit / `@calcit/procs` 0.44.0。下游需对齐依赖图并重新生成两端 JS；存档、wire 和公开 API 保持不变，请在正式 Git tag 发布后升级。
+
 ## 0.3.6 候选使用说明
 
 前后端需配对 Calcit 和 `@calcit/procs` 0.44.0，统一 `deps.cirru` 中的正式依赖并重新生成 JS。

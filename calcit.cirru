@@ -24,19 +24,12 @@
           :schema $ quote $ Ref (Option schema/ClientStore)
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! ()
-            ws-connect!
+            ws-edn.client/ws-connect-typed!
               str |ws://
                 :hostname $ browser/location-snapshot
                 , |: $ :port config/site
-              {}
-                :on-open $ fn (event) (simulate-login!)
-                :on-close $ fn (event) (reset! *store None) (shared/console-error! "|Lost connection!")
-                :on-data $ fn (data)
-                  match (protocol/receive-server-patch! *store data)
-                    (:ok _) (shared/console-log! |Applied-server-patch)
-                    (:err detail)
-                      shared/console-error! $ str |Rejected-server-patch: detail
-                :class-mapper protocol/patch-class-mapper
+              ws-edn.client/ClientConfig :retry-base-ms None :retry-max-ms None :retry-jitter None :heartbeat-timeout-ms None :class-mapper protocol/patch-class-mapper
+              ws-edn.client/ClientCallbacks :on-open (Some on-ws-open) :on-close (Some on-ws-close) :on-error None :on-data $ Some on-server-data
           :examples $ []
           :schema $ quote $ Fn (-> ws-edn.client/WsClient) (:features :io :js-ffi :state)
         'dispatch! $ %{} 'CodeEntry (:doc |)
@@ -128,10 +121,26 @@
             .unwrap $ respo.ffi.browser/query-selector |.app
           :examples $ []
           :schema $ quote respo.dom/DomElement
+        'on-server-data $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-server-data (data)
+            match (protocol/receive-server-patch! *store data)
+              (:ok _) (shared/console-log! |Applied-server-patch)
+              (:err detail)
+                shared/console-error! $ str |Rejected-server-patch: detail
+          :examples $ []
+          :schema $ quote $ Fn Dynamic (-> Unit) (:features :io :js-ffi :state)
         'on-store-change! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-store-change! (current previous) (render-app! render!) &unit
           :examples $ []
           :schema $ quote $ Fn (Option schema/ClientStore) (Option schema/ClientStore) (-> Unit) (:features :io :js-ffi :state)
+        'on-ws-close $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-ws-close (event) (reset! *store None) (shared/console-error! "|Lost connection!")
+          :examples $ []
+          :schema $ quote $ Fn browser/EventHost (-> Unit) (:features :io :js-ffi :state)
+        'on-ws-open $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-ws-open (event) (simulate-login!)
+          :examples $ []
+          :schema $ quote $ Fn browser/EventHost (-> Unit) (:features :io :js-ffi :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (add-watch! *store :changes on-store-change!)
             add-watch! *states :changes $ fn (states prev)
@@ -189,7 +198,7 @@
             cljs.reader :refer $ read-string
             cumulo-reel.schema :as schema
             cumulo-reel.app.config :as config
-            ws-edn.client :refer $ ws-connect! ws-send!
+            ws-edn.client :refer $ ws-send!
             cumulo-util.activity :refer $ page-visible?
             js-ffi.browser :as browser
             js-ffi.shared :as shared

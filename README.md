@@ -2,9 +2,9 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
-## 0.3.10 使用说明
+## 0.3.11 使用说明
 
-配对正式 Calcit 0.44.0、Cumulo Util 0.0.49、WS-EDN 0.2.10、Recollect 0.3.11 及 Respo 正式依赖图；使用者需统一依赖并重新生成前后端 JS。事件、存档、wire 和公开 API 保持不变，正式标签发布前为候选。
+配对正式 Calcit 0.44.0、Cumulo Util 0.0.50、WS-EDN 0.2.11、Recollect 0.3.12 及 Respo 正式依赖图；使用者需统一依赖并重新生成前后端 JS。事件、存档、wire 和本库公开 API 保持不变。直接调用 WS-EDN 的 `maintain-socket!` 或 `maintain-host-socket!` 的函数需声明 `:io` effect；正式标签发布前为候选。
 
 ## 0.3.9 使用说明
 

@@ -2,6 +2,10 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+## 0.3.12 候选：使用者需要注意
+
+配套正式 Calcit / `@calcit/procs` 0.45.0、Cumulo Util 0.0.51、WS-EDN 0.3.1、Recollect 0.3.13 和对应 Respo 依赖图；升级后需重新安装依赖并生成前后端 JS。本库事件、存档及 wire 协议不变。直接构造 WS-EDN `WsClient` 的下游需要按其 0.3.0 合同补充 `:callbacks`，通常应使用现有连接函数。请在正式标签发布后升级。
+
 ## 0.3.11 使用说明
 
 配对正式 Calcit 0.44.0、Cumulo Util 0.0.50、WS-EDN 0.2.11、Recollect 0.3.12 及 Respo 正式依赖图；使用者需统一依赖并重新生成前后端 JS。事件、存档、wire 和本库公开 API 保持不变。直接调用 WS-EDN 的 `maintain-socket!` 或 `maintain-host-socket!` 的函数需声明 `:io` effect；正式标签发布前为候选。
@@ -282,7 +286,7 @@ session ID、事件与协议均不变，不增加平行启动入口或修改生�
 与精确 main 验证；历史版本的验收不自动覆盖新提交。
 
 `deps.cirru :calcit-version` 与 `package.json @calcit/procs` 保持同一版本。
-Actions 使用 `calcit-lang/setup-calcit@v1.5.0`，显式安装 `calcit,caps`。
+Actions 使用 `calcit-lang/setup-calcit@v1.5.2`，显式安装 `calcit,caps`。
 
 `caps --strict --ci` 检查传递依赖的版本冲突。冲突应在对应上游模块升级并
 发布后修复；原有普通 `caps --ci` 会显示版本差异并选择兼容的最高 SemVer。

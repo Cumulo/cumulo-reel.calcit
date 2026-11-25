@@ -1224,7 +1224,7 @@
               :nickname $ :nickname user
               :avatar $ encode-optional-string $ :avatar user
           :examples $ []
-          :schema $ quote $ Fn cumulo-reel.schema/ClientUser
+          :schema $ quote $ Fn schema/ClientUser
             -> $ Map Tag $ JsNullish String
           :tests $ [] $ %{} 'TestEntry (:name |preserves-wire-fields)
             :code $ quote $ do

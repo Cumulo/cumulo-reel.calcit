@@ -1256,9 +1256,9 @@
               (:some item) (encode item)
           :examples $ []
           :schema $ quote $ Fn (Option T)
-            Fn T $ -> $ Map Tag Dynamic
-            -> $ JsNullish $ Map Tag Dynamic
-            :generics T
+            Fn T $ -> V
+            -> $ JsNullish V
+            :generics T V
         'encode-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-router (router)
             .assoc (&struct:to-map router) :router $ encode-optional-wire (:router router) encode-router

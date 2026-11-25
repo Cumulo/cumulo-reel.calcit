@@ -2125,10 +2125,7 @@
                   Some $ memo-twig-by1 user-id twig-user user
                   , None
           :examples $ []
-          :schema $ quote $ Fn schema/Database schema/Session
-            List $ List Dynamic
-            -> schema/ClientStore
-            :features :state
+          :schema $ quote $ Fn schema/Database schema/Session (List Item) (-> schema/ClientStore) (:generics Item) (:features :state)
         'twig-members $ %{} 'CodeEntry
           :doc "|Project session member names into the legacy router wire map. Internal session absence uses Option; output nil/String values preserve the existing client wire protocol."
           :code $ quote $ defn twig-members (sessions users)

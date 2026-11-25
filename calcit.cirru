@@ -1218,10 +1218,27 @@
             -> $ Map Tag Dynamic
         'encode-client-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-client-user (user)
-            .assoc (&struct:to-map user) :avatar $ encode-optional-string $ :avatar user
+            {}
+              :name $ :name user
+              :id $ :id user
+              :nickname $ :nickname user
+              :avatar $ encode-optional-string $ :avatar user
           :examples $ []
-          :schema $ quote $ Fn schema/ClientUser
-            -> $ Map Tag Dynamic
+          :schema $ quote $ Fn cumulo-reel.schema/ClientUser
+            -> $ Map Tag $ JsNullish String
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-wire-fields)
+            :code $ quote $ do
+              let
+                  user $ schema/ClientUser :name |Ada :id |u1 :nickname |A :avatar None
+                assert=
+                  .assoc (&struct:to-map user) :avatar nil
+                  encode-client-user user
+              let
+                  user $ schema/ClientUser :name |Bea :id |u2 :nickname |B :avatar $ Some |portrait
+                assert=
+                  .assoc (&struct:to-map user) :avatar |portrait
+                  encode-client-user user
+            :tags $ #{} :portable :protocol
         'encode-optional-string $ %{} 'CodeEntry
           :doc "|Project an internal Option<String> to the legacy wire nil/String representation; not an internal absence model."
           :code $ quote $ defn encode-optional-string (value)

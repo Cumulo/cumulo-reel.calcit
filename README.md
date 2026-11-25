@@ -4,7 +4,7 @@ Cumulo 的 Reel 状态、操作记录与重放库。
 
 ## 0.3.13 候选：使用者需要注意
 
-配套正式 Calcit / `@calcit/procs` 0.45.1、Cumulo Util 0.0.52、WS-EDN 0.3.2、Recollect 0.3.14、Message 0.4.11 及对应 Respo 依赖；升级时需统一依赖图并重新生成前后端 JS。事件、存档和 wire 协议沿用原行为，请在正式标签发布后升级。
+配套正式 Calcit / `@calcit/procs` 0.45.1、Cumulo Util 0.0.52、WS-EDN 0.3.2、Recollect 0.3.14、Message 0.4.11 及对应 Respo 依赖；升级时需统一依赖图并重新生成前后端 JS。事件、存档和 wire 协议沿用原行为。`encode-client-user` 返回类型收紧为 `Map<Tag, JsNullish<String>>`，直接调用方可用精确类型接收；请在正式标签发布后升级。
 
 ## 0.3.12 候选：使用者需要注意
 

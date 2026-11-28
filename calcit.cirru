@@ -34,31 +34,36 @@
           :schema $ quote $ Fn (-> ws-edn.client/WsClient) (:features :io :js-ffi :state)
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op op-data) (println |Dispatch op op-data)
-            if (list? op)
-              recur
-                match op-data
-                  (:some data) (:: :states op data)
-                  (:none) (:: :states op nil)
-                , None
-              if (tag? op)
+            match
+              try-decode-map-as op $ List Dynamic
+              (:ok cursor)
                 recur
                   match op-data
-                    (:some data) (:: op data)
-                    (:none)
-                      if (= op :effect/connect) (:: :effect/connect) (:: op nil)
+                    (:some data) (:: :states cursor data)
+                    (:none) (:: :states cursor nil)
                   , None
-                match op
-                  (:states cursor s)
-                    do
-                      reset! *states $ decode-map-as
-                        update-state-tree @*states
-                          decode-map-as cursor $ List Dynamic
-                          , s
-                        Map Tag Dynamic
-                      , &unit
-                  (:effect/connect)
-                    do (connect!) &unit
-                  _ $ ws-send! op
+              (:err _)
+                match (try-decode-map-as op Tag)
+                  (:ok tag)
+                    recur
+                      match op-data
+                        (:some data) (:: tag data)
+                        (:none)
+                          if (= tag :effect/connect) (:: :effect/connect) (:: tag nil)
+                      , None
+                  (:err _)
+                    match op
+                      (:states cursor s)
+                        do
+                          reset! *states $ decode-map-as
+                            update-state-tree @*states
+                              decode-map-as cursor $ List Dynamic
+                              , s
+                            Map Tag Dynamic
+                          , &unit
+                      (:effect/connect)
+                        do (connect!) &unit
+                      _ $ ws-send! op
           :examples $ []
           :schema $ quote $ Fn Dynamic (Option Dynamic) (-> Unit) (:features :io :js-ffi :state)
           :tests $ []
@@ -212,9 +217,8 @@
               (:none) (comp-offline)
               (:some store-typed)
                 let
-                    state $ calcit.core/get
-                      either states $ {}
-                      , :data
+                    states-map $ .unwrap-or (nil->option states) ({})
+                    state $ calcit.core/get states-map :data
                     session store-typed.:session
                     router store-typed.:router
                     router-data router.:data
@@ -226,11 +230,7 @@
                         :home $ <> |Home
                         :profile $ comp-profile (.unwrap store-typed.:user) (cumulo-reel.app.comp.profile/decode-member-names router.:data)
                         _ $ <> $ to-string router.:name
-                      comp-login $ decode-map-as
-                        >>
-                          either states $ {}
-                          , :login
-                        Map Tag Dynamic
+                      comp-login $ decode-map-as (>> states-map :login) (Map Tag Dynamic)
                     comp-status-color store-typed.:color
                     comp-messages
                       filter-map-kv (session.:messages)
@@ -321,17 +321,13 @@
                 cursor $ calcit.core/get states :cursor
                 state $ match (calcit.core/get states :data)
                   (:some value)
-                    let
-                        raw $ either value initial-state
-                      decode-map-as
-                        if (struct? raw) (&struct:to-map raw) raw
-                        , 'cumulo-reel.app.comp.login/LoginState
-                  (:none)
-                    let
-                        raw initial-state
-                      decode-map-as
-                        if (struct? raw) (&struct:to-map raw) raw
-                        , 'cumulo-reel.app.comp.login/LoginState
+                    match (nil->option value)
+                      (:none) initial-state
+                      (:some non-nil)
+                        decode-map-as
+                          if (struct? non-nil) (&struct:to-map non-nil) non-nil
+                          , 'cumulo-reel.app.comp.login/LoginState
+                  (:none) initial-state
               div
                 {} $ :style $ style/merge-styles ui/flex ui/center
                 div ({})
@@ -400,7 +396,12 @@
               browser/storage-set! (:storage-key config/site)
                 format-cirru-edn $ [] username password
           :examples $ []
-          :schema $ quote $ Fn String String Bool (-> respo.schema/EventHandler) (:features :io :js-ffi :state)
+          :schema $ quote $ Fn String String Bool
+            -> $ Fn respo.schema/RespoEvent
+              Fn schema/Op (-> Unit) (:features :io :state)
+              -> Unit
+              :features :io :state
+            :features :io :js-ffi :state
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns cumulo-reel.app.comp.login
           :require
@@ -1055,44 +1056,52 @@
             :tags $ #{} :protocol :unit
         'decode-nullable-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-number (value)
-            if (nil? value) (Result :ok None)
-              match (decode-number value)
-                (:err detail) (Result :err detail)
-                (:ok decoded)
-                  Result :ok $ Some decoded
+            match (try-decode-map-as value Nil)
+              (:ok _) (Result :ok None)
+              (:err _)
+                match (decode-number value)
+                  (:err detail) (Result :err detail)
+                  (:ok decoded)
+                    Result :ok $ Some decoded
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option Number) String
             :generics Input
         'decode-nullable-router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-router (value)
-            if (nil? value) (Result :ok None)
-              match (decode-router value)
-                (:err detail) (Result :err detail)
-                (:ok router)
-                  Result :ok $ Some router
+            match (try-decode-map-as value Nil)
+              (:ok _) (Result :ok None)
+              (:err _)
+                match (decode-router value)
+                  (:err detail) (Result :err detail)
+                  (:ok router)
+                    Result :ok $ Some router
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option schema/Router) String
             :generics Input
         'decode-nullable-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-store (value)
-            if (nil? value) (Result :ok None)
-              match (decode-client-store value)
-                (:err detail) (Result :err detail)
-                (:ok store)
-                  Result :ok $ Some store
+            match (try-decode-map-as value Nil)
+              (:ok _) (Result :ok None)
+              (:err _)
+                match (decode-client-store value)
+                  (:err detail) (Result :err detail)
+                  (:ok store)
+                    Result :ok $ Some store
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option schema/ClientStore) String
             :generics Input
         'decode-nullable-user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-nullable-user (value)
-            if (nil? value) (Result :ok None)
-              match (decode-client-user value)
-                (:err detail) (Result :err detail)
-                (:ok user)
-                  Result :ok $ Some user
+            match (try-decode-map-as value Nil)
+              (:ok _) (Result :ok None)
+              (:err _)
+                match (decode-client-user value)
+                  (:err detail) (Result :err detail)
+                  (:ok user)
+                    Result :ok $ Some user
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option schema/ClientUser) String
@@ -1127,11 +1136,13 @@
               :tags $ #{} :protocol :unit
         'decode-optional-string $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-optional-string (value)
-            if (nil? value) (Result :ok None)
-              match (decode-string value)
-                (:err detail) (Result :err detail)
-                (:ok decoded)
-                  Result :ok $ Some decoded
+            match (try-decode-map-as value Nil)
+              (:ok _) (Result :ok None)
+              (:err _)
+                match (decode-string value)
+                  (:err detail) (Result :err detail)
+                  (:ok decoded)
+                    Result :ok $ Some decoded
           :examples $ []
           :schema $ quote $ Fn Input
             -> $ Result (Option String) String
@@ -2968,26 +2979,25 @@
         'struct-tree-input $ %{} 'CodeEntry
           :doc "|Recursively turn untrusted struct trees, including struct payloads inside nominal enums, into maps so try-decode-map-as can validate them against a nominal schema."
           :code $ quote $ defn struct-tree-input (value)
-            cond
-                struct? value
-                struct-tree-input $ &struct:to-map value
-              (map? value)
-                filter-map-kv
-                  decode-map-as value $ Map Dynamic Dynamic
-                  fn (key item)
-                    hint-fn $ Fn Dynamic Dynamic $ -> (MapEntryDecision Dynamic Dynamic)
-                    MapEntryDecision :keep key $ struct-tree-input item
-              (list? value)
-                map
-                  decode-map-as value $ List Dynamic
-                  , struct-tree-input
-              (enum? value)
+            if (struct? value)
+              struct-tree-input $ &struct:to-map value
+              if (enum? value)
                 .foldl
                   range 1 $ .count value
                   , value $ fn (acc idx)
                     hint-fn $ Fn AnyEnum Number $ -> AnyEnum
                     assoc acc idx $ struct-tree-input $ .unwrap (nth value idx)
-              true value
+                match
+                  try-decode-map-as value $ Map Dynamic Dynamic
+                  (:ok map-value)
+                    filter-map-kv map-value $ fn (key item)
+                      hint-fn $ Fn Dynamic Dynamic $ -> (MapEntryDecision Dynamic Dynamic)
+                      MapEntryDecision :keep key $ struct-tree-input item
+                  (:err _)
+                    match
+                      try-decode-map-as value $ List Dynamic
+                      (:ok list-value) (map list-value struct-tree-input)
+                      (:err _) value
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> Dynamic)
           :tests $ [] $ %{} 'TestEntry (:name |structs-become-maps)

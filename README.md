@@ -2,6 +2,10 @@
 
 Cumulo 的 Reel 状态、操作记录与重放库。
 
+## 0.3.15 候选：使用者需要注意
+
+配套正式 Calcit / `@calcit/procs` 0.47.1、Cumulo Util 0.0.54、Recollect 0.3.15、Respo 0.20.1、Respo UI 0.16.7、Message 0.4.13、WS-EDN 0.3.5 与 JS-FFI 0.2.26；升级时请统一依赖图并重新生成前后端 JS。已将遗留 `either`、`nil?`、`list?`/`tag?`/`map?` 运行时检查及值类型别名迁移为 `nil->option` 与 `try-decode-map-as`，事件、存档和 wire 协议保持原行为。当前仍是候选，请在本库正式标签发布后升级。
+
 ## 0.3.14 候选：使用者需要注意
 
 使用 Calcit / `@calcit/procs` 0.46.0，并将 Recollect 固定为其 0.46 维护线的预发布标签 `0.3.15-calcit.0.46.0`；它与需要 Calcit 0.47.1 的 Recollect 0.3.15 不可混用。升级时请统一依赖图并重新生成前后端 JS；事件、存档和 wire 协议保持原行为。当前仍是候选，请在本库正式标签发布后升级。

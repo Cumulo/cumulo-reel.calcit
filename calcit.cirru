@@ -2376,7 +2376,9 @@
         'reel-reducer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reel-reducer (reel updater op sid op-id op-time dev?)
             let
-                tag-name $ if (enum? op) (&enum:nth op 0) :unknown
+                tag-name $ if (enum? op)
+                  decode-map-as (&enum:nth op 0) Tag
+                  , :unknown
               if
                 starts-with? (str tag-name) |:reel/
                 if (= tag-name :reel/reset)
